@@ -1,56 +1,58 @@
 package com.darshad.project.auth;
 
-import com.darshad.project.auth.dto.*;
-import com.darshad.project.auth.jwt.JwtService;
-import com.darshad.project.user.*;
-import org.springframework.security.authentication.*;
+import com.darshad.project.auth.dto.AuthResponse;
+import com.darshad.project.auth.dto.LoginRequest;
+import com.darshad.project.auth.dto.RegisterRequest;
+import com.darshad.project.security.jwt.JwtService;
+import com.darshad.project.user.User;
+import com.darshad.project.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
 
-    private final UserRepository users;
-    private final PasswordEncoder encoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final AuthenticationManager authManager;
 
-    public AuthService(UserRepository users, PasswordEncoder encoder, JwtService jwtService, AuthenticationManager authManager) {
-        this.users = users;
-        this.encoder = encoder;
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.authManager = authManager;
     }
 
     public AuthResponse register(RegisterRequest req) {
-        String email = req.email().trim().toLowerCase();
-
-        if (users.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email already exists");
+        if (userRepository.existsByEmail(req.email())) {
+            throw new IllegalArgumentException("Email already registered");
         }
 
-        var user = User.builder()
-                .email(email)
-                .passwordHash(encoder.encode(req.password()))
+        User user = User.builder()
+                .email(req.email().toLowerCase())
+                .passwordHash(passwordEncoder.encode(req.password()))
                 .role("USER")
                 .enabled(true)
                 .build();
 
-        users.save(user);
+        userRepository.save(user);
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole());
-        return new AuthResponse(token, "Bearer");
+        return new AuthResponse(token);
     }
 
     public AuthResponse login(LoginRequest req) {
-        String email = req.email().trim().toLowerCase();
+        User user = userRepository.findByEmail(req.email().toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
-        authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, req.password())
-        );
+        if (!user.isEnabled()) {
+            throw new IllegalArgumentException("User disabled");
+        }
 
-        var user = users.findByEmail(email).orElseThrow(); // после auth уже должен быть
+        if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+
         String token = jwtService.generateToken(user.getEmail(), user.getRole());
-        return new AuthResponse(token, "Bearer");
+        return new AuthResponse(token);
     }
 }

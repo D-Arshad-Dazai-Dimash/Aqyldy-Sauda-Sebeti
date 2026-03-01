@@ -1,27 +1,28 @@
 package com.darshad.project.auth;
 
-import com.darshad.project.auth.dto.*;
+import com.darshad.project.auth.dto.AuthResponse;
+import com.darshad.project.auth.dto.LoginRequest;
+import com.darshad.project.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthService auth;
+    private final AuthService authService;
 
-    public AuthController(AuthService auth) {
-        this.auth = auth;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
-        return ResponseEntity.ok(auth.register(req));
+    public AuthResponse register(@Valid @RequestBody RegisterRequest req) {
+        return authService.register(req);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
-        return ResponseEntity.ok(auth.login(req));
+    public AuthResponse login(@Valid @RequestBody LoginRequest req) {
+        return authService.login(req);
     }
 }

@@ -2,6 +2,8 @@ package com.darshad.project.user;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -14,36 +16,28 @@ import java.util.UUID;
 public class User {
 
     @Id
+    @GeneratedValue
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false, length = 50)
-    private String role; // e.g. "USER", "ADMIN"
+    @Column(nullable = false)
+    private String role;
 
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
-
-    @PrePersist
-    void prePersist() {
-        if (id == null) id = UUID.randomUUID();
-        if (createdAt == null) createdAt = OffsetDateTime.now();
-    }
-
-    @PreUpdate
-    void preUpdate() {
-        updatedAt = OffsetDateTime.now();
-    }
 }

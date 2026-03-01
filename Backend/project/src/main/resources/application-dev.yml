@@ -16,8 +16,8 @@ spring:
     open-in-view: false
 app:
   jwt:
-    secret: "dasfjjJL@LJsdmfdsklmkl@KKmklmslkdmsdkmvdskvm225"
-    access-token-ttl-minutes: 60
+    secret: "da5jJL@LJsdmfdsklmkl@KKmklmslkdmsdkmvdskvm225"
+    access-ttl-minutes: 60
 springdoc:
   swagger-ui:
     path: /swagger
