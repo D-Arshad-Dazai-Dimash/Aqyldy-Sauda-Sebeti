@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: aqyldy_sauda_sebeti__db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dbaqyldy
+      POSTGRES_USER: aqsa
+      POSTGRES_PASSWORD: aqyldysebet123
+    ports:
+      - "55432:5432"
+    volumes:
+      - aqyldy_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aqsa -d dbaqyldy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  aqyldy_pg:
