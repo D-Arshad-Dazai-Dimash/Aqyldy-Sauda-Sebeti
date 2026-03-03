@@ -1,5 +1,6 @@
 package com.darshad.project.cart;
 
+import com.darshad.project.store.Store;
 import com.darshad.project.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,9 +23,13 @@ public class Cart {
     @UuidGenerator
     private UUID id;
 
-    @OneToOne(optional = false)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

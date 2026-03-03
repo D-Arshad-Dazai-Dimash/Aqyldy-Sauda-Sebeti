@@ -8,8 +8,9 @@ import java.util.UUID;
 
 public interface CartRepository extends JpaRepository<Cart, UUID> {
 
-    @EntityGraph(attributePaths = {"items", "items.product", "items.product.categories"})
-    Optional<Cart> findByUserId(UUID userId);
+    @EntityGraph(attributePaths = {"items", "items.product"})
+    Optional<Cart> findGraphByUserIdAndStoreId(UUID userId, UUID storeId);
 
-    boolean existsByUserId(UUID userId);
+    @EntityGraph(attributePaths = {"items", "items.product"})
+    Optional<Cart> findGraphById(UUID id);
 }
