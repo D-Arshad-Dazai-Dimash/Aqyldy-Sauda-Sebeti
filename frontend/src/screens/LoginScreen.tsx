@@ -10,7 +10,8 @@ import {
   SafeAreaView, 
   StatusBar,
   Dimensions,
-  ScrollView
+  ScrollView,
+  ActivityIndicator
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
@@ -25,12 +26,16 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = React.useState(false);
 
   const onSubmit = async () => {
+    if (!email || !password) {
+      setError('Введите email и пароль');
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
       await login(email.trim(), password);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Ошибка входа');
+      setError(e?.response?.data?.message ?? 'Неверный логин или пароль');
     } finally {
       setLoading(false);
     }
@@ -41,7 +46,7 @@ export default function LoginScreen({ navigation }: any) {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
       >
         <ScrollView 
@@ -49,15 +54,15 @@ export default function LoginScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Декоративный элемент для стиля */}
+          {/* Декоративный "умный" фон */}
           <View style={styles.headerDecoration} />
 
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Feather name="shopping-bag" size={40} color="#27AE60" />
+              <Feather name="shopping-bag" size={42} color="#27AE60" />
             </View>
             <Text style={styles.title}>Aqyldy Sebet</Text>
-            <Text style={styles.subtitle}>Умные покупки начинаются здесь</Text>
+            <Text style={styles.subtitle}>Smart Retail Ecosystem</Text>
           </View>
 
           <View style={styles.formCard}>
@@ -65,7 +70,7 @@ export default function LoginScreen({ navigation }: any) {
             <View style={styles.inputContainer}>
               <Feather name="mail" size={20} color="#94A3B8" />
               <TextInput 
-                placeholder="email@example.com" 
+                placeholder="example@mail.com" 
                 autoCapitalize="none"
                 keyboardType="email-address"
                 value={email} 
@@ -96,22 +101,29 @@ export default function LoginScreen({ navigation }: any) {
             )}
 
             <TouchableOpacity 
-              activeOpacity={0.85}
+              activeOpacity={0.8}
               style={[styles.loginButton, loading && styles.disabledButton]} 
               onPress={onSubmit} 
               disabled={loading}
             >
-              <Text style={styles.buttonText}>
-                {loading ? 'Загрузка...' : 'Войти'}
-              </Text>
-              {!loading && <Feather name="arrow-right" size={20} color="#FFF" />}
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>Войти</Text>
+                  <Feather name="arrow-right" size={20} color="#FFF" />
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <TouchableOpacity 
+              activeOpacity={0.6} 
+              onPress={() => navigation.navigate('Register')}
+            >
               <Text style={styles.footerText}>
-                У вас еще нет аккаунта? <Text style={styles.linkText}>Создать</Text>
+                Нет аккаунта? <Text style={styles.linkText}>Создать сейчас</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -122,133 +134,80 @@ export default function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    justifyContent: 'center',
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollContent: { 
+    flexGrow: 1, 
+    paddingHorizontal: 28, 
+    paddingBottom: 40, 
+    justifyContent: 'center' 
   },
   headerDecoration: {
     position: 'absolute',
-    top: -width * 0.2,
-    right: -width * 0.1,
-    width: width * 0.6,
-    height: width * 0.6,
-    borderRadius: width * 0.3,
+    top: -width * 0.25,
+    right: -width * 0.15,
+    width: width * 0.7,
+    height: width * 0.7,
+    borderRadius: width * 0.35,
     backgroundColor: '#F0FDF4',
     zIndex: -1,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
+  header: { alignItems: 'center', marginBottom: 45 },
   logoContainer: {
-    width: 84,
-    height: 84,
-    borderRadius: 28,
+    width: 88,
+    height: 88,
+    borderRadius: 30,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    // Тени для iOS
+    elevation: 10,
     shadowColor: '#27AE60',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    // Тени для Android
-    elevation: 8,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1E293B',
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748B',
-    marginTop: 8,
-  },
-  formCard: {
-    width: '100%',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
+  title: { fontSize: 34, fontWeight: '900', color: '#1E293B', letterSpacing: -1 },
+  subtitle: { fontSize: 16, color: '#64748B', marginTop: 6, fontWeight: '500' },
+  formCard: { width: '100%' },
+  inputLabel: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 10, marginLeft: 4 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#F1F5F9',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-    height: 60,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    marginBottom: 22,
+    height: 64,
   },
-  input: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    color: '#1E293B',
-    fontWeight: '500',
-  },
+  input: { flex: 1, marginLeft: 12, fontSize: 16, color: '#1E293B', fontWeight: '500' },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     marginBottom: 20,
   },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 14,
-    marginLeft: 8,
-    fontWeight: '500',
-  },
+  errorText: { color: '#EF4444', fontSize: 14, marginLeft: 8, fontWeight: '600' },
   loginButton: {
     backgroundColor: '#27AE60',
-    height: 60,
-    borderRadius: 18,
+    height: 64,
+    borderRadius: 20,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#27AE60',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowRadius: 12,
+    elevation: 8,
     marginTop: 10,
   },
-  disabledButton: {
-    opacity: 0.6,
-    backgroundColor: '#94A3B8',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    marginRight: 8,
-  },
-  footer: {
-    marginTop: 30,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 15,
-    color: '#64748B',
-  },
-  linkText: {
-    color: '#27AE60',
-    fontWeight: '700',
-  },
+  disabledButton: { opacity: 0.7, backgroundColor: '#94A3B8' },
+  buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginRight: 10 },
+  footer: { marginTop: 35, alignItems: 'center' },
+  footerText: { fontSize: 15, color: '#64748B', fontWeight: '500' },
+  linkText: { color: '#27AE60', fontWeight: '800' },
 });
