@@ -1,0 +1,65 @@
+package com.darshad.project.catalog.product;
+
+import com.darshad.project.catalog.category.Category;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.UuidGenerator;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+@Entity
+@Table(name = "products")
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
+public class Product {
+
+    @Id
+    @GeneratedValue
+    @UuidGenerator
+    private UUID id;
+
+    @Column(nullable = false, length = 180)
+    private String title;
+
+    @Column(columnDefinition = "text")
+    private String description;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal price;
+
+    @Column(columnDefinition = "text")
+    private String imageUrl;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    @Column(nullable = false)
+    private OffsetDateTime createdAt;
+
+    private OffsetDateTime updatedAt;
+
+    @ManyToMany
+    @JoinTable(
+            name = "product_categories",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    @Builder.Default
+    private Set<Category> categories = new HashSet<>();
+
+    @PrePersist
+    void prePersist() {
+        createdAt = OffsetDateTime.now();
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = OffsetDateTime.now();
+    }
+}

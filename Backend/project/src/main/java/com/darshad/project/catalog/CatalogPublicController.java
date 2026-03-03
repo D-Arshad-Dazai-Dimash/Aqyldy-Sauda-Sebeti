@@ -1,0 +1,42 @@
+package com.darshad.project.catalog;
+
+import com.darshad.project.catalog.category.CategoryDto;
+import com.darshad.project.catalog.category.CategoryService;
+import com.darshad.project.catalog.product.ProductDto;
+import com.darshad.project.catalog.product.ProductService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api")
+@RequiredArgsConstructor
+public class CatalogPublicController {
+
+    private final CategoryService categoryService;
+    private final ProductService productService;
+
+    @GetMapping("/categories")
+    public List<CategoryDto> categories() {
+        return categoryService.list();
+    }
+
+    @GetMapping("/products")
+    public Page<ProductDto> products(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) Boolean active,
+            Pageable pageable
+    ) {
+        return productService.search(q, categoryId, active, pageable);
+    }
+
+    @GetMapping("/products/{id}")
+    public ProductDto product(@PathVariable UUID id) {
+        return productService.get(id);
+    }
+}
