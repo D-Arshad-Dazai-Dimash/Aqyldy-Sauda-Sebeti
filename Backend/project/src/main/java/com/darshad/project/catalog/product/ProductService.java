@@ -40,6 +40,9 @@ public class ProductService {
                 .title(req.title())
                 .description(req.description())
                 .price(req.price())
+                .barcode(req.barcode())
+                .stock(req.stock() == null ? 0 : req.stock())
+                .discount(req.discount())
                 .imageUrl(req.imageUrl())
                 .active(req.active() == null || req.active())
                 .build();
@@ -52,7 +55,12 @@ public class ProductService {
     public ProductDto update(UUID id, ProductUpsertRequest req) {
         var p = productRepo.findById(id)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
+        p.setBarcode(req.barcode());
 
+        if (req.stock() != null)
+            p.setStock(req.stock());
+
+        p.setDiscount(req.discount());
         p.setTitle(req.title());
         p.setDescription(req.description());
         p.setPrice(req.price());
@@ -84,9 +92,18 @@ public class ProductService {
                 p.getTitle(),
                 p.getDescription(),
                 p.getPrice(),
+                p.getBarcode(),
+                p.getStock(),
+                p.getDiscount(),
                 p.getImageUrl(),
                 p.isActive(),
                 p.getCategories().stream().map(c -> c.getId()).toList()
         );
+    }
+
+    public ProductDto findByBarcode(String barcode) {
+        return productRepo.findByBarcode(barcode)
+                .map(this::toDto)
+                .orElseThrow(() -> new IllegalStateException("Product not found"));
     }
 }
