@@ -30,11 +30,24 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // AUTH
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // SWAGGER
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // PUBLIC CATALOG
+                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/**").permitAll()
+
+                        // ADMIN
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // USER API
                         .requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/**").permitAll()
+
+                        // EVERYTHING ELSE
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

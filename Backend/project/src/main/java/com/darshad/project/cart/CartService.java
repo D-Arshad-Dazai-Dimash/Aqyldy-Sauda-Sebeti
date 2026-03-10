@@ -35,36 +35,60 @@ public class CartService {
 
     @Transactional
     public CartDto add(String email, UUID storeId, AddToCartRequest req) {
+
         var user = getUserByEmail(email);
 
         var store = storeRepo.findById(storeId)
                 .orElseThrow(() -> new IllegalStateException("Store not found"));
 
         var cart = cartRepo.findGraphByUserIdAndStoreId(user.getId(), storeId)
-                .orElseGet(() -> cartRepo.save(Cart.builder().user(user).store(store).build()));
+                .orElseGet(() -> cartRepo.save(
+                        Cart.builder()
+                                .user(user)
+                                .store(store)
+                                .build()
+                ));
 
         var product = productRepo.findById(req.productId())
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
 
+        if (!product.isActive())
+            throw new IllegalStateException("Product inactive");
+
+        if (req.quantity() > product.getStock())
+            throw new IllegalStateException("Not enough stock");
+
         var existing = itemRepo.findByCartIdAndProductId(cart.getId(), product.getId()).orElse(null);
 
         if (existing == null) {
-            itemRepo.save(CartItem.builder()
-                    .cart(cart)
-                    .product(product)
-                    .quantity(req.quantity())
-                    .build());
+
+            itemRepo.save(
+                    CartItem.builder()
+                            .cart(cart)
+                            .product(product)
+                            .quantity(req.quantity())
+                            .build()
+            );
+
         } else {
-            existing.setQuantity(existing.getQuantity() + req.quantity());
+
+            int newQty = existing.getQuantity() + req.quantity();
+
+            if (newQty > product.getStock())
+                throw new IllegalStateException("Not enough stock");
+
+            existing.setQuantity(newQty);
+
         }
 
-        // важно: вернуть актуальную корзину с items+product
         var refreshed = cartRepo.findGraphById(cart.getId()).orElseThrow();
+
         return toDto(refreshed);
     }
 
     @Transactional
     public CartDto updateItem(String email, UUID storeId, UUID itemId, UpdateCartItemRequest req) {
+
         var user = getUserByEmail(email);
 
         var item = itemRepo.findById(itemId)
@@ -75,13 +99,25 @@ public class CartService {
         if (!cart.getUser().getId().equals(user.getId())) {
             throw new IllegalStateException("Not your cart item");
         }
-        if (cart.getStore() == null || !cart.getStore().getId().equals(storeId)) {
+
+        if (!cart.getStore().getId().equals(storeId)) {
             throw new IllegalStateException("Cart item not in this store");
         }
 
-        item.setQuantity(req.quantity());
+        var product = item.getProduct();
+
+        if (req.quantity() > product.getStock()) {
+            throw new IllegalStateException("Not enough stock");
+        }
+
+        if (req.quantity() <= 0) {
+            itemRepo.delete(item);
+        } else {
+            item.setQuantity(req.quantity());
+        }
 
         var refreshed = cartRepo.findGraphById(cart.getId()).orElseThrow();
+
         return toDto(refreshed);
     }
 
@@ -114,6 +150,7 @@ public class CartService {
         var cart = cartRepo.findGraphByUserIdAndStoreId(user.getId(), storeId)
                 .orElseThrow(() -> new IllegalStateException("Cart not found"));
 
+        itemRepo.deleteAll(cart.getItems());
         cart.getItems().clear();
 
         var refreshed = cartRepo.findGraphById(cart.getId()).orElseThrow();

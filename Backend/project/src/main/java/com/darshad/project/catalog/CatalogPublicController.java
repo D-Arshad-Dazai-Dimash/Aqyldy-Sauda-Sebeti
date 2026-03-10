@@ -39,4 +39,9 @@ public class CatalogPublicController {
     public ProductDto product(@PathVariable UUID id) {
         return productService.get(id);
     }
+
+    @GetMapping("/products/barcode/{barcode}")
+    public ProductDto productByBarcode(@PathVariable String barcode) {
+        return productService.findByBarcode(barcode);
+    }
 }

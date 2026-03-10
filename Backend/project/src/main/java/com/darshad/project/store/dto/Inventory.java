@@ -1,6 +1,8 @@
-package com.darshad.project.store;
+package com.darshad.project.store.dto;
 
 import com.darshad.project.catalog.product.Product;
+import com.darshad.project.store.InventoryId;
+import com.darshad.project.store.Store;
 import jakarta.persistence.*;
 import lombok.*;
 

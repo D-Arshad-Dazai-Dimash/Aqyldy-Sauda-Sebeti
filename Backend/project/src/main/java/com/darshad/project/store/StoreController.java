@@ -1,5 +1,6 @@
 package com.darshad.project.store;
 
+import com.darshad.project.store.dto.InventoryResponse;
 import com.darshad.project.store.dto.StoreResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -22,5 +23,15 @@ public class StoreController {
     @GetMapping("/{id}")
     public StoreResponse getById(@PathVariable UUID id) {
         return storeService.getById(id);
+    }
+
+    @GetMapping("/{id}/inventory")
+    public List<InventoryResponse> getInventory(@PathVariable UUID id) {
+        return storeService.getStoreInventory(id);
+    }
+
+    @GetMapping("/{id}/products")
+    public List<InventoryResponse> getProducts(@PathVariable UUID id) {
+        return storeService.getStoreProducts(id);
     }
 }

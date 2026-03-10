@@ -13,6 +13,9 @@ public record ProductUpsertRequest(
         @NotBlank @Size(max = 180) String title,
         String description,
         @NotNull @Positive BigDecimal price,
+        String barcode,
+        Integer stock,
+        BigDecimal discount,
         String imageUrl,
         Boolean active,
         List<UUID> categoryIds

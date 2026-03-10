@@ -9,6 +9,9 @@ public record ProductDto(
         String title,
         String description,
         BigDecimal price,
+        String barcode,
+        Integer stock,
+        BigDecimal discount,
         String imageUrl,
         boolean active,
         List<UUID> categoryIds

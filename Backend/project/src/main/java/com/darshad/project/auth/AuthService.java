@@ -4,6 +4,7 @@ import com.darshad.project.auth.dto.AuthResponse;
 import com.darshad.project.auth.dto.LoginRequest;
 import com.darshad.project.auth.dto.RegisterRequest;
 import com.darshad.project.security.jwt.JwtService;
+import com.darshad.project.user.Role;
 import com.darshad.project.user.User;
 import com.darshad.project.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,25 +24,36 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
+
+        String email = req.email().toLowerCase();
+
+        if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already registered");
         }
 
+        if (req.password().length() < 6) {
+            throw new IllegalArgumentException("Password too short");
+        }
+
         User user = User.builder()
-                .email(req.email().toLowerCase())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(req.password()))
-                .role("USER")
+                .role(Role.USER)
                 .enabled(true)
                 .build();
 
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getEmail(), user.getRole());
-        return new AuthResponse(token);
+        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(token, "Bearer");
     }
 
     public AuthResponse login(LoginRequest req) {
-        User user = userRepository.findByEmail(req.email().toLowerCase())
+
+        String email = req.email().toLowerCase();
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
         if (!user.isEnabled()) {
@@ -52,7 +64,8 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
-        String token = jwtService.generateToken(user.getEmail(), user.getRole());
-        return new AuthResponse(token);
+        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(token, "Bearer");
     }
 }

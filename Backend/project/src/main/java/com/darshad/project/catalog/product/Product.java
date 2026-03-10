@@ -32,6 +32,16 @@ public class Product {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
+    @Column(unique = true, length = 64)
+    private String barcode;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer stock = 0;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal discount;
+
     @Column(columnDefinition = "text")
     private String imageUrl;
 
@@ -43,6 +53,8 @@ public class Product {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
+
+
 
     @ManyToMany
     @JoinTable(

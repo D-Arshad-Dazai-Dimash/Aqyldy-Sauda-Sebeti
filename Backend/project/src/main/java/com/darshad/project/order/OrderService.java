@@ -5,6 +5,8 @@ import com.darshad.project.catalog.product.ProductRepository;
 import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.Store;
 import com.darshad.project.user.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,9 @@ public class OrderService {
     private final UserRepository userRepo;
     private final InventoryRepository inventoryRepo;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Transactional
     public OrderResponse checkout(String email, CheckoutRequest request) {
 
@@ -37,10 +42,11 @@ public class OrderService {
             throw new IllegalStateException("Cart is empty");
         }
 
-        // создаём заказ (store обязателен)
+        var storeRef = entityManager.getReference(Store.class, storeId);
+
         var order = Order.builder()
                 .user(user)
-                .store(new Store(storeId)) // reference по id
+                .store(storeRef)
                 .comment(request.comment())
                 .status(OrderStatus.CREATED)
                 .build();
@@ -52,24 +58,20 @@ public class OrderService {
             var product = productRepo.findById(cartItem.getProduct().getId())
                     .orElseThrow(() -> new IllegalStateException("Product not found"));
 
-            if (!product.isActive()) {
+            if (!product.isActive())
                 throw new IllegalStateException("Product inactive: " + product.getTitle());
-            }
 
-            // ✅ проверяем остаток в конкретном магазине
             var inv = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
-                    .orElseThrow(() -> new IllegalStateException("No inventory for product in this store: " + product.getTitle()));
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No inventory for product in this store: " + product.getTitle()));
 
             if (inv.getQuantity() < cartItem.getQuantity()) {
                 throw new IllegalStateException(
-                        "Not enough stock for: " + product.getTitle() +
-                                ". Available=" + inv.getQuantity() +
-                                ", requested=" + cartItem.getQuantity()
-                );
+                        "Not enough stock for: " + product.getTitle());
             }
 
-            // ✅ списываем
             inv.setQuantity(inv.getQuantity() - cartItem.getQuantity());
+            inventoryRepo.save(inv);
 
             BigDecimal lineTotal = product.getPrice()
                     .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
@@ -91,7 +93,6 @@ public class OrderService {
 
         orderRepo.save(order);
 
-        // очистка корзины
         cart.getItems().clear();
 
         return new OrderResponse(
