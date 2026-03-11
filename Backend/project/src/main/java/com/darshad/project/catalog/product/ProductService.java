@@ -18,11 +18,22 @@ public class ProductService {
     private final ProductRepository productRepo;
     private final CategoryRepository categoryRepo;
 
+    @Transactional(readOnly = true)
     public Page<ProductDto> search(String q, UUID categoryId, Boolean active, Pageable pageable) {
-        Specification<Product> spec = Specification
-                .where(ProductSpecs.search(q))
-                .and(ProductSpecs.inCategory(categoryId))
-                .and(ProductSpecs.isActive(active));
+
+        Specification<Product> spec = (root, query, cb) -> cb.conjunction();
+
+        if (q != null && !q.isBlank()) {
+            spec = spec.and(ProductSpecs.search(q));
+        }
+
+        if (categoryId != null) {
+            spec = spec.and(ProductSpecs.inCategory(categoryId));
+        }
+
+        if (active != null) {
+            spec = spec.and(ProductSpecs.isActive(active));
+        }
 
         return productRepo.findAll(spec, pageable)
                 .map(this::toDto);
