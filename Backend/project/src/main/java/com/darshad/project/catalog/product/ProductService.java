@@ -1,5 +1,6 @@
 package com.darshad.project.catalog.product;
 
+import com.darshad.project.catalog.category.Category;
 import com.darshad.project.catalog.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -108,7 +109,7 @@ public class ProductService {
                 p.getDiscount(),
                 p.getImageUrl(),
                 p.isActive(),
-                p.getCategories().stream().map(c -> c.getId()).toList()
+                p.getCategories().stream().map(Category::getId).toList()
         );
     }
 
