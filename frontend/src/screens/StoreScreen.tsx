@@ -14,7 +14,6 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 import Collapsible from 'react-native-collapsible';
 import { useFavoritesStore } from '../store/favoritesStore';
-import FastImage from 'react-native-fast-image';
 // @ts-ignore
 import VerifiedIcon from '../assets/icons/verified.svg'; // SVG белгішесі
 
@@ -49,48 +48,46 @@ export default function StoreScreen({ navigation }: any) {
   const { toggleFavorite, isFavorite } = useFavoritesStore();
 
   const renderProductItem = ({ item }: { item: any }) => {
-    const isFav = isFavorite(item.id);
+  const isFav = isFavorite(item.id);
 
-    return (
-      <TouchableOpacity 
-        activeOpacity={0.9}
-        style={styles.productGridItem}
-        onPress={() => navigation.navigate('ProductScreen', { product: item })}
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.productGridItem}
+      onPress={() => navigation.navigate('ProductScreen', { product: item })}
+    >
+      <TouchableOpacity
+        style={styles.favoriteBtn}
+        onPress={() => toggleFavorite(item.id)}
       >
-        {/* Жүрекше */}
-        <TouchableOpacity 
-          style={styles.favoriteBtn} 
-          onPress={() => toggleFavorite(item.id)}
-        >
-          <Image 
-            source={isFav 
-              ? require('../assets/icons/heart.png') 
+        <Image
+          source={
+            isFav
+              ? require('../assets/icons/heart.png')
               : require('../assets/icons/love.png')
-            } 
-            style={styles.heartIcon} 
-            resizeMode="contain" 
-          />
-        </TouchableOpacity>
-
-        {/* 2. ТАУАР СУРЕТІ - FastImage қолданылды */}
-        <View style={styles.imageWrapper}>
-          <FastImage 
-            source={item.image} 
-            style={styles.productGridImage} 
-            resizeMode={FastImage.resizeMode.contain}
-          />
-        </View>
-
-        {/* Тауар аты және бағасы */}
-        <View style={styles.productTextContainer}>
-          <Text style={styles.productGridTitle} numberOfLines={2}>
-            {item.name}
-          </Text>
-          <Text style={styles.productGridPrice}>{item.price}</Text>
-        </View>
+          }
+          style={styles.heartIcon}
+          resizeMode="contain"
+        />
       </TouchableOpacity>
-    );
-  };
+
+      <View style={styles.imageWrapper}>
+        <Image
+          source={item.image}
+          style={styles.productGridImage}
+          resizeMode="contain"
+        />
+      </View>
+
+      <View style={styles.productTextContainer}>
+        <Text style={styles.productGridTitle} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={styles.productGridPrice}>{item.price}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
   return (
     <SafeAreaView style={styles.container}>
