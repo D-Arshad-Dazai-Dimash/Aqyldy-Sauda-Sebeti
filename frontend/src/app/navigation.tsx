@@ -15,6 +15,8 @@ import ScanScreen from '../screens/ScanScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import SearchScreen from '../screens/SearchScreen';
+import StoreScreen from '../screens/StoreScreen'; // СЕНІҢ БЕТІҢ
+import ProductScreen from '../screens/ProductScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -98,16 +100,14 @@ function MainTabs() {
 // 2. Стек для авторизованного пользователя
 function AppStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+      {/* Төменгі мәзірі бар негізгі бет */}
       <Stack.Screen name="Main" component={MainTabs} />
-      <Stack.Screen 
-        name="Search" 
-        component={SearchScreen} 
-        options={{ 
-          animation: 'fade',
-          presentation: 'transparentModal' 
-        }} 
-      />
+      
+      {/* Төменгі мәзірсіз ашылатын сенің беттерің */}
+      <Stack.Screen name="Search" component={SearchScreen} />
+      <Stack.Screen name="StoreScreen" component={StoreScreen} />
+      <Stack.Screen name="ProductScreen" component={ProductScreen} />
     </Stack.Navigator>
   );
 }

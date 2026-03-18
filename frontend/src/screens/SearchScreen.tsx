@@ -1,117 +1,270 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, TextInput, TouchableOpacity, 
-  FlatList, Image, SafeAreaView, ScrollView 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  Platform,
+  ScrollView,
+  Image,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import { FilterModal } from '../components/FilterModal'; // Сүзгі компонентін ұмытпаймыз
 
-const RECENT_SEARCHES = ['Nestle', 'Греческий йогурт', 'Дубайский шоколад', 'Cola'];
+// @ts-ignore
+import VerifiedIcon from '../assets/icons/verified.svg'; // SVG импорттау
 
-const MOCK_PRODUCTS = [
-  { id: '1', name: 'Колбаса Narlen', price: '1900 ₸', shop: 'Magnum', image: 'https://via.placeholder.com/100' },
-  { id: '2', name: 'Докторская колбаса', price: '2900 ₸', shop: 'Magnum', image: 'https://via.placeholder.com/100' },
-  { id: '3', name: 'Колбаса Папа может', price: '1870 ₸', shop: 'Magnum', image: 'https://via.placeholder.com/100' },
+// ТЕСТТІК МӘЛІМЕТТЕР (Backend келгендей)
+const MOCK_STORES_RESULTS = [
+  {
+    id: '1',
+    name: 'Magnum',
+    logo: require('../assets/magnum-logo.png'), 
+    isVerified: true,
+    totalProducts: 325,
+    products: [
+      { id: 'p1', name: 'Колбаса Narlen', price: '1900 ₸' },
+      { id: 'p2', name: 'Докторская', price: '2900 ₸' },
+      { id: 'p3', name: 'Папа может', price: '1870 ₸' },
+      { id: 'p4', name: 'Колбаса Сливочная', price: '2100 ₸' },
+    ],
+  },
+  {
+    id: '2',
+    name: 'Small',
+    logo: require('../assets/magnum-logo.png'), 
+    isVerified: true,
+    totalProducts: 150,
+    products: [
+      { id: 'p5', name: 'Сүт', price: '450 ₸' },
+      { id: 'p6', name: 'Айран', price: '380 ₸' },
+    ],
+  },
 ];
 
 export default function SearchScreen({ navigation }: any) {
-  const [query, setQuery] = useState('');
-  const [isSearched, setIsSearched] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [history, setHistory] = useState(['Nestle', 'Греческий йогурт', 'Дубайский шоколад', 'Cola']);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  
+  // ФИЛЬТР КҮЙЛЕРІ (STATE)
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [priceRange, setPriceRange] = useState([500, 10000]);
+  const [selectedStores, setSelectedStores] = useState<string[]>(['Magnum']);
+
+  const toggleFavorite = (productId: string) => {
+    setFavorites((prev) =>
+      prev.includes(productId) 
+        ? prev.filter((id) => id !== productId) 
+        : [...prev, productId]
+    );
+  };
+
+  const toggleStore = (store: string) => {
+    setSelectedStores(prev => 
+      prev.includes(store) ? prev.filter(s => s !== store) : [...prev, store]
+    );
+  };
+
+  const removeHistoryItem = (item: string) => {
+    setHistory(history.filter((h) => h !== item));
+  };
+
+  const clearHistory = () => setHistory([]);
+
+  // --- ІЗДЕУ НӘТИЖЕЛЕРІН ШЫҒАРАТЫН ФУНКЦИЯ (МАГАЗИНДЕР ОСЫ ЖЕРДЕ) ---
+  const renderSearchResults = () => {
+    return (
+      <ScrollView style={styles.resultsBody} showsVerticalScrollIndicator={false}>
+        {MOCK_STORES_RESULTS.map((store) => (
+          <View key={store.id} style={styles.storeCard}>
+            
+            {/* 1. ДҮКЕННІҢ HEADER-І (ОСЫ ЖЕРДІ TouchableOpacity-ГЕ ОРАДЫҚ) */}
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('StoreScreen', { storeId: store.id })}
+              style={styles.storeHeaderRow}
+            >
+              <View style={styles.storeInfoMain}>
+                <Image source={store.logo} style={styles.storeLogo} resizeMode="cover" />
+                <View style={styles.storeTitleCol}>
+                  <View style={styles.storeNameRow}>
+                    <Text style={styles.storeName}>{store.name}</Text>
+                    {/* SVG ГАЛОЧКА ОСЫ ЖЕРДЕ */}
+                    {store.isVerified && (
+                      <VerifiedIcon width={16} height={16} style={styles.verifyIcon} />
+                    )}
+                  </View>
+                  <Text style={styles.productCountText}>{store.totalProducts} өнім</Text>
+                </View>
+              </View>
+              {/* Оң жақтағы стрелка */}
+              <View style={styles.arrowBtn}>
+                <Feather name="chevron-right" size={24} color="#64748B" />
+              </View>
+            </TouchableOpacity>
+
+            {/* 2. ТАУАРЛАРДЫҢ КВАДРАТЫ (110x110) */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsScroll}>
+              {store.products.map((product) => {
+                const isFav = favorites.includes(product.id);
+                return (
+                  <View key={product.id} style={styles.productSquare}>
+                    
+                    {/* ЖҮРЕКШЕ БАТЫРМАСЫ (Сенің PNG суреттеріңмен) */}
+                    <TouchableOpacity 
+                      style={styles.favoriteBtn} 
+                      onPress={() => toggleFavorite(product.id)}
+                    >
+                      <Image 
+                        source={isFav 
+                          ? require('../assets/icons/heart.png') 
+                          : require('../assets/icons/love.png')
+                        } 
+                        style={styles.heartIcon} 
+                        resizeMode="contain" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ))}
+      </ScrollView>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Шапка поиска */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="chevron-left" size={28} color="#1E293B" />
+      {/* HEADER ПЕН ІЗДЕУ ЖОЛАҒЫ */}
+      <View style={styles.searchHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Feather name="chevron-left" size={32} color="#000" />
         </TouchableOpacity>
-        <View style={styles.searchBar}>
-          <Feather name="search" size={20} color="#94A3B8" />
-          <TextInput
-            style={styles.input}
-            placeholder="Поиск..."
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => setIsSearched(true)}
-            autoFocus
+        
+        <View style={styles.activeSearchInputContainer}>
+          <Feather name="search" size={20} color="#000" style={styles.searchIcon} />
+          <TextInput 
+            autoFocus 
+            placeholder="Іздеу" 
+            style={styles.activeSearchInput}
+            placeholderTextColor="#94A3B8"
+            value={searchQuery}
+            onChangeText={(text) => setSearchQuery(text)}
           />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => {setQuery(''); setIsSearched(false);}}>
-              <Feather name="x" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
+          {/* ФИЛЬТР БАТЫРМАСЫ */}
+          <TouchableOpacity onPress={() => setIsFilterVisible(true)}>
+            <Feather name="sliders" size={20} color="#000" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {!isSearched ? (
-        /* История поиска (как на 1-м скрине) */
-        <View style={styles.content}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Соңғы іздегеніңіз</Text>
-            <TouchableOpacity><Text style={styles.clearBtn}>Тазалау</Text></TouchableOpacity>
+      {/* ШАРТТЫ ТАҢДАУ */}
+      {searchQuery.length > 0 ? renderSearchResults() : (
+        <View style={styles.searchBody}>
+          <View style={styles.historyTitleRow}>
+            <Text style={styles.historyTitle}>Соңғы іздегеніңіз</Text>
+            <TouchableOpacity onPress={clearHistory}>
+              <Text style={styles.clearAllText}>Тазалау</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.chipContainer}>
-            {RECENT_SEARCHES.map((item, index) => (
-              <View key={index} style={styles.chip}>
-                <Text style={styles.chipText}>{item}</Text>
-                <Feather name="x" size={14} color="#94A3B8" style={{marginLeft: 5}} />
+          <View style={styles.historyTags}>
+            {history.map((item, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{item}</Text>
+                <TouchableOpacity onPress={() => removeHistoryItem(item)}>
+                  <Feather name="x" size={16} color="#94A3B8" style={styles.xIcon} />
+                </TouchableOpacity>
               </View>
             ))}
           </View>
         </View>
-      ) : (
-        /* Результаты поиска (как на 2-м скрине) */
-        <ScrollView style={styles.resultsContainer}>
-           <View style={styles.shopSection}>
-              <View style={styles.shopHeader}>
-                  <View style={styles.shopLogo}><Text style={{color:'#FFF', fontWeight:'bold'}}>magnum</Text></View>
-                  <View>
-                      <Text style={styles.shopName}>Magnum <Feather name="check-circle" size={14} color="#2563EB" /></Text>
-                      <Text style={styles.shopCount}>325 өнім</Text>
-                  </View>
-                  <Feather name="chevron-right" size={24} color="#94A3B8" style={{marginLeft:'auto'}} />
-              </View>
-              <FlatList
-                horizontal
-                data={MOCK_PRODUCTS}
-                renderItem={({item}) => (
-                    <View style={styles.productCard}>
-                        <TouchableOpacity style={styles.heartBtn}><Feather name="heart" size={16} color="#1E293B" /></TouchableOpacity>
-                        <Image source={{uri: item.image}} style={styles.productImg} />
-                        <Text style={styles.productName}>{item.name}</Text>
-                        <Text style={styles.productPrice}>{item.price}</Text>
-                    </View>
-                )}
-                keyExtractor={item => item.id}
-                showsHorizontalScrollIndicator={false}
-              />
-           </View>
-        </ScrollView>
       )}
+
+      {/* ФИЛЬТР КОМПОНЕНТІ */}
+      <FilterModal 
+        isVisible={isFilterVisible}
+        onClose={() => setIsFilterVisible(false)}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+        selectedStores={selectedStores}
+        toggleStore={toggleStore}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', marginLeft: 10, paddingHorizontal: 15, borderRadius: 12, height: 45 },
-  input: { flex: 1, marginLeft: 10, fontSize: 16 },
-  content: { padding: 20 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
-  clearBtn: { color: '#7C3AED' },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  chip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginRight: 10, marginBottom: 10 },
-  chipText: { color: '#64748B' },
-  resultsContainer: { flex: 1, backgroundColor: '#F8FAFC' },
-  shopSection: { backgroundColor: '#FFF', marginBottom: 10, paddingVertical: 15 },
-  shopHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, marginBottom: 15 },
-  shopLogo: { width: 60, height: 60, backgroundColor: '#E11D48', borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  shopName: { fontSize: 18, fontWeight: 'bold' },
-  shopCount: { color: '#94A3B8' },
-  productCard: { width: 130, backgroundColor: '#FFF', marginLeft: 15, padding: 10, borderRadius: 15, borderWidth: 1, borderColor: '#F1F5F9', alignItems: 'center' },
-  productImg: { width: 80, height: 80, marginBottom: 10 },
-  productName: { fontSize: 12, textAlign: 'center', height: 32 },
-  productPrice: { fontSize: 14, fontWeight: 'bold', color: '#27AE60' },
-  heartBtn: { position: 'absolute', right: 8, top: 8, zIndex: 1 }
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: Platform.OS === 'ios' ? 10 : 40, 
+    paddingBottom: 10,
+  },
+  backBtn: { marginRight: 10 },
+  activeSearchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#00449C',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  searchIcon: { marginRight: 10 },
+  activeSearchInput: { flex: 1, fontSize: 16, color: '#000', fontWeight: '500', paddingVertical: 0 },
+  
+  searchBody: { paddingHorizontal: 25, marginTop: 30 },
+  historyTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  historyTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
+  clearAllText: { color: '#00449C', fontWeight: '600', fontSize: 14 },
+  historyTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tag: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
+  tagText: { color: '#64748B', fontSize: 14, fontWeight: '500' },
+  xIcon: { marginLeft: 8 },
+
+  resultsBody: { paddingHorizontal: 20, marginTop: 25 },
+  storeCard: { marginBottom: 30 },
+  storeHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  storeInfoMain: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  storeLogo: { width: 50, height: 50, borderRadius: 12, marginRight: 15, backgroundColor: '#F1F5F9' },
+  storeTitleCol: { justifyContent: 'center' },
+  storeNameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  storeName: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginRight: 8 },
+  verifyIcon: { marginLeft: 6, marginTop: 1 },
+  productCountText: { fontSize: 14, color: '#64748B', fontWeight: '500' },
+  arrowBtn: { padding: 5, marginLeft: 10 },
+
+  productsScroll: { gap: 15, paddingRight: 20 },
+  productSquare: {
+    width: 110,
+    height: 110,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    position: 'relative',
+  },
+  
+  favoriteBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+    borderRadius: 10,
+    padding: 3,
+  },
+  heartIcon: { width: 22, height: 22 }
 });
