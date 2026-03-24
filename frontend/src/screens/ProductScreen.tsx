@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,127 +8,227 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  FlatList,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
+import { useCartStore } from '../store/cartStore';
+import * as ProductsApi from '../api/products';
+import type { Product } from '../types/api';
 
 const { width } = Dimensions.get('window');
-const GLOBAL_PADDING = 20; // Бүкіл бетке ортақ шеткі отступ
-
-const SIMILAR_PRODUCTS = [
-  { id: 's1', image: require('../assets/p1.png') },
-  { id: 's2', image: require('../assets/p1.png') },
-  { id: 's3', image: require('../assets/p1.png') },
-  { id: 's4', image: require('../assets/p1.png') },
-  { id: 's5', image: require('../assets/p1.png') },
-];
+const GLOBAL_PADDING = 20;
 
 export default function ProductScreen({ route, navigation }: any) {
-  const product = route.params?.product || { 
-    id: 'p1', 
-    name: 'Докторская колбаса', 
-    price: '2900 ₸' 
-  };
+  const productId: string | undefined = route.params?.productId;
+  const storeId: string | undefined = route.params?.storeId;
+
+  // Support legacy navigation that passes full product object
+  const legacyProduct = route.params?.product;
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const { toggleFavorite, isFavorite } = useFavoritesStore();
-  const isFav = isFavorite(product.id);
+  const addItem = useCartStore((s) => s.addItem);
+
+  const id = productId || legacyProduct?.id;
+  const isFav = id ? isFavorite(id) : false;
+
+  useEffect(() => {
+    if (productId) {
+      loadProduct(productId);
+    } else if (legacyProduct) {
+      // Legacy: product object passed directly
+      setProduct({
+        id: legacyProduct.id,
+        title: legacyProduct.name || legacyProduct.title || 'Product',
+        description: null,
+        price: typeof legacyProduct.price === 'number' ? legacyProduct.price : 0,
+        barcode: null,
+        stock: 0,
+        discount: null,
+        imageUrl: null,
+        active: true,
+        categoryIds: [],
+      });
+      setLoading(false);
+    } else {
+      setLoading(false);
+    }
+  }, [productId]);
+
+  const loadProduct = async (pid: string) => {
+    setLoading(true);
+    try {
+      const data = await ProductsApi.getProduct(pid);
+      setProduct(data);
+    } catch {
+      setProduct(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!product || !storeId) {
+      Alert.alert('Info', 'Select a store first to add to cart');
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      await addItem(storeId, product.id);
+      Alert.alert('Added!', `${product.title} added to cart`);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not add to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  const formatPrice = (price: number) => `${Math.round(price)} \u20B8`;
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#4AB7B6" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+            <Feather name="chevron-left" size={32} color="#000" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Product not found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const discountedPrice = product.discount && product.discount > 0
+    ? product.price * (1 - product.discount / 100)
+    : null;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 1. HEADER - Енді бұл 60px-тің ішінде әдемі тұрады */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
           <Feather name="chevron-left" size={32} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => toggleFavorite(product.id)} style={styles.iconBtn}>
-          <Image 
-            source={isFav ? require('../assets/icons/heart.png') : require('../assets/icons/love.png')} 
-            style={styles.heartIcon} 
+        <TouchableOpacity onPress={() => id && toggleFavorite(id)} style={styles.iconBtn}>
+          <Image
+            source={isFav ? require('../assets/icons/heart.png') : require('../assets/icons/love.png')}
+            style={styles.heartIcon}
           />
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* 2. ТАУАР СУРЕТІ (75px қосымша отступпен) */}
+        {/* PRODUCT IMAGE */}
         <View style={styles.imageSection}>
-          <Image source={require('../assets/p1.png')} style={styles.mainImage} resizeMode="contain" />
+          {product.imageUrl ? (
+            <Image source={{ uri: product.imageUrl }} style={styles.mainImage} resizeMode="contain" />
+          ) : (
+            <Image source={require('../assets/p1.png')} style={styles.mainImage} resizeMode="contain" />
+          )}
         </View>
 
-        {/* 3. АТЫ ЖӘНЕ БАҒАСЫ */}
+        {/* NAME & PRICE */}
         <View style={styles.infoSection}>
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>{product.price}</Text>
+          <Text style={styles.productName}>{product.title}</Text>
+          <View style={styles.priceRow}>
+            {discountedPrice ? (
+              <>
+                <Text style={styles.originalPrice}>{formatPrice(product.price)}</Text>
+                <Text style={styles.productPrice}>{formatPrice(discountedPrice)}</Text>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>-{product.discount}%</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
+            )}
+          </View>
+          {product.stock > 0 ? (
+            <Text style={styles.stockText}>In stock: {product.stock}</Text>
+          ) : (
+            <Text style={styles.outOfStockText}>Out of stock</Text>
+          )}
         </View>
 
-        {/* 4. "ҚОСУ" БАТЫРМАСЫ */}
-        <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
-          <Text style={styles.addBtnText}>Қосу</Text>
+        {/* ADD TO CART BUTTON */}
+        <TouchableOpacity
+          style={[styles.addBtn, (!product.active || product.stock === 0) && styles.addBtnDisabled]}
+          activeOpacity={0.8}
+          onPress={handleAddToCart}
+          disabled={!product.active || product.stock === 0 || addingToCart}
+        >
+          {addingToCart ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.addBtnText}>
+              {product.stock === 0 ? 'Out of stock' : 'Add to cart'}
+            </Text>
+          )}
         </TouchableOpacity>
 
-        {/* 5. СИПАТТАМА */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Сипаттама</Text>
-          <Text style={styles.descriptionText}>
-            Бұл жоғары сапалы еттен дайындалған табиғи өнім. Құрамында жасанды қоспалар жоқ, 
-            балалар тағамына және күнделікті тұтынуға өте ыңғайлы. Нәзік дәмі мен 
-            хош иісі сіздің асыңызды ерекше етеді.
-          </Text>
-        </View>
+        {/* DESCRIPTION */}
+        {product.description && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.descriptionText}>{product.description}</Text>
+          </View>
+        )}
 
-        {/* 6. ҰҚСАС ӨНІМДЕР */}
-        <View style={[styles.section, { marginBottom: 40 }]}>
-          <Text style={styles.sectionTitle}>Ұқсас өнімдер</Text>
-          <FlatList
-            data={SIMILAR_PRODUCTS}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.similarList}
-            renderItem={({ item }) => (
-              <View style={styles.similarCard}>
-                <Image source={item.image} style={styles.similarImage} resizeMode="contain" />
-              </View>
-            )}
-          />
-        </View>
+        {/* BARCODE */}
+        {product.barcode && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Barcode</Text>
+            <Text style={styles.barcodeText}>{product.barcode}</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    // Android-та статустық жолақтан қашу үшін
-    paddingTop: Platform.OS === 'android' ? 60 : 0, 
+    paddingTop: Platform.OS === 'android' ? 60 : 0,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: GLOBAL_PADDING, // 20px
-    height: 60, // Хэдердің нақты биіктігі
+    paddingHorizontal: GLOBAL_PADDING,
+    height: 60,
   },
   iconBtn: { padding: 5 },
   heartIcon: { width: 28, height: 28 },
-  
-  scrollContent: {
-    paddingBottom: 20,
-  },
+  scrollContent: { paddingBottom: 40 },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText: { fontSize: 16, color: '#EF4444' },
 
-  // Сурет бөлімі (Ортада тұруы үшін)
   imageSection: {
     marginTop: 20,
-    paddingHorizontal: 75, // Сен айтқан 75px отступ
+    paddingHorizontal: 75,
     alignItems: 'center',
   },
-  mainImage: {
-    width: width - 150, 
-    height: 220,
-  },
+  mainImage: { width: width - 150, height: 220 },
 
   infoSection: {
     alignItems: 'center',
@@ -142,11 +242,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 5,
   },
-  productPrice: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#4AB7B6',
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  productPrice: { fontSize: 22, fontWeight: '700', color: '#4AB7B6' },
+  originalPrice: { fontSize: 16, color: '#94A3B8', textDecorationLine: 'line-through' },
+  discountBadge: {
+    backgroundColor: '#EF4444',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
+  discountText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  stockText: { fontSize: 13, color: '#27AE60', marginTop: 4 },
+  outOfStockText: { fontSize: 13, color: '#EF4444', marginTop: 4 },
 
   addBtn: {
     backgroundColor: '#4AB7B6',
@@ -156,50 +263,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 25,
-    // Көлеңке (Android/iOS)
     elevation: 5,
     shadowColor: '#27AE60',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
   },
+  addBtnDisabled: { backgroundColor: '#CBD5E1' },
   addBtnText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
 
-  // Ортақ секция стилі (Сипаттама және Ұқсас тауарлар үшін)
   section: {
     marginTop: 35,
-    paddingHorizontal: GLOBAL_PADDING, // Бәрінде бірдей 20px
+    paddingHorizontal: GLOBAL_PADDING,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 12,
-  },
-  descriptionText: {
-    fontSize: 15,
-    color: '#64748B',
-    lineHeight: 22,
-  },
-
-  similarList: {
-    paddingRight: 20, // Скролл соңында бос орын болу үшін
-    gap: 15,
-  },
-  similarCard: {
-    width: 75,
-    height: 75,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-  },
-  similarImage: { width: 55, height: 55 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', marginBottom: 12 },
+  descriptionText: { fontSize: 15, color: '#64748B', lineHeight: 22 },
+  barcodeText: { fontSize: 14, color: '#64748B', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
 });
