@@ -13,7 +13,7 @@ spring:
     open-in-view: false
 app:
   jwt:
-    secret: "da5jJL@LJsdmfdsklmkl@KKmklmslkdmsdkmvdskvm225"
+    secret: ${JWT_SECRET:change-me-in-production-use-env-var}
     access-ttl-minutes: 60
 
   # Show SQL params (dev only)

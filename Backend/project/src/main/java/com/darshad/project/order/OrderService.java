@@ -88,7 +88,18 @@ public class OrderService {
             inventoryRepo.save(inv);
             log.debug("  inventory updated: product={}, {} → {}", product.getTitle(), oldQty, inv.getQuantity());
 
-            BigDecimal lineTotal = product.getPrice()
+            // Apply discount: effectivePrice = price * (1 - discount/100)
+            BigDecimal unitPrice = product.getPrice();
+            if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal multiplier = BigDecimal.ONE.subtract(
+                        product.getDiscount().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                );
+                unitPrice = unitPrice.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
+                log.debug("  discount applied: product={}, original={}, discount={}%, effective={}",
+                        product.getTitle(), product.getPrice(), product.getDiscount(), unitPrice);
+            }
+
+            BigDecimal lineTotal = unitPrice
                     .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
             total = total.add(lineTotal);
@@ -97,7 +108,7 @@ public class OrderService {
                     .order(order)
                     .product(product)
                     .quantity(cartItem.getQuantity())
-                    .price(product.getPrice())
+                    .price(unitPrice)
                     .lineTotal(lineTotal)
                     .build();
 
