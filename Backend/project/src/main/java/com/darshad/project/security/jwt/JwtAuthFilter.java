@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,6 +19,8 @@ import java.util.List;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     private final JwtService jwtService;
 
     public JwtAuthFilter(JwtService jwtService) {
@@ -28,9 +32,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        String method = request.getMethod();
+        String uri = request.getRequestURI();
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (header == null || !header.startsWith("Bearer ")) {
+            log.debug("→ {} {} (no token)", method, uri);
             filterChain.doFilter(request, response);
             return;
         }
@@ -50,9 +57,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                log.debug("→ {} {} ✓ authenticated: email={}, role={}", method, uri, email, role);
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            log.warn("→ {} {} ✗ token EXPIRED: {}", method, uri, e.getMessage());
+            SecurityContextHolder.clearContext();
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            log.warn("→ {} {} ✗ token TAMPERED: {}", method, uri, e.getMessage());
+            SecurityContextHolder.clearContext();
         } catch (Exception e) {
-            // токен плохой — просто не аутентифицируем
+            log.warn("→ {} {} ✗ token INVALID: {} — {}", method, uri, e.getClass().getSimpleName(), e.getMessage());
             SecurityContextHolder.clearContext();
         }
 

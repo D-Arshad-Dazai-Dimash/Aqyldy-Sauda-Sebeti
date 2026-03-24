@@ -6,6 +6,8 @@ import com.darshad.project.store.StoreRepository;
 import com.darshad.project.user.User;
 import com.darshad.project.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CartService {
 
+    private static final Logger log = LoggerFactory.getLogger(CartService.class);
+
     private final CartRepository cartRepo;
     private final CartItemRepository itemRepo;
     private final UserRepository userRepo;
@@ -24,17 +28,22 @@ public class CartService {
 
     @Transactional(readOnly = true)
     public CartDto getMyCart(String email, UUID storeId) {
+        log.debug("▶ getMyCart: email={}, storeId={}", email, storeId);
         var user = getUserByEmail(email);
 
         var cart = cartRepo.findGraphByUserIdAndStoreId(user.getId(), storeId).orElse(null);
         if (cart == null) {
+            log.debug("  cart empty for user={}, storeId={}", email, storeId);
             return new CartDto(null, java.util.List.of(), BigDecimal.ZERO);
         }
+        log.debug("  cart found: id={}, items={}", cart.getId(), cart.getItems().size());
         return toDto(cart);
     }
 
     @Transactional
     public CartDto add(String email, UUID storeId, AddToCartRequest req) {
+
+        log.info("▶ CART ADD: email={}, storeId={}, productId={}, qty={}", email, storeId, req.productId(), req.quantity());
 
         var user = getUserByEmail(email);
 
@@ -42,21 +51,28 @@ public class CartService {
                 .orElseThrow(() -> new IllegalStateException("Store not found"));
 
         var cart = cartRepo.findGraphByUserIdAndStoreId(user.getId(), storeId)
-                .orElseGet(() -> cartRepo.save(
+                .orElseGet(() -> {
+                    log.debug("  creating new cart for user={}, store={}", email, store.getName());
+                    return cartRepo.save(
                         Cart.builder()
                                 .user(user)
                                 .store(store)
                                 .build()
-                ));
+                    );
+                });
 
         var product = productRepo.findById(req.productId())
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
 
-        if (!product.isActive())
+        if (!product.isActive()) {
+            log.warn("  ✗ product inactive: {}", product.getTitle());
             throw new IllegalStateException("Product inactive");
+        }
 
-        if (req.quantity() > product.getStock())
+        if (req.quantity() > product.getStock()) {
+            log.warn("  ✗ not enough stock: requested={}, available={}, product={}", req.quantity(), product.getStock(), product.getTitle());
             throw new IllegalStateException("Not enough stock");
+        }
 
         var existing = itemRepo.findByCartIdAndProductId(cart.getId(), product.getId()).orElse(null);
 
@@ -69,15 +85,19 @@ public class CartService {
                             .quantity(req.quantity())
                             .build()
             );
+            log.info("  ✓ new item added: product={}, qty={}", product.getTitle(), req.quantity());
 
         } else {
 
             int newQty = existing.getQuantity() + req.quantity();
 
-            if (newQty > product.getStock())
+            if (newQty > product.getStock()) {
+                log.warn("  ✗ not enough stock (cumulative): requested={}, available={}, product={}", newQty, product.getStock(), product.getTitle());
                 throw new IllegalStateException("Not enough stock");
+            }
 
             existing.setQuantity(newQty);
+            log.info("  ✓ item qty updated: product={}, oldQty={}, newQty={}", product.getTitle(), existing.getQuantity(), newQty);
 
         }
 
@@ -89,6 +109,8 @@ public class CartService {
     @Transactional
     public CartDto updateItem(String email, UUID storeId, UUID itemId, UpdateCartItemRequest req) {
 
+        log.info("▶ CART UPDATE: email={}, storeId={}, itemId={}, newQty={}", email, storeId, itemId, req.quantity());
+
         var user = getUserByEmail(email);
 
         var item = itemRepo.findById(itemId)
@@ -97,6 +119,7 @@ public class CartService {
         var cart = item.getCart();
 
         if (!cart.getUser().getId().equals(user.getId())) {
+            log.warn("  ✗ ownership mismatch: cartUser={}, requestUser={}", cart.getUser().getEmail(), email);
             throw new IllegalStateException("Not your cart item");
         }
 
@@ -107,13 +130,16 @@ public class CartService {
         var product = item.getProduct();
 
         if (req.quantity() > product.getStock()) {
+            log.warn("  ✗ not enough stock: requested={}, available={}", req.quantity(), product.getStock());
             throw new IllegalStateException("Not enough stock");
         }
 
         if (req.quantity() <= 0) {
             itemRepo.delete(item);
+            log.info("  ✓ item removed (qty<=0): product={}", product.getTitle());
         } else {
             item.setQuantity(req.quantity());
+            log.info("  ✓ item updated: product={}, qty={}", product.getTitle(), req.quantity());
         }
 
         var refreshed = cartRepo.findGraphById(cart.getId()).orElseThrow();
@@ -123,6 +149,7 @@ public class CartService {
 
     @Transactional
     public CartDto removeItem(String email, UUID storeId, UUID itemId) {
+        log.info("▶ CART REMOVE: email={}, storeId={}, itemId={}", email, storeId, itemId);
         var user = getUserByEmail(email);
 
         var item = itemRepo.findById(itemId)
@@ -138,6 +165,7 @@ public class CartService {
         }
 
         itemRepo.delete(item);
+        log.info("  ✓ item removed: product={}", item.getProduct().getTitle());
 
         var refreshed = cartRepo.findGraphById(cart.getId()).orElseThrow();
         return toDto(refreshed);
@@ -145,13 +173,16 @@ public class CartService {
 
     @Transactional
     public CartDto clear(String email, UUID storeId) {
+        log.info("▶ CART CLEAR: email={}, storeId={}", email, storeId);
         var user = getUserByEmail(email);
 
         var cart = cartRepo.findGraphByUserIdAndStoreId(user.getId(), storeId)
                 .orElseThrow(() -> new IllegalStateException("Cart not found"));
 
+        int count = cart.getItems().size();
         itemRepo.deleteAll(cart.getItems());
         cart.getItems().clear();
+        log.info("  ✓ cart cleared: {} items removed", count);
 
         var refreshed = cartRepo.findGraphById(cart.getId()).orElseThrow();
         return toDto(refreshed);
