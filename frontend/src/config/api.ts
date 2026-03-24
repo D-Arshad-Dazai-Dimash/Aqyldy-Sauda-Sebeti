@@ -1,5 +1,12 @@
-// src/config/api.ts
-export const API_BASE_URL = 'http://10.0.2.2:8080'; 
-// Android emulator -> 10.0.2.2
-// Если реальный телефон: http://<IP_ПК>:8080
-// iOS simulator: http://localhost:8080
+import { Platform } from 'react-native';
+
+// Android emulator uses 10.0.2.2 to reach host machine
+// iOS simulator uses localhost
+// Real device: replace with your machine's local IP
+const DEV_HOST = Platform.select({
+  android: '10.0.2.2',
+  ios: 'localhost',
+  default: 'localhost',
+});
+
+export const API_BASE_URL = `http://${DEV_HOST}:8080`;
