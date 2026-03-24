@@ -63,7 +63,7 @@ public class StoreService {
             throw new IllegalStateException("Store inactive");
         }
 
-        var items = inventoryRepository.findByStore_Id(storeId)
+        var items = inventoryRepository.findWithProductByStore_Id(storeId)
                 .stream()
                 .map(inv -> new InventoryResponse(
                         inv.getProduct().getId(),
@@ -88,7 +88,7 @@ public class StoreService {
             throw new IllegalStateException("Store inactive");
         }
 
-        var items = inventoryRepository.findByStore_Id(storeId)
+        var items = inventoryRepository.findWithProductByStore_Id(storeId)
                 .stream()
                 .filter(inv -> inv.getQuantity() > 0)
                 .map(inv -> new InventoryResponse(

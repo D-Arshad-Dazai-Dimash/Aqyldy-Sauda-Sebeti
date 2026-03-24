@@ -48,6 +48,7 @@ public class ProductService {
         return result;
     }
 
+    @Transactional(readOnly = true)
     public ProductDto get(UUID id) {
         log.debug("▶ get product: id={}", id);
         return productRepo.findById(id)
@@ -129,6 +130,7 @@ public class ProductService {
         );
     }
 
+    @Transactional(readOnly = true)
     public ProductDto findByBarcode(String barcode) {
         return productRepo.findByBarcode(barcode)
                 .map(this::toDto)
