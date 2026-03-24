@@ -3,6 +3,8 @@ package com.darshad.project.catalog.product;
 import com.darshad.project.catalog.category.Category;
 import com.darshad.project.catalog.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -16,11 +18,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+
     private final ProductRepository productRepo;
     private final CategoryRepository categoryRepo;
 
     @Transactional(readOnly = true)
     public Page<ProductDto> search(String q, UUID categoryId, Boolean active, Pageable pageable) {
+
+        log.debug("▶ product search: q={}, categoryId={}, active={}, page={}", q, categoryId, active, pageable);
 
         Specification<Product> spec = (root, query, cb) -> cb.conjunction();
 
@@ -36,11 +42,14 @@ public class ProductService {
             spec = spec.and(ProductSpecs.isActive(active));
         }
 
-        return productRepo.findAll(spec, pageable)
+        var result = productRepo.findAll(spec, pageable)
                 .map(this::toDto);
+        log.debug("  found {} products (page {}/{})", result.getNumberOfElements(), result.getNumber(), result.getTotalPages());
+        return result;
     }
 
     public ProductDto get(UUID id) {
+        log.debug("▶ get product: id={}", id);
         return productRepo.findById(id)
                 .map(this::toDto)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
@@ -48,6 +57,7 @@ public class ProductService {
 
     @Transactional
     public ProductDto create(ProductUpsertRequest req) {
+        log.info("▶ CREATE product: title={}, barcode={}, price={}", req.title(), req.barcode(), req.price());
         var p = Product.builder()
                 .title(req.title())
                 .description(req.description())
@@ -60,11 +70,14 @@ public class ProductService {
                 .build();
 
         applyCategories(p, req);
-        return toDto(productRepo.save(p));
+        var saved = productRepo.save(p);
+        log.info("✓ product CREATED: id={}, title={}", saved.getId(), saved.getTitle());
+        return toDto(saved);
     }
 
     @Transactional
     public ProductDto update(UUID id, ProductUpsertRequest req) {
+        log.info("▶ UPDATE product: id={}, title={}", id, req.title());
         var p = productRepo.findById(id)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
         p.setBarcode(req.barcode());
@@ -80,12 +93,15 @@ public class ProductService {
         if (req.active() != null) p.setActive(req.active());
 
         applyCategories(p, req);
+        log.info("✓ product UPDATED: id={}, title={}", p.getId(), p.getTitle());
         return toDto(p);
     }
 
     @Transactional
     public void delete(UUID id) {
+        log.info("▶ DELETE product: id={}", id);
         productRepo.deleteById(id);
+        log.info("✓ product DELETED: id={}", id);
     }
 
     private void applyCategories(Product p, ProductUpsertRequest req) {
