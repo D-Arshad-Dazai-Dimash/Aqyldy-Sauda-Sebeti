@@ -27,16 +27,23 @@ export default function RegisterScreen({ navigation }: any) {
   const [loading, setLoading] = React.useState(false);
 
   const onSubmit = async () => {
-    if (!email || !password) {
+    // Енді name-ді де тексереміз
+    if (!email || !password || !name) {
       setError('Пожалуйста, заполните все поля');
       return;
     }
+    
     setError(null);
     setLoading(true);
+    
     try {
-      await register(email.trim(), password);
+      await register(email.trim(), password, name.trim());
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Ошибка регистрации');
+      // МЫНА ЖЕРГЕ ҚОС:
+      console.log('--- ТОЛЫҚ ҚАТЕ (ERROR) ---');
+      console.log(e); // Бұл жерде Network Error немесе басқа қате шығады
+      
+      setError(e?.response?.data?.message ?? 'Ошибка регистрации. Проверьте сеть!');
     } finally {
       setLoading(false);
     }

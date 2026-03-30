@@ -1,99 +1,129 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Image,
-  ScrollView,
-  Dimensions,
   FlatList,
+  Dimensions,
+  Image,
   Platform,
+  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import FastImage from 'react-native-fast-image';
 import { useFavoritesStore } from '../store/favoritesStore';
+import { api } from '../api/client';
+import { MOCK_PRODUCTS } from '../constants/mockProducts';
 
 const { width } = Dimensions.get('window');
-const GLOBAL_PADDING = 20; // Бүкіл бетке ортақ шеткі отступ
+const ITEM_WIDTH = (width - (20 * 2) - 15) / 2;
 
-const SIMILAR_PRODUCTS = [
-  { id: 's1', image: require('../assets/p1.png') },
-  { id: 's2', image: require('../assets/p1.png') },
-  { id: 's3', image: require('../assets/p1.png') },
-  { id: 's4', image: require('../assets/p1.png') },
-  { id: 's5', image: require('../assets/p1.png') },
-];
-
-export default function ProductScreen({ route, navigation }: any) {
-  const product = route.params?.product || { 
-    id: 'p1', 
-    name: 'Докторская колбаса', 
-    price: '2900 ₸' 
-  };
-
+export default function ProductListScreen({ route, navigation }: any) {
+  const { subCategoryName } = route?.params || { subCategoryName: 'Тауарлар' };
+  
+  const [realProducts, setRealProducts] = useState<any[]>([]); // Типті нақтыладық
+  const [loading, setLoading] = useState(true);
   const { toggleFavorite, isFavorite } = useFavoritesStore();
-  const isFav = isFavorite(product.id);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* 1. HEADER - Енді бұл 60px-тің ішінде әдемі тұрады */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Feather name="chevron-left" size={32} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => toggleFavorite(product.id)} style={styles.iconBtn}>
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/api/products');
+        setRealProducts(res.data || []);
+      } catch (error) {
+        console.log('Деректерді алу мүмкін болмады:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = [
+    ...realProducts.filter((p: any) => p.subcategory === subCategoryName),
+    ...MOCK_PRODUCTS.filter((p: any) => p.subcategory === subCategoryName)
+  ];
+
+  const renderProductItem = ({ item }: { item: any }) => {
+    const isFav = isFavorite(item.id);
+
+    return (
+      <TouchableOpacity 
+        activeOpacity={0.9}
+        style={styles.productCard}
+        onPress={() => navigation.navigate('ProductScreen', { productId: item.id })}      
+      >     
+        <TouchableOpacity 
+          style={styles.favoriteBtn} 
+          onPress={() => toggleFavorite(item.id)}
+        >
           <Image 
-            source={isFav ? require('../assets/icons/heart.png') : require('../assets/icons/love.png')} 
+            source={isFav 
+              ? require('../assets/icons/heart.png') 
+              : require('../assets/icons/love.png')
+            } 
             style={styles.heartIcon} 
           />
         </TouchableOpacity>
-      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* 2. ТАУАР СУРЕТІ (75px қосымша отступпен) */}
-        <View style={styles.imageSection}>
-          <Image source={require('../assets/p1.png')} style={styles.mainImage} resizeMode="contain" />
-        </View>
-
-        {/* 3. АТЫ ЖӘНЕ БАҒАСЫ */}
-        <View style={styles.infoSection}>
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>{product.price}</Text>
-        </View>
-
-        {/* 4. "ҚОСУ" БАТЫРМАСЫ */}
-        <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
-          <Text style={styles.addBtnText}>Қосу</Text>
-        </TouchableOpacity>
-
-        {/* 5. СИПАТТАМА */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Сипаттама</Text>
-          <Text style={styles.descriptionText}>
-            Бұл жоғары сапалы еттен дайындалған табиғи өнім. Құрамында жасанды қоспалар жоқ, 
-            балалар тағамына және күнделікті тұтынуға өте ыңғайлы. Нәзік дәмі мен 
-            хош иісі сіздің асыңызды ерекше етеді.
-          </Text>
-        </View>
-
-        {/* 6. ҰҚСАС ӨНІМДЕР */}
-        <View style={[styles.section, { marginBottom: 40 }]}>
-          <Text style={styles.sectionTitle}>Ұқсас өнімдер</Text>
-          <FlatList
-            data={SIMILAR_PRODUCTS}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.similarList}
-            renderItem={({ item }) => (
-              <View style={styles.similarCard}>
-                <Image source={item.image} style={styles.similarImage} resizeMode="contain" />
-              </View>
-            )}
+        <View style={styles.imageWrapper}>
+          <FastImage 
+            style={styles.productImage}
+            source={
+              typeof item.image === 'string' 
+                ? { uri: item.image, priority: FastImage.priority.normal } 
+                : item.image
+            }
+            defaultSource={require('../assets/p1.png')}
+            resizeMode={FastImage.resizeMode.contain}
           />
         </View>
-      </ScrollView>
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.productTitle} numberOfLines={2}>{item.name}</Text>
+          <Text style={styles.productPrice}>{item.price} ₸</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Feather name="chevron-left" size={32} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{subCategoryName}</Text>
+        <TouchableOpacity style={styles.searchBtn}>
+          <Feather name="search" size={24} color="#000" />
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#4AB7B6" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProductItem}
+          // keyExtractor-дағы id қатесін осылай түзейміз:
+          keyExtractor={(item: any, index: number) => (item.id ? item.id.toString() : index.toString())}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listPadding}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Бұл бөлімде әзірге тауарлар жоқ</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -102,104 +132,61 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#FFFFFF',
-    // Android-та статустық жолақтан қашу үшін
-    paddingTop: Platform.OS === 'android' ? 60 : 0, 
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, 
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: GLOBAL_PADDING, // 20px
-    height: 60, // Хэдердің нақты биіктігі
-  },
-  iconBtn: { padding: 5 },
-  heartIcon: { width: 28, height: 28 },
-  
-  scrollContent: {
-    paddingBottom: 20,
-  },
-
-  // Сурет бөлімі (Ортада тұруы үшін)
-  imageSection: {
-    marginTop: 20,
-    paddingHorizontal: 75, // Сен айтқан 75px отступ
-    alignItems: 'center',
-  },
-  mainImage: {
-    width: width - 150, 
-    height: 220,
-  },
-
-  infoSection: {
-    alignItems: 'center',
-    marginTop: 20,
-    paddingHorizontal: GLOBAL_PADDING,
-  },
-  productName: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1E293B',
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  productPrice: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#4AB7B6',
-  },
-
-  addBtn: {
-    backgroundColor: '#4AB7B6',
-    marginHorizontal: 60,
-    height: 55,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 25,
-    // Көлеңке (Android/iOS)
-    elevation: 5,
-    shadowColor: '#27AE60',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  },
-  addBtnText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
-
-  // Ортақ секция стилі (Сипаттама және Ұқсас тауарлар үшін)
-  section: {
-    marginTop: 35,
-    paddingHorizontal: GLOBAL_PADDING, // Бәрінде бірдей 20px
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 12,
-  },
-  descriptionText: {
-    fontSize: 15,
-    color: '#64748B',
-    lineHeight: 22,
-  },
-
-  similarList: {
-    paddingRight: 20, // Скролл соңында бос орын болу үшін
-    gap: 15,
-  },
-  similarCard: {
-    width: 75,
-    height: 75,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingVertical: 15,
     backgroundColor: '#FFFFFF',
+  },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B' },
+  backBtn: { marginLeft: -10, padding: 5 },
+  searchBtn: { padding: 5 },
+  listPadding: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30 },
+  row: { justifyContent: 'space-between', marginBottom: 5 },
+  productCard: {
+    width: ITEM_WIDTH,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    alignItems: 'center',
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 5,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 4,
+  },
+  heartIcon: { width: 20, height: 20 },
+  imageWrapper: { width: '100%', height: 100, marginBottom: 10 },
+  productImage: { width: '100%', height: '100%' },
+  infoContainer: { alignItems: 'center', width: '100%' },
+  productTitle: { fontSize: 12, fontWeight: '500', color: '#1E293B', textAlign: 'center', marginBottom: 4 },
+  productPrice: { fontSize: 14, fontWeight: '700', color: '#4AB7B6' },
+  // ИНЛАЙН СТИЛЬДЕРДІ ОСЫ ЖЕРГЕ КӨШІРДІК (ESLint үшін):
+  centerContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
   },
-  similarImage: { width: 55, height: 55 },
+  emptyContainer: {
+    marginTop: 50,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#94A3B8',
+    fontSize: 16,
+  }
 });

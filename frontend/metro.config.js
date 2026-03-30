@@ -1,11 +1,29 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {};
+module.exports = (async () => {
+  const defaultConfig = await getDefaultConfig(__dirname);
+  const {
+    resolver: { sourceExts, assetExts },
+  } = defaultConfig;
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+  const config = {
+    transformer: {
+      // SVG файлдарын трансформациялау үшін
+      babelTransformerPath: require.resolve('react-native-svg-transformer'),
+      // Мына жол маңызды: ол активтерді (images) дұрыс өңдеуге көмектеседі
+      getTransformOptions: async () => ({
+        transform: {
+          experimentalImportSupport: false,
+          inlineRequires: true,
+        },
+      }),
+    },
+    resolver: {
+      // SVG-ні assetExts-тен алып тастап, sourceExts-ке қосамыз
+      assetExts: assetExts.filter((ext) => ext !== 'svg'),
+      sourceExts: [...sourceExts, 'svg'],
+    },
+  };
+
+  return mergeConfig(defaultConfig, config);
+})();

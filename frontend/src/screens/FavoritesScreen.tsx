@@ -7,7 +7,9 @@ import {
   Image, 
   TouchableOpacity, 
   SafeAreaView,
-  Alert // <--- ГЛАВНОЕ: Импортируем Alert здесь
+  Alert,
+  Platform, // ҚОСЫЛДЫ
+  StatusBar // ҚОСЫЛДЫ
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 
@@ -21,14 +23,13 @@ export default function FavoritesScreen() {
   const [favorites, setFavorites] = useState(MOCK_FAVORITES);
 
   const removeItem = (id: string) => {
-    // Системное окно подтверждения
     Alert.alert(
-      "Удаление",
-      "Удалить этот товар из избранного?",
+      "Өшіру", // Қазақшаға аудардым
+      "Бұл тауарды таңдаулылардан өшіресіз бе?",
       [
-        { text: "Отмена", style: "cancel" },
+        { text: "Болдырмау", style: "cancel" },
         { 
-          text: "Удалить", 
+          text: "Өшіру", 
           style: "destructive", 
           onPress: () => setFavorites(prev => prev.filter(item => item.id !== id)) 
         }
@@ -37,8 +38,7 @@ export default function FavoritesScreen() {
   };
 
   const addToCart = (itemName: string) => {
-    // Использование Alert.alert вместо alert
-    Alert.alert("Корзина", `${itemName} добавлен в корзину!`);
+    Alert.alert("Себет", `${itemName} себетке қосылды!`);
   };
 
   const renderItem = ({ item }: any) => (
@@ -68,8 +68,8 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Избранное</Text>
-        <Text style={styles.count}>{favorites.length} товаров</Text>
+        <Text style={styles.title}>Таңдаулылар</Text>
+        <Text style={styles.count}>{favorites.length} тауар</Text>
       </View>
 
       {favorites.length > 0 ? (
@@ -83,9 +83,9 @@ export default function FavoritesScreen() {
       ) : (
         <View style={styles.emptyContainer}>
           <Feather name="heart" size={80} color="#CBD5E1" />
-          <Text style={styles.emptyText}>В избранном пока пусто</Text>
+          <Text style={styles.emptyText}>Таңдаулылар тізімі бос</Text>
           <TouchableOpacity style={styles.browseButton}>
-            <Text style={styles.browseButtonText}>Перейти к покупкам</Text>
+            <Text style={styles.browseButtonText}>Сатып алуға көшу</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -94,8 +94,18 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { padding: 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8FAFC',
+    // Android үшін жоғарғы отступ
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  header: { 
+    padding: 20, 
+    backgroundColor: '#FFF', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F1F5F9' 
+  },
   title: { fontSize: 24, fontWeight: '700', color: '#1E293B' },
   count: { fontSize: 14, color: '#64748B', marginTop: 4 },
   list: { padding: 15 },
