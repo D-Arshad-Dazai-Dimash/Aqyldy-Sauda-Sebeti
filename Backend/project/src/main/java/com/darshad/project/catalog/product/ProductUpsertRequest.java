@@ -17,6 +17,8 @@ public record ProductUpsertRequest(
         Integer stock,
         BigDecimal discount,
         String imageUrl,
+        String unit,
+        String weight,
         Boolean active,
         List<UUID> categoryIds
 ) {}

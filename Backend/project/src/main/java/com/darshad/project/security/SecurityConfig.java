@@ -78,6 +78,8 @@ public class SecurityConfig {
                         // USER API
                         .requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
+                        .requestMatchers("/api/favorites/**").authenticated()
+                        .requestMatchers("/api/me/**").authenticated()
 
                         // EVERYTHING ELSE
                         .anyRequest().authenticated()

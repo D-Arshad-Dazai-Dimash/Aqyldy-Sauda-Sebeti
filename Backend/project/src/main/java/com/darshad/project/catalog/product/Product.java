@@ -45,6 +45,13 @@ public class Product {
     @Column(columnDefinition = "text")
     private String imageUrl;
 
+    @Column(length = 20)
+    @Builder.Default
+    private String unit = "piece";
+
+    @Column(length = 30)
+    private String weight;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;

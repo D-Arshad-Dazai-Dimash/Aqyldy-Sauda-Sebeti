@@ -13,6 +13,8 @@ public record ProductDto(
         Integer stock,
         BigDecimal discount,
         String imageUrl,
+        String unit,
+        String weight,
         boolean active,
         List<UUID> categoryIds
 ) {}

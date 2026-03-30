@@ -21,13 +21,27 @@ public class Store {
     @UuidGenerator
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 200)
     private String name;
 
+    @Column(length = 300)
     private String address;
 
+    @Column(columnDefinition = "text")
+    private String description;
+
+    @Column(length = 20)
+    private String phone;
+
+    @Column(columnDefinition = "text")
+    private String logoUrl;
+
+    @Column(length = 100)
+    private String workingHours;
+
     @Column(nullable = false)
-    private boolean active;
+    @Builder.Default
+    private boolean active = true;
 
     @Column(nullable = false)
     private OffsetDateTime createdAt;
