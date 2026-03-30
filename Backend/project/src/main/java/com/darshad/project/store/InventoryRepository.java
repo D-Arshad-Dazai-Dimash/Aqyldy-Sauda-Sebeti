@@ -1,14 +1,23 @@
 package com.darshad.project.store;
 
+import com.darshad.project.store.dto.Inventory;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface InventoryRepository extends JpaRepository<Inventory, InventoryId> {
 
-    Optional<Inventory> findByStoreIdAndProductId(UUID storeId, UUID productId);
-
-    // Spring Data сам поймёт, что store.id и product.id
     Optional<Inventory> findByStore_IdAndProduct_Id(UUID storeId, UUID productId);
+
+    List<Inventory> findByStore_Id(UUID storeId);
+
+    /**
+     * Fetches inventory with product eagerly loaded in a single query.
+     * Avoids N+1 problem when mapping inventory → product fields.
+     */
+    @EntityGraph(attributePaths = {"product"})
+    List<Inventory> findWithProductByStore_Id(UUID storeId);
 }

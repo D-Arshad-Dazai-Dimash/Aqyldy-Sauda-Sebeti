@@ -35,8 +35,22 @@ public class Product {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
+<<<<<<< HEAD
     // Базадағы image_url бағанымен сәйкестендіру
     @Column(name = "image_url", columnDefinition = "text")
+=======
+    @Column(unique = true, length = 64)
+    private String barcode;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer stock = 0;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal discount;
+
+    @Column(columnDefinition = "text")
+>>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
     private String imageUrl;
 
     // ЖАҢА: Қоймадағы саны
@@ -53,7 +67,9 @@ public class Product {
 
     private OffsetDateTime updatedAt;
 
-    @ManyToMany
+
+
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "product_categories",
             joinColumns = @JoinColumn(name = "product_id"),

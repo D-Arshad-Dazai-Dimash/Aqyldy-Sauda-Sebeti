@@ -5,8 +5,12 @@ import com.darshad.project.catalog.product.ProductRepository;
 import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.Store;
 import com.darshad.project.user.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -16,14 +20,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderService {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
     private final CartRepository cartRepo;
     private final OrderRepository orderRepo;
     private final ProductRepository productRepo;
     private final UserRepository userRepo;
     private final InventoryRepository inventoryRepo;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Transactional
     public OrderResponse checkout(String email, CheckoutRequest request) {
+
+        log.info("▶ CHECKOUT: email={}, storeId={}", email, request.storeId());
 
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
@@ -34,13 +45,17 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalStateException("Cart is empty"));
 
         if (cart.getItems().isEmpty()) {
+            log.warn("  ✗ checkout failed: cart is empty for user={}", email);
             throw new IllegalStateException("Cart is empty");
         }
 
-        // создаём заказ (store обязателен)
+        log.info("  cart has {} items, processing...", cart.getItems().size());
+
+        var storeRef = entityManager.getReference(Store.class, storeId);
+
         var order = Order.builder()
                 .user(user)
-                .store(new Store(storeId)) // reference по id
+                .store(storeRef)
                 .comment(request.comment())
                 .status(OrderStatus.CREATED)
                 .build();
@@ -53,25 +68,38 @@ public class OrderService {
                     .orElseThrow(() -> new IllegalStateException("Product not found"));
 
             if (!product.isActive()) {
+                log.warn("  ✗ product inactive during checkout: {}", product.getTitle());
                 throw new IllegalStateException("Product inactive: " + product.getTitle());
             }
 
-            // ✅ проверяем остаток в конкретном магазине
             var inv = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
-                    .orElseThrow(() -> new IllegalStateException("No inventory for product in this store: " + product.getTitle()));
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No inventory for product in this store: " + product.getTitle()));
 
             if (inv.getQuantity() < cartItem.getQuantity()) {
+                log.warn("  ✗ not enough stock: product={}, requested={}, available={}",
+                        product.getTitle(), cartItem.getQuantity(), inv.getQuantity());
                 throw new IllegalStateException(
-                        "Not enough stock for: " + product.getTitle() +
-                                ". Available=" + inv.getQuantity() +
-                                ", requested=" + cartItem.getQuantity()
-                );
+                        "Not enough stock for: " + product.getTitle());
             }
 
-            // ✅ списываем
+            int oldQty = inv.getQuantity();
             inv.setQuantity(inv.getQuantity() - cartItem.getQuantity());
+            inventoryRepo.save(inv);
+            log.debug("  inventory updated: product={}, {} → {}", product.getTitle(), oldQty, inv.getQuantity());
 
-            BigDecimal lineTotal = product.getPrice()
+            // Apply discount: effectivePrice = price * (1 - discount/100)
+            BigDecimal unitPrice = product.getPrice();
+            if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal multiplier = BigDecimal.ONE.subtract(
+                        product.getDiscount().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                );
+                unitPrice = unitPrice.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
+                log.debug("  discount applied: product={}, original={}, discount={}%, effective={}",
+                        product.getTitle(), product.getPrice(), product.getDiscount(), unitPrice);
+            }
+
+            BigDecimal lineTotal = unitPrice
                     .multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
             total = total.add(lineTotal);
@@ -80,7 +108,7 @@ public class OrderService {
                     .order(order)
                     .product(product)
                     .quantity(cartItem.getQuantity())
-                    .price(product.getPrice())
+                    .price(unitPrice)
                     .lineTotal(lineTotal)
                     .build();
 
@@ -90,8 +118,9 @@ public class OrderService {
         order.setTotalAmount(total);
 
         orderRepo.save(order);
+        log.info("✓ ORDER CREATED: orderId={}, total={}, items={}, user={}",
+                order.getId(), total, order.getItems().size(), email);
 
-        // очистка корзины
         cart.getItems().clear();
 
         return new OrderResponse(
@@ -105,10 +134,12 @@ public class OrderService {
 
     public List<OrderResponse> myOrders(String email) {
 
+        log.debug("▶ myOrders: email={}", email);
+
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
 
-        return orderRepo.findByUserIdOrderByCreatedAtDesc(user.getId())
+        var orders = orderRepo.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(o -> new OrderResponse(
                         o.getId(),
@@ -118,5 +149,8 @@ public class OrderService {
                         o.getCreatedAt()
                 ))
                 .toList();
+
+        log.debug("  found {} orders for user={}", orders.size(), email);
+        return orders;
     }
 }

@@ -1,4 +1,39 @@
 package com.darshad.project.catalog;
 
+import com.darshad.project.catalog.product.ProductDto;
+import com.darshad.project.catalog.product.ProductService;
+import com.darshad.project.catalog.product.ProductUpsertRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/admin/products")
+@RequiredArgsConstructor
 public class CatalogAdminController {
+
+    private final ProductService productService;
+
+    @PostMapping
+    public ProductDto create(@Valid @RequestBody ProductUpsertRequest req) {
+        return productService.create(req);
+    }
+
+    @PutMapping("/{id}")
+    public ProductDto update(
+            @PathVariable UUID id,
+            @Valid @RequestBody ProductUpsertRequest req
+    ) {
+        return productService.update(id, req);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable UUID id) {
+        productService.delete(id);
+    }
+
 }

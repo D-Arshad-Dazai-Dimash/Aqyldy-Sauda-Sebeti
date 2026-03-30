@@ -13,8 +13,17 @@ spring:
     open-in-view: false
 app:
   jwt:
-    secret: "da5jJL@LJsdmfdsklmkl@KKmklmslkdmsdkmvdskvm225"
+    secret: ${JWT_SECRET:change-me-in-production-use-env-var}
     access-ttl-minutes: 60
+
+  # Show SQL params (dev only)
+  jpa.properties.hibernate.format_sql: true
+
+logging:
+  level:
+    com.darshad.project: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.web: DEBUG
 
 springdoc:
   swagger-ui:

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api")
@@ -25,11 +27,14 @@ public class CatalogPublicController {
         return categoryService.list();
     }
 
+
+
     @GetMapping("/products")
     public Page<ProductDto> products(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) Boolean active,
+            @PageableDefault(size = 20, sort = "title", direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
         return productService.search(q, categoryId, active, pageable);
@@ -38,5 +43,10 @@ public class CatalogPublicController {
     @GetMapping("/products/{id}")
     public ProductDto product(@PathVariable UUID id) {
         return productService.get(id);
+    }
+
+    @GetMapping("/products/barcode/{barcode}")
+    public ProductDto productByBarcode(@PathVariable String barcode) {
+        return productService.findByBarcode(barcode);
     }
 }
