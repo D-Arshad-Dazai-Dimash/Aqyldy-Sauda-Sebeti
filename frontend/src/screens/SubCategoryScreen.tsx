@@ -4,11 +4,7 @@ import {
   TouchableOpacity, SafeAreaView, Dimensions, Platform, StatusBar 
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-<<<<<<< HEAD
 import { PRODUCT_CATEGORIES, Category } from '../constants/categories';
-=======
-import { PRODUCT_CATEGORIES, Category } from '../constants/categories.ts';
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 60) / 2;

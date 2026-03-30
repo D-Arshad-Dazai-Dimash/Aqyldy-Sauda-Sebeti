@@ -17,19 +17,12 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import SearchScreen from '../screens/SearchScreen';
 import StoreScreen from '../screens/StoreScreen';
 import ProductScreen from '../screens/ProductScreen';
-<<<<<<< HEAD
 import SubCategoryScreen from '../screens/SubCategoryScreen';
 import ProductListScreen from '../screens/ProductListScreen';
-import BusinessDashboard from '../screens/BusinessDashboard'; 
+import BusinessDashboard from '../screens/BusinessDashboard';
 import BusinessInventoryScreen from '../screens/BusinessInventoryScreen';
-import CartScreen from '../screens/CartScreen.tsx';
-import AddProductScreen from '../screens/AddProductScreen'; // ЖАҢА: Тауар қосу беті
-=======
-import SubCategoryScreen from '../screens/SubCategoryScreen'; 
-import BusinessDashboard from '../screens/BusinessDashboard'; 
-import BusinessInventoryScreen from '../screens/BusinessInventoryScreen';
-import CartScreen from '../screens/CartScreen.tsx'; 
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
+import CartScreen from '../screens/CartScreen';
+import AddProductScreen from '../screens/AddProductScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -102,10 +95,6 @@ function BusinessTabs() {
   );
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
 // --- КЛИЕНТТІК МӘЗІР ---
 function MainTabs() {
   return (
@@ -145,22 +134,14 @@ function AppStack() {
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="BusinessMain" component={BusinessTabs} />
       
-<<<<<<< HEAD
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} />
-=======
-      <Stack.Screen name="Favorites" component={FavoritesScreen} /> 
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
 
       <Stack.Screen name="BusinessInventory" component={BusinessInventoryScreen} />
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="StoreScreen" component={StoreScreen} />
-<<<<<<< HEAD
       <Stack.Screen name="SubCategory" component={SubCategoryScreen} />
       <Stack.Screen name="ProductList" component={ProductListScreen} />
-=======
-      <Stack.Screen name="SubCategory" component={SubCategoryScreen} /> 
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
       <Stack.Screen name="ProductScreen" component={ProductScreen} />
       {/* Кез келген жерден Scan бетін шақыру үшін Stack-ке де қосамыз */}
       <Stack.Screen name="ScanScreen" component={ScanScreen} /> 
