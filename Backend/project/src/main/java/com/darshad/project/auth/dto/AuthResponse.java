@@ -2,5 +2,6 @@ package com.darshad.project.auth.dto;
 
 public record AuthResponse(
         String accessToken,
-        String tokenType
+        String tokenType,
+        String role
 ) {}

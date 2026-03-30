@@ -5,5 +5,9 @@ import java.util.UUID;
 public record StoreResponse(
         UUID id,
         String name,
-        String address
+        String address,
+        String description,
+        String phone,
+        String logoUrl,
+        String workingHours
 ) {}

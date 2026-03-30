@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -22,5 +23,10 @@ public class OrderController {
     @GetMapping("/my")
     public List<OrderResponse> myOrders(Authentication auth) {
         return orderService.myOrders(auth.getName());
+    }
+
+    @GetMapping("/{id}")
+    public OrderDetailResponse getOrderById(@PathVariable UUID id, Authentication auth) {
+        return orderService.getOrderById(auth.getName(), id);
     }
 }

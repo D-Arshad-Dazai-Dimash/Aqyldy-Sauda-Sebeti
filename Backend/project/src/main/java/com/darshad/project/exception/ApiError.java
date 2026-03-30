@@ -5,14 +5,14 @@ import java.time.OffsetDateTime;
 public record ApiError(
         int status,
         String error,
-        String message,
+        String detail,
         OffsetDateTime timestamp
 ) {
-    public static ApiError of(int status, String error, String message) {
+    public static ApiError of(int status, String error, String detail) {
         return new ApiError(
                 status,
                 error,
-                message,
+                detail,
                 OffsetDateTime.now()
         );
     }

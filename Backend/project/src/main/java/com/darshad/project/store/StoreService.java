@@ -23,11 +23,7 @@ public class StoreService {
         log.debug("▶ getAllActive stores");
         var stores = storeRepository.findAllByActiveTrue()
                 .stream()
-                .map(s -> new StoreResponse(
-                        s.getId(),
-                        s.getName(),
-                        s.getAddress()
-                ))
+                .map(this::toDto)
                 .toList();
         log.debug("  found {} active stores", stores.size());
         return stores;
@@ -45,10 +41,18 @@ public class StoreService {
             throw new IllegalStateException("Store inactive");
         }
 
+        return toDto(store);
+    }
+
+    private StoreResponse toDto(Store s) {
         return new StoreResponse(
-                store.getId(),
-                store.getName(),
-                store.getAddress()
+                s.getId(),
+                s.getName(),
+                s.getAddress(),
+                s.getDescription(),
+                s.getPhone(),
+                s.getLogoUrl(),
+                s.getWorkingHours()
         );
     }
 

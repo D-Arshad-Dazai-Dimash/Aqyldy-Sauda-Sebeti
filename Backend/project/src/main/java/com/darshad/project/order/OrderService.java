@@ -153,4 +153,40 @@ public class OrderService {
         log.debug("  found {} orders for user={}", orders.size(), email);
         return orders;
     }
+
+    public OrderDetailResponse getOrderById(String email, java.util.UUID orderId) {
+
+        log.debug("▶ getOrderById: email={}, orderId={}", email, orderId);
+
+        var user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        var order = orderRepo.findByIdAndUserIdWithItems(orderId, user.getId())
+                .orElseThrow(() -> new IllegalStateException("Order not found"));
+
+        var items = order.getItems().stream()
+                .map(i -> new OrderDetailResponse.OrderItemDetail(
+                        i.getId(),
+                        i.getProduct().getId(),
+                        i.getProduct().getTitle(),
+                        i.getProduct().getImageUrl(),
+                        i.getQuantity(),
+                        i.getPrice(),
+                        i.getLineTotal()
+                ))
+                .toList();
+
+        log.debug("  found order {} with {} items", orderId, items.size());
+
+        return new OrderDetailResponse(
+                order.getId(),
+                order.getStore().getId(),
+                order.getStore().getName(),
+                order.getStatus().name(),
+                order.getTotalAmount(),
+                order.getComment(),
+                order.getCreatedAt(),
+                items
+        );
+    }
 }

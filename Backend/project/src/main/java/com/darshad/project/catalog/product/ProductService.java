@@ -2,6 +2,8 @@ package com.darshad.project.catalog.product;
 
 import com.darshad.project.catalog.category.Category;
 import com.darshad.project.catalog.category.CategoryRepository;
+import com.darshad.project.catalog.pricehistory.PriceHistory;
+import com.darshad.project.catalog.pricehistory.PriceHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,7 @@ public class ProductService {
 
     private final ProductRepository productRepo;
     private final CategoryRepository categoryRepo;
+    private final PriceHistoryRepository priceHistoryRepo;
 
     @Transactional(readOnly = true)
     public Page<ProductDto> search(String q, UUID categoryId, Boolean active, Pageable pageable) {
@@ -67,6 +70,8 @@ public class ProductService {
                 .stock(req.stock() == null ? 0 : req.stock())
                 .discount(req.discount())
                 .imageUrl(req.imageUrl())
+                .unit(req.unit())
+                .weight(req.weight())
                 .active(req.active() == null || req.active())
                 .build();
 
@@ -89,8 +94,22 @@ public class ProductService {
         p.setDiscount(req.discount());
         p.setTitle(req.title());
         p.setDescription(req.description());
+
+        // Track price changes
+        if (req.price() != null && p.getPrice() != null
+                && req.price().compareTo(p.getPrice()) != 0) {
+            log.info("  price change detected: {} → {}", p.getPrice(), req.price());
+            priceHistoryRepo.save(PriceHistory.builder()
+                    .product(p)
+                    .oldPrice(p.getPrice())
+                    .newPrice(req.price())
+                    .build());
+        }
         p.setPrice(req.price());
+
         p.setImageUrl(req.imageUrl());
+        p.setUnit(req.unit());
+        p.setWeight(req.weight());
         if (req.active() != null) p.setActive(req.active());
 
         applyCategories(p, req);
@@ -125,6 +144,8 @@ public class ProductService {
                 p.getStock(),
                 p.getDiscount(),
                 p.getImageUrl(),
+                p.getUnit(),
+                p.getWeight(),
                 p.isActive(),
                 p.getCategories().stream().map(Category::getId).toList()
         );
