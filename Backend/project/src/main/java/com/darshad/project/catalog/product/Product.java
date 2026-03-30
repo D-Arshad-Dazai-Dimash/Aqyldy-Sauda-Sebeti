@@ -23,6 +23,9 @@ public class Product {
     @UuidGenerator
     private UUID id;
 
+    @Column(nullable = false, unique = true, length = 50)
+    private String barcode;
+
     @Column(nullable = false, length = 180)
     private String title;
 
@@ -32,17 +35,7 @@ public class Product {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
-    @Column(unique = true, length = 64)
-    private String barcode;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private Integer stock = 0;
-
-    @Column(precision = 5, scale = 2)
-    private BigDecimal discount;
-
-    @Column(columnDefinition = "text")
+    @Column(name = "image_url", columnDefinition = "text")
     private String imageUrl;
 
     @Column(length = 20)
@@ -54,14 +47,19 @@ public class Product {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean active = true;
+    private Integer stock = 0;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal discount;
 
     @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
-
-
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -75,6 +73,7 @@ public class Product {
     @PrePersist
     void prePersist() {
         createdAt = OffsetDateTime.now();
+        if (stock == null) stock = 0;
     }
 
     @PreUpdate

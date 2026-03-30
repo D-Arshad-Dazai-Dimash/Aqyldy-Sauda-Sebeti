@@ -1,9 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, SafeAreaView } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Image, 
+  ScrollView, 
+  SafeAreaView,
+  Platform, 
+  StatusBar 
+} from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) { // navigation қосылды
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
@@ -27,46 +37,55 @@ export default function ProfileScreen() {
               source={{ uri: 'https://ui-avatars.com/api/?name=' + (user?.email || 'User') + '&background=27AE60&color=fff' }} 
               style={styles.avatar} 
             />
-            <TouchableOpacity style={styles.editBadge}>
-              <Feather name="camera" size={14} color="#FFF" />
-            </TouchableOpacity>
           </View>
-          <Text style={styles.userName}>{user?.email?.split('@')[0] || 'Пользователь'}</Text>
+          <Text style={styles.userName}>{user?.email?.split('@')[0] || 'Пайдаланушы'}</Text>
           <Text style={styles.userEmail}>{user?.email || 'email@example.com'}</Text>
         </View>
 
-        {/* Статистика (Карточки) */}
+        {/* --- БИЗНЕСКЕ ӨТУ БӨЛІМІ --- */}
+        <View style={styles.menuSection}>
+  <Text style={styles.sectionTitle}>Режим</Text>
+  <MenuEntry 
+    icon="briefcase" 
+    title="Бизнес режимге өту" 
+    color="#27AE60" 
+    onPress={() => {
+      // НАЗАР АУДАР: Навигациямен бірге "ADMIN" режимін қосамыз
+      navigation.navigate('BusinessMain', { screen: 'BusinessHome', params: { forceRole: 'ADMIN' } });
+    }} 
+  />
+</View>
+
+        {/* Статистика */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Покупок</Text>
+            <Text style={styles.statLabel}>Сатып алу</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>4.5к</Text>
-            <Text style={styles.statLabel}>Бонусов</Text>
+            <Text style={styles.statLabel}>Бонустар</Text>
           </View>
         </View>
 
         {/* Меню настроек */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>Аккаунт</Text>
-          <MenuEntry icon="user" title="Личные данные" />
-          <MenuEntry icon="shopping-bag" title="История заказов" />
-          <MenuEntry icon="credit-card" title="Способы оплаты" />
+          <MenuEntry icon="user" title="Жеке деректер" />
+          <MenuEntry icon="shopping-bag" title="Тапсырыстар тарихы" />
         </View>
 
         <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Настройки</Text>
-          <MenuEntry icon="bell" title="Уведомления" />
-          <MenuEntry icon="shield" title="Безопасность" />
-          <MenuEntry icon="help-circle" title="Поддержка" />
+          <Text style={styles.sectionTitle}>Баптаулар</Text>
+          <MenuEntry icon="bell" title="Хабарландырулар" />
+          <MenuEntry icon="shield" title="Қауіпсіздік" />
         </View>
 
         {/* Кнопка выхода */}
-        <View style={[styles.menuSection, { marginBottom: 100 }]}>
+        <View style={[styles.menuSection, { marginBottom: 120 }]}>
           <MenuEntry 
             icon="log-out" 
-            title="Выйти из аккаунта" 
+            title="Аккаунттан шығу" 
             color="#EF4444" 
             onPress={() => logout()} 
           />
@@ -77,19 +96,22 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8FAFC',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   header: { alignItems: 'center', paddingVertical: 30, backgroundColor: '#FFF' },
   avatarContainer: { position: 'relative', marginBottom: 15 },
   avatar: { width: 100, height: 100, borderRadius: 50 },
-  editBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#4AB7B6', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#FFF' },
   userName: { fontSize: 22, fontWeight: '700', color: '#1E293B' },
   userEmail: { fontSize: 14, color: '#64748B', marginTop: 4 },
-  statsRow: { flexDirection: 'row', padding: 20, justifyContent: 'space-between' },
+  statsRow: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 10, justifyContent: 'space-between' },
   statCard: { backgroundColor: '#FFF', width: '48%', padding: 15, borderRadius: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
   statValue: { fontSize: 20, fontWeight: '700', color: '#4AB7B6' },
   statLabel: { fontSize: 12, color: '#64748B', marginTop: 2 },
   menuSection: { marginTop: 20, paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#94A3B8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#94A3B8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
   menuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', padding: 12, borderRadius: 12, marginBottom: 8 },
   iconContainer: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   menuText: { flex: 1, fontSize: 16, fontWeight: '500' },
