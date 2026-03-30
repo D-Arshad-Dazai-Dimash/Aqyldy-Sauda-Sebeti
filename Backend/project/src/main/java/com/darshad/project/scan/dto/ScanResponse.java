@@ -4,13 +4,13 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record ScanResponse(
-        UUID productId,
+        UUID id,
         String title,
         String description,
         BigDecimal price,
         String imageUrl,
         String barcode,
-        int availableQuantity,
+        int quantity,
         boolean available,
         UUID storeId,
         String storeName
