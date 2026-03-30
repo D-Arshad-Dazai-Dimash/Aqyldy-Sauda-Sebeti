@@ -9,8 +9,13 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 app:
   jwt:
     secret: ${JWT_SECRET:change-me-in-production-use-env-var}
@@ -24,6 +29,8 @@ logging:
     com.darshad.project: DEBUG
     org.hibernate.SQL: DEBUG
     org.springframework.web: DEBUG
+    org.flywaydb: DEBUG
+    org.springframework.boot.autoconfigure.flyway: DEBUG
 
 springdoc:
   swagger-ui:
