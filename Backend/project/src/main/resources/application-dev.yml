@@ -18,7 +18,7 @@ spring:
     locations: classpath:db/migration
 app:
   jwt:
-    secret: ${JWT_SECRET:change-me-in-production-use-env-var}
+    secret: ${JWT_SECRET:dev-secret-at-least-32-chars-long!!}
     access-ttl-minutes: 60
 
   # Show SQL params (dev only)
