@@ -45,6 +45,7 @@ public class AuthService {
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(req.password()))
+                .name(req.name() != null ? req.name().trim() : null)
                 .role(Role.USER)
                 .enabled(true)
                 .build();
