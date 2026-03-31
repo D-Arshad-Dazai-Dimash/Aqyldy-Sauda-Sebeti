@@ -8,12 +8,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-<<<<<<< HEAD
-  Platform, // ҚОСЫЛДЫ
-  StatusBar // ҚОСЫЛДЫ
-=======
+  Platform,
+  StatusBar,
   ActivityIndicator,
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
@@ -29,19 +26,6 @@ export default function FavoritesScreen({ navigation }: any) {
     loadFavorites();
   }, [favorites]);
 
-<<<<<<< HEAD
-  const removeItem = (id: string) => {
-    Alert.alert(
-      "Өшіру", // Қазақшаға аудардым
-      "Бұл тауарды таңдаулылардан өшіресіз бе?",
-      [
-        { text: "Болдырмау", style: "cancel" },
-        { 
-          text: "Өшіру", 
-          style: "destructive", 
-          onPress: () => setFavorites(prev => prev.filter(item => item.id !== id)) 
-        }
-=======
   const loadFavorites = async () => {
     if (favorites.length === 0) {
       setProducts([]);
@@ -50,7 +34,6 @@ export default function FavoritesScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      // Load each favorite product (could be optimized with a batch endpoint)
       const results = await Promise.allSettled(
         favorites.map((id) => ProductsApi.getProduct(id))
       );
@@ -67,27 +50,20 @@ export default function FavoritesScreen({ navigation }: any) {
 
   const removeItem = (id: string, name: string) => {
     Alert.alert(
-      'Remove',
-      `Remove "${name}" from favorites?`,
+      'Өшіру',
+      `"${name}" таңдаулылардан өшіресіз бе?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Болдырмау', style: 'cancel' },
         {
-          text: 'Remove',
+          text: 'Өшіру',
           style: 'destructive',
           onPress: () => toggleFavorite(id),
         },
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
       ]
     );
   };
 
-<<<<<<< HEAD
-  const addToCart = (itemName: string) => {
-    Alert.alert("Себет", `${itemName} себетке қосылды!`);
-  };
-=======
-  const formatPrice = (price: number) => `${Math.round(price)} \u20B8`;
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
+  const formatPrice = (price: number) => `${Math.round(price)} ₸`;
 
   const renderItem = ({ item }: { item: Product }) => (
     <TouchableOpacity
@@ -120,13 +96,8 @@ export default function FavoritesScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-<<<<<<< HEAD
         <Text style={styles.title}>Таңдаулылар</Text>
         <Text style={styles.count}>{favorites.length} тауар</Text>
-=======
-        <Text style={styles.title}>Favorites</Text>
-        <Text style={styles.count}>{favorites.length} items</Text>
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
       </View>
 
       {loading && products.length === 0 ? (
@@ -144,18 +115,12 @@ export default function FavoritesScreen({ navigation }: any) {
       ) : (
         <View style={styles.emptyContainer}>
           <Feather name="heart" size={80} color="#CBD5E1" />
-<<<<<<< HEAD
           <Text style={styles.emptyText}>Таңдаулылар тізімі бос</Text>
-          <TouchableOpacity style={styles.browseButton}>
-            <Text style={styles.browseButtonText}>Сатып алуға көшу</Text>
-=======
-          <Text style={styles.emptyText}>No favorites yet</Text>
           <TouchableOpacity
             style={styles.browseButton}
             onPress={() => navigation.navigate('Categories')}
           >
-            <Text style={styles.browseButtonText}>Browse products</Text>
->>>>>>> 0d522b1bd6e38864b67ee0518f37010a1c892700
+            <Text style={styles.browseButtonText}>Сатып алуға көшу</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -164,17 +129,16 @@ export default function FavoritesScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: '#F8FAFC',
-    // Android үшін жоғарғы отступ
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  header: { 
-    padding: 20, 
-    backgroundColor: '#FFF', 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#F1F5F9' 
+  header: {
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   title: { fontSize: 24, fontWeight: '700', color: '#1E293B' },
   count: { fontSize: 14, color: '#64748B', marginTop: 4 },
