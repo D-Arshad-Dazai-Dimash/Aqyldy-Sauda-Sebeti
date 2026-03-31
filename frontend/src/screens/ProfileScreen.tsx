@@ -72,7 +72,7 @@ export default function ProfileScreen({ navigation }: any) { // navigation қо�
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>Аккаунт</Text>
           <MenuEntry icon="user" title="Жеке деректер" />
-          <MenuEntry icon="shopping-bag" title="Тапсырыстар тарихы" />
+          <MenuEntry icon="shopping-bag" title="Тапсырыстар тарихы" onPress={() => navigation.navigate('Orders')} />
         </View>
 
         <View style={styles.menuSection}>
