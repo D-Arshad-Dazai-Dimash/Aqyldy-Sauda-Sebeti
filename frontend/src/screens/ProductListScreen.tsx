@@ -13,18 +13,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import FastImage from 'react-native-fast-image';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { api } from '../api/client';
-import { MOCK_PRODUCTS } from '../constants/mockProducts';
 
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = (width - (20 * 2) - 15) / 2;
 
 export default function ProductListScreen({ route, navigation }: any) {
-  const { subCategoryName } = route?.params || { subCategoryName: 'Тауарлар' };
-  
-  const [realProducts, setRealProducts] = useState<any[]>([]); // Типті нақтыладық
+  const { subCategoryName, categoryId } = route?.params || { subCategoryName: 'Тауарлар' };
+
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toggleFavorite, isFavorite } = useFavoritesStore();
 
@@ -32,8 +30,10 @@ export default function ProductListScreen({ route, navigation }: any) {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await api.get('/api/products');
-        setRealProducts(res.data || []);
+        const params: any = { active: true };
+        if (categoryId) params.categoryId = categoryId;
+        const res = await api.get('/api/products', { params });
+        setProducts(res.data?.content || []);
       } catch (error) {
         console.log('Деректерді алу мүмкін болмады:', error);
       } finally {
@@ -41,50 +41,40 @@ export default function ProductListScreen({ route, navigation }: any) {
       }
     };
     fetchProducts();
-  }, []);
-
-  const filteredProducts = [
-    ...realProducts.filter((p: any) => p.subcategory === subCategoryName),
-    ...MOCK_PRODUCTS.filter((p: any) => p.subcategory === subCategoryName)
-  ];
+  }, [categoryId]);
 
   const renderProductItem = ({ item }: { item: any }) => {
     const isFav = isFavorite(item.id);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.9}
         style={styles.productCard}
-        onPress={() => navigation.navigate('ProductScreen', { productId: item.id })}      
-      >     
-        <TouchableOpacity 
-          style={styles.favoriteBtn} 
+        onPress={() => navigation.navigate('ProductScreen', { productId: item.id })}
+      >
+        <TouchableOpacity
+          style={styles.favoriteBtn}
           onPress={() => toggleFavorite(item.id)}
         >
-          <Image 
-            source={isFav 
-              ? require('../assets/icons/heart.png') 
+          <Image
+            source={isFav
+              ? require('../assets/icons/heart.png')
               : require('../assets/icons/love.png')
-            } 
-            style={styles.heartIcon} 
+            }
+            style={styles.heartIcon}
           />
         </TouchableOpacity>
 
         <View style={styles.imageWrapper}>
-          <FastImage 
+          <Image
             style={styles.productImage}
-            source={
-              typeof item.image === 'string' 
-                ? { uri: item.image, priority: FastImage.priority.normal } 
-                : item.image
-            }
-            defaultSource={require('../assets/p1.png')}
-            resizeMode={FastImage.resizeMode.contain}
+            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            resizeMode="contain"
           />
         </View>
 
         <View style={styles.infoContainer}>
-          <Text style={styles.productTitle} numberOfLines={2}>{item.name}</Text>
+          <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.productPrice}>{item.price} ₸</Text>
         </View>
       </TouchableOpacity>
@@ -109,7 +99,7 @@ export default function ProductListScreen({ route, navigation }: any) {
         </View>
       ) : (
         <FlatList
-          data={filteredProducts}
+          data={products}
           renderItem={renderProductItem}
           // keyExtractor-дағы id қатесін осылай түзейміз:
           keyExtractor={(item: any, index: number) => (item.id ? item.id.toString() : index.toString())}

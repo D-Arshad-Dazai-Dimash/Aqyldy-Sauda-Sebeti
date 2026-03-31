@@ -48,7 +48,7 @@ export default function SubCategoryScreen({ route, navigation }: any) {
           <TouchableOpacity 
             style={styles.gridCard}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('ProductList', { subCategoryName: item })}
+            onPress={() => navigation.navigate('ProductList', { subCategoryName: item, categoryId })}
           >
             <View style={styles.imagePlaceholder}>
               <Feather name="package" size={40} color="#E2E8F0" />
