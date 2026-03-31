@@ -14,11 +14,11 @@ export default function BusinessDashboard({ navigation }: any) {
   // Базадан нақты мәліметтерді алу
   const fetchBusinessData = async () => {
     try {
-      const res = await api.get('/api/products');
-      setProducts(res.data);
-      
-      const outOfStockCount = res.data.filter((p: any) => p.stock === 0).length;
-      setStats({ total: res.data.length, outOfStock: outOfStockCount });
+      const res = await api.get('/api/products', { params: { size: 20 } });
+      const content = res.data?.content || [];
+      setProducts(content);
+      const outOfStockCount = content.filter((p: any) => p.stock === 0).length;
+      setStats({ total: content.length, outOfStock: outOfStockCount });
     } catch (e) {
       console.log('Бизнес деректерін алу қатесі:', e);
     } finally {
@@ -35,13 +35,13 @@ export default function BusinessDashboard({ navigation }: any) {
 
   const ProductItem = ({ item }: { item: any }) => (
     <View style={styles.productRow}>
-      <Image 
-        source={typeof item.image === 'string' ? { uri: item.image } : item.image} 
-        style={styles.productImage} 
-        resizeMode="contain" 
+      <Image
+        source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+        style={styles.productImage}
+        resizeMode="contain"
       />
       <View style={styles.productInfo}>
-        <Text style={styles.productName}>{item.name}</Text>
+        <Text style={styles.productName}>{item.title}</Text>
         <Text style={styles.productCode}>ID: {item.id}</Text>
         <Text style={styles.productBarcode}>Barcode: {item.barcode}</Text>
       </View>
@@ -96,7 +96,7 @@ export default function BusinessDashboard({ navigation }: any) {
         <TouchableOpacity 
           style={styles.addButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('ScanScreen')} 
+          onPress={() => navigation.navigate('BusinessScan')}
         >
           <Feather name="plus" size={24} color="#FFF" />
           <Text style={styles.addButtonText}>Жаңа өнім қосу</Text>

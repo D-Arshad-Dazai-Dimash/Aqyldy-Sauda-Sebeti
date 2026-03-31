@@ -23,6 +23,7 @@ import BusinessDashboard from '../screens/BusinessDashboard';
 import BusinessInventoryScreen from '../screens/BusinessInventoryScreen';
 import CartScreen from '../screens/CartScreen';
 import AddProductScreen from '../screens/AddProductScreen';
+import OrdersScreen from '../screens/OrdersScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -82,14 +83,14 @@ function BusinessTabs() {
           ),
         }} 
       />
-      <Tab.Screen 
-        name="BusinessOrders" 
-        component={FavoritesScreen} 
+      <Tab.Screen
+        name="BusinessOrders"
+        component={OrdersScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <Feather name="file-text" size={28} color={focused ? '#4AB7B6' : '#CBD5E1'} />
           ),
-        }} 
+        }}
       />
     </Tab.Navigator>
   );
@@ -144,7 +145,8 @@ function AppStack() {
       <Stack.Screen name="ProductList" component={ProductListScreen} />
       <Stack.Screen name="ProductScreen" component={ProductScreen} />
       {/* Кез келген жерден Scan бетін шақыру үшін Stack-ке де қосамыз */}
-      <Stack.Screen name="ScanScreen" component={ScanScreen} /> 
+      <Stack.Screen name="ScanScreen" component={ScanScreen} />
+      <Stack.Screen name="Orders" component={OrdersScreen} />
     </Stack.Navigator>
   );
 }
