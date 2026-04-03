@@ -18,4 +18,8 @@ buildscript {
     }
 }
 
+if (JavaVersion.current() != JavaVersion.VERSION_17) {
+    throw new GradleException("Android build must run with JDK 17. Current runtime: ${System.getProperty('java.version')}")
+}
+
 apply plugin: "com.facebook.react.rootproject"
