@@ -25,6 +25,7 @@ import CartScreen from '../screens/CartScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
+import BusinessRegisterScreen from '../screens/BusinessRegisterScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -131,11 +132,18 @@ function MainTabs() {
 
 // --- НЕГІЗГІ СТЕК ---
 function AppStack() {
+  const role = useAuthStore((s) => s.role);
+  const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
+  const initialRoute = isAdmin ? 'BusinessMain' : 'Main';
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+    <Stack.Navigator
+      initialRouteName={initialRoute}
+      screenOptions={{ headerShown: false, animation: 'fade' }}
+    >
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="BusinessMain" component={BusinessTabs} />
-      
+
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} />
 
@@ -145,7 +153,6 @@ function AppStack() {
       <Stack.Screen name="SubCategory" component={SubCategoryScreen} />
       <Stack.Screen name="ProductList" component={ProductListScreen} />
       <Stack.Screen name="ProductScreen" component={ProductScreen} />
-      {/* Кез келген жерден Scan бетін шақыру үшін Stack-ке де қосамыз */}
       <Stack.Screen name="ScanScreen" component={ScanScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
@@ -171,6 +178,7 @@ export default function RootNavigation() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="BusinessRegister" component={BusinessRegisterScreen} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

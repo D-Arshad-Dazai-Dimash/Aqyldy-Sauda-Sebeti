@@ -11,8 +11,18 @@ export type RegisterRequest = {
   name?: string;
 };
 
+export type BusinessRegisterRequest = {
+  email: string;
+  password: string;
+  name?: string;
+  storeName: string;
+  storeAddress?: string;
+  phone?: string;
+  bin?: string;
+  workingHours?: string;
+};
+
 export type AuthResponse = {
   accessToken: string;
-  // если backend возвращает role отдельно — добавим
   role?: Role;
 };

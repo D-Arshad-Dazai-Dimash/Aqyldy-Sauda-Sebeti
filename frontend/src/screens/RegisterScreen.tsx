@@ -143,6 +143,17 @@ export default function RegisterScreen({ navigation }: any) {
               Нажимая кнопку, вы принимаете условия {'\n'} 
               <Text style={styles.linkTextInline}>Пользовательского соглашения</Text>
             </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.6}
+              onPress={() => navigation.navigate('BusinessRegister')}
+              style={{ marginTop: 18 }}
+            >
+              <Text style={styles.businessLink}>
+                Бизнес иесісіз бе?{' '}
+                <Text style={styles.businessLinkBold}>Бизнес тіркелу →</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -255,4 +266,6 @@ const styles = StyleSheet.create({
     lineHeight: 20 
   },
   linkTextInline: { color: '#27AE60', fontWeight: '700' },
+  businessLink: { fontSize: 14, color: '#64748B', textAlign: 'center' },
+  businessLinkBold: { color: '#4AB7B6', fontWeight: '700' },
 });

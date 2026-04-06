@@ -12,6 +12,11 @@ type AuthState = {
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
+  registerBusiness: (data: {
+    email: string; password: string; name?: string;
+    storeName: string; storeAddress?: string; phone?: string;
+    bin?: string; workingHours?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -60,6 +65,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email, password, name) => {
     const data = await AuthApi.register({ email, password, name });
+
+    const token = data.accessToken;
+    const role = (data.role ?? null) as Role | null;
+
+    await AsyncStorage.setItem(KEY_TOKEN, token);
+    if (role) await AsyncStorage.setItem(KEY_ROLE, role);
+
+    set({ accessToken: token, role });
+
+    const user = await AuthApi.me();
+    set({ user });
+  },
+
+  registerBusiness: async (params) => {
+    const data = await AuthApi.registerBusiness(params);
 
     const token = data.accessToken;
     const role = (data.role ?? null) as Role | null;

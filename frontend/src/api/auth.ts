@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { AuthResponse, LoginRequest, RegisterRequest } from '../types/auth';
+import type { AuthResponse, BusinessRegisterRequest, LoginRequest, RegisterRequest } from '../types/auth';
 
 export async function login(data: LoginRequest) {
   const res = await api.post<AuthResponse>('/api/auth/login', data);
@@ -11,7 +11,12 @@ export async function register(data: RegisterRequest) {
   return res.data;
 }
 
+export async function registerBusiness(data: BusinessRegisterRequest) {
+  const res = await api.post<AuthResponse>('/api/auth/register/business', data);
+  return res.data;
+}
+
 export async function me() {
   const res = await api.get('/api/me');
-  return res.data; // будет user dto с backend
+  return res.data;
 }

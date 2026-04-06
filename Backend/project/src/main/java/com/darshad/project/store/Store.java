@@ -39,6 +39,12 @@ public class Store {
     @Column(length = 100)
     private String workingHours;
 
+    @Column(name = "owner_id")
+    private UUID ownerId;
+
+    @Column(length = 20)
+    private String bin;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
