@@ -41,10 +41,10 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   addItem: async (storeId, productId, quantity = 1) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, storeId });
     try {
       const cart = await CartApi.addToCart(storeId, productId, quantity);
-      set({ cart, loading: false });
+      set({ cart, storeId, loading: false });
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'Failed to add item';
       set({ loading: false, error: msg });

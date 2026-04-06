@@ -15,7 +15,6 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 import { useIsFocused } from '@react-navigation/native';
 import { useCartStore } from '../store/cartStore';
-import { api } from '../api/client';
 
 export default function CartScreen({ navigation }: any) {
   const isFocused = useIsFocused();
@@ -94,27 +93,7 @@ export default function CartScreen({ navigation }: any) {
 
   const handleCheckout = () => {
     if (!storeId || cartItems.length === 0) return;
-    Alert.alert(
-      'Тапсырысты растау',
-      `Жалпы сома: ${cart?.total ?? 0} ₸\nТапсырыс беремін бе?`,
-      [
-        { text: 'Болдырмау', style: 'cancel' },
-        {
-          text: 'Растау',
-          onPress: async () => {
-            try {
-              await api.post('/api/orders/checkout', { storeId, comment: null });
-              Alert.alert('✅ Сәтті!', 'Тапсырысыңыз қабылданды!', [
-                { text: 'OK', onPress: () => navigation.goBack() },
-              ]);
-            } catch (e: any) {
-              const msg = e?.response?.data?.detail || 'Тапсырыс беру мүмкін болмады';
-              Alert.alert('Қате', msg);
-            }
-          },
-        },
-      ]
-    );
+    navigation.navigate('PaymentScreen', { storeId, total: cart?.total ?? 0 });
   };
 
   const totalPrice = cart?.total ?? 0;
@@ -130,7 +109,7 @@ export default function CartScreen({ navigation }: any) {
       </View>
 
       <View style={styles.infoContainer}>
-        <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.productName} numberOfLines={2}>{item.productTitle || item.title}</Text>
         <Text style={styles.unitPrice}>{item.price} ₸</Text>
 
         <View style={styles.controls}>
@@ -216,7 +195,7 @@ export default function CartScreen({ navigation }: any) {
             {loading ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Text style={styles.checkoutText}>Тапсырыс беру</Text>
+              <Text style={styles.checkoutText}>Төлеу</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -295,10 +274,10 @@ const styles = StyleSheet.create({
   lineTotal: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
   footer: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    bottom: 80, left: 0, right: 0,
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingBottom: 16,
     backgroundColor: '#FFF',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',

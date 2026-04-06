@@ -26,6 +26,7 @@ import AddProductScreen from '../screens/AddProductScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 import BusinessRegisterScreen from '../screens/BusinessRegisterScreen';
+import PaymentScreen from '../screens/PaymentScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -156,6 +157,7 @@ function AppStack() {
       <Stack.Screen name="ScanScreen" component={ScanScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
     </Stack.Navigator>
   );
 }

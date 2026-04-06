@@ -17,7 +17,7 @@ import { useCartStore } from '../store/cartStore';
 import { api } from '../api/client';
 
 export default function ProductScreen({ route, navigation }: any) {
-  const { productId } = route.params;
+  const { productId, storeId: routeStoreId } = route.params;
 
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,8 @@ export default function ProductScreen({ route, navigation }: any) {
   const [cartMessage, setCartMessage] = useState('');
 
   const { toggleFavorite, isFavorite } = useFavoritesStore();
-  const { addItem, storeId } = useCartStore();
+  const { addItem, storeId: cartStoreId } = useCartStore();
+  const storeId = routeStoreId || cartStoreId;
 
   useEffect(() => {
     const fetchProduct = async () => {
