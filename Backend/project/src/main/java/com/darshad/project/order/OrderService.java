@@ -72,7 +72,9 @@ public class OrderService {
                 throw new IllegalStateException("Product inactive: " + product.getTitle());
             }
 
-            var inv = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
+            // PESSIMISTIC_WRITE lock — prevents two concurrent checkouts
+            // from reading the same stock value and overselling.
+            var inv = inventoryRepo.findForUpdateByStore_IdAndProduct_Id(storeId, product.getId())
                     .orElseThrow(() -> new IllegalStateException(
                             "No inventory for product in this store: " + product.getTitle()));
 
@@ -88,15 +90,26 @@ public class OrderService {
             inventoryRepo.save(inv);
             log.debug("  inventory updated: product={}, {} → {}", product.getTitle(), oldQty, inv.getQuantity());
 
-            // Apply discount: effectivePrice = price * (1 - discount/100)
-            BigDecimal unitPrice = product.getPrice();
-            if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal multiplier = BigDecimal.ONE.subtract(
-                        product.getDiscount().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
-                );
-                unitPrice = unitPrice.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
-                log.debug("  discount applied: product={}, original={}, discount={}%, effective={}",
-                        product.getTitle(), product.getPrice(), product.getDiscount(), unitPrice);
+            // B7: honour the price snapshot taken at "add to cart" time.
+            // If the cart row has a snapshot, that is the contract price the
+            // user agreed to. Legacy rows without a snapshot fall back to the
+            // live discount math (kept identical to CartService.effectivePrice
+            // so historical behaviour is preserved).
+            BigDecimal unitPrice;
+            if (cartItem.getPrice() != null) {
+                unitPrice = cartItem.getPrice();
+                log.debug("  using snapshotted cart price: product={}, snapshot={}",
+                        product.getTitle(), unitPrice);
+            } else {
+                unitPrice = product.getPrice();
+                if (product.getDiscount() != null && product.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal multiplier = BigDecimal.ONE.subtract(
+                            product.getDiscount().divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                    );
+                    unitPrice = unitPrice.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
+                    log.debug("  discount applied (legacy fallback): product={}, original={}, discount={}%, effective={}",
+                            product.getTitle(), product.getPrice(), product.getDiscount(), unitPrice);
+                }
             }
 
             BigDecimal lineTotal = unitPrice
@@ -187,6 +200,110 @@ public class OrderService {
                 order.getComment(),
                 order.getCreatedAt(),
                 items
+        );
+    }
+
+    /**
+     * B5: Admin moves an order through the lifecycle. Validates the
+     * transition against {@link OrderStatus#canTransitionTo}. If the
+     * destination is CANCELLED, stock is returned to inventory under
+     * the same pessimistic lock used at checkout, so two simultaneous
+     * cancel/checkout calls cannot interleave on the same row.
+     */
+    @Transactional
+    public OrderResponse updateStatus(java.util.UUID orderId, OrderStatus next) {
+
+        log.info("▶ ADMIN updateStatus: orderId={}, target={}", orderId, next);
+
+        var order = orderRepo.findByIdWithItems(orderId)
+                .orElseThrow(() -> new IllegalStateException("Order not found"));
+
+        OrderStatus current = order.getStatus();
+        if (current == next) {
+            log.debug("  no-op transition: order already in {}", current);
+            return toOrderResponse(order);
+        }
+
+        if (!current.canTransitionTo(next)) {
+            log.warn("  ✗ illegal transition: {} → {}", current, next);
+            throw new IllegalStateException(
+                    "Illegal status transition: " + current + " → " + next);
+        }
+
+        if (next == OrderStatus.CANCELLED) {
+            returnStockForCancellation(order);
+        }
+
+        order.setStatus(next);
+        log.info("✓ order status updated: orderId={}, {} → {}", orderId, current, next);
+
+        return toOrderResponse(order);
+    }
+
+    /**
+     * B6: User cancels their own order. Allowed only while the order is
+     * still in CREATED or PAID — once a merchant has CONFIRMED/SHIPPED
+     * the order, the buyer must contact support. Returns stock to the
+     * inventory rows the checkout decremented from.
+     */
+    @Transactional
+    public OrderResponse cancelOwnOrder(String email, java.util.UUID orderId) {
+
+        log.info("▶ USER cancelOrder: email={}, orderId={}", email, orderId);
+
+        var user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        var order = orderRepo.findByIdAndUserIdWithItems(orderId, user.getId())
+                .orElseThrow(() -> new IllegalStateException("Order not found"));
+
+        OrderStatus current = order.getStatus();
+        if (current != OrderStatus.CREATED && current != OrderStatus.PAID) {
+            log.warn("  ✗ user cancel rejected: order already in {}", current);
+            throw new IllegalStateException(
+                    "Order can no longer be cancelled by the buyer (status=" + current + ")");
+        }
+
+        returnStockForCancellation(order);
+        order.setStatus(OrderStatus.CANCELLED);
+        log.info("✓ user cancelled order: orderId={}, email={}", orderId, email);
+
+        return toOrderResponse(order);
+    }
+
+    /**
+     * Returns each order line's quantity to the corresponding inventory
+     * row, locking the row first so we cannot race against a concurrent
+     * checkout decrement on the same (store, product).
+     */
+    private void returnStockForCancellation(Order order) {
+        var storeId = order.getStore().getId();
+        for (var item : order.getItems()) {
+            var productId = item.getProduct().getId();
+            var inv = inventoryRepo.findForUpdateByStore_IdAndProduct_Id(storeId, productId)
+                    .orElse(null);
+            if (inv == null) {
+                // Product or inventory row may have been deleted in the meantime;
+                // we don't fail the cancel for that — log and move on.
+                log.warn("  ⚠ cannot return stock: no inventory row for product={} in store={}",
+                        productId, storeId);
+                continue;
+            }
+            int oldQty = inv.getQuantity();
+            inv.setQuantity(oldQty + item.getQuantity());
+            inventoryRepo.save(inv);
+            log.debug("  stock returned: product={}, {} → {}",
+                    item.getProduct().getTitle(), oldQty, inv.getQuantity());
+        }
+    }
+
+    private OrderResponse toOrderResponse(Order order) {
+        return new OrderResponse(
+                order.getId(),
+                order.getStore().getId(),
+                order.getStatus().name(),
+                order.getTotalAmount(),
+                order.getCreatedAt()
         );
     }
 }

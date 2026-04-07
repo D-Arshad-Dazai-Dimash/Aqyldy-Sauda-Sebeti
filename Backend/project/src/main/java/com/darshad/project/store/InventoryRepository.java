@@ -1,8 +1,12 @@
 package com.darshad.project.store;
 
 import com.darshad.project.store.dto.Inventory;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +24,14 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
      */
     @EntityGraph(attributePaths = {"product"})
     List<Inventory> findWithProductByStore_Id(UUID storeId);
+
+    /**
+     * Acquires a row-level write lock on the inventory row before reading it.
+     * Prevents two concurrent checkouts from selling the same last unit
+     * (oversell). Must be called inside a @Transactional boundary.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from Inventory i where i.store.id = :storeId and i.product.id = :productId")
+    Optional<Inventory> findForUpdateByStore_IdAndProduct_Id(@Param("storeId") UUID storeId,
+                                                             @Param("productId") UUID productId);
 }

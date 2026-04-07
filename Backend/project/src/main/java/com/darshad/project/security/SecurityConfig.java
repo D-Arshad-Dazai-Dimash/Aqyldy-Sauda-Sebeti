@@ -50,7 +50,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                            JwtAuthFilter jwtAuthFilter,
+                                            RateLimitFilter rateLimitFilter) throws Exception {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -62,6 +64,9 @@ public class SecurityConfig {
 
                         // SWAGGER
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // STATIC UPLOADS (B8: product images served by WebConfig)
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         // PUBLIC CATALOG
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/**").permitAll()
@@ -84,6 +89,7 @@ public class SecurityConfig {
                         // EVERYTHING ELSE
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

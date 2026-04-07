@@ -1,7 +1,9 @@
 package com.darshad.project.cart;
 
 import com.darshad.project.cart.dto.*;
+import com.darshad.project.catalog.product.Product;
 import com.darshad.project.catalog.product.ProductRepository;
+import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.StoreRepository;
 import com.darshad.project.user.User;
 import com.darshad.project.user.UserRepository;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.UUID;
 
 @Service
@@ -25,6 +28,7 @@ public class CartService {
     private final UserRepository userRepo;
     private final ProductRepository productRepo;
     private final StoreRepository storeRepo;
+    private final InventoryRepository inventoryRepo;
 
     @Transactional(readOnly = true)
     public CartDto getMyCart(String email, UUID storeId) {
@@ -69,8 +73,17 @@ public class CartService {
             throw new IllegalStateException("Product inactive");
         }
 
-        if (req.quantity() > product.getStock()) {
-            log.warn("  ✗ not enough stock: requested={}, available={}, product={}", req.quantity(), product.getStock(), product.getTitle());
+        // Use store-specific inventory (matches checkout behaviour and avoids
+        // letting users add items that are out of stock in the chosen store).
+        int availableInStore = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
+                .map(inv -> inv.getQuantity())
+                .orElseThrow(() -> {
+                    log.warn("  ✗ no inventory for product in this store: product={}, store={}", product.getTitle(), storeId);
+                    return new IllegalStateException("Product not available in this store");
+                });
+
+        if (req.quantity() > availableInStore) {
+            log.warn("  ✗ not enough stock: requested={}, available={}, product={}", req.quantity(), availableInStore, product.getTitle());
             throw new IllegalStateException("Not enough stock");
         }
 
@@ -78,21 +91,26 @@ public class CartService {
 
         if (existing == null) {
 
+            // B7: snapshot the effective price at the moment of "add to cart".
+            // Frozen for the lifetime of the row so a merchant price change
+            // between add and checkout cannot silently shift the cart total.
             itemRepo.save(
                     CartItem.builder()
                             .cart(cart)
                             .product(product)
                             .quantity(req.quantity())
+                            .price(effectivePrice(product))
                             .build()
             );
-            log.info("  ✓ new item added: product={}, qty={}", product.getTitle(), req.quantity());
+            log.info("  ✓ new item added: product={}, qty={}, snapshotPrice={}",
+                    product.getTitle(), req.quantity(), effectivePrice(product));
 
         } else {
 
             int newQty = existing.getQuantity() + req.quantity();
 
-            if (newQty > product.getStock()) {
-                log.warn("  ✗ not enough stock (cumulative): requested={}, available={}, product={}", newQty, product.getStock(), product.getTitle());
+            if (newQty > availableInStore) {
+                log.warn("  ✗ not enough stock (cumulative): requested={}, available={}, product={}", newQty, availableInStore, product.getTitle());
                 throw new IllegalStateException("Not enough stock");
             }
 
@@ -129,8 +147,16 @@ public class CartService {
 
         var product = item.getProduct();
 
-        if (req.quantity() > product.getStock()) {
-            log.warn("  ✗ not enough stock: requested={}, available={}", req.quantity(), product.getStock());
+        // Use store-specific inventory, not the global product.stock.
+        int availableInStore = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
+                .map(inv -> inv.getQuantity())
+                .orElseThrow(() -> {
+                    log.warn("  ✗ no inventory for product in this store: product={}, store={}", product.getTitle(), storeId);
+                    return new IllegalStateException("Product not available in this store");
+                });
+
+        if (req.quantity() > availableInStore) {
+            log.warn("  ✗ not enough stock: requested={}, available={}", req.quantity(), availableInStore);
             throw new IllegalStateException("Not enough stock");
         }
 
@@ -195,14 +221,18 @@ public class CartService {
 
     private CartDto toDto(Cart cart) {
         var items = cart.getItems().stream().map(i -> {
-            var price = i.getProduct().getPrice();
+            var product = i.getProduct();
+            // B7: prefer the snapshotted price written when the item was added.
+            // Legacy rows (added before the V6 migration) have null price — fall
+            // back to the live effective price for those so old carts still work.
+            var price = i.getPrice() != null ? i.getPrice() : effectivePrice(product);
             var lineTotal = price.multiply(BigDecimal.valueOf(i.getQuantity()));
             return new CartItemDto(
                     i.getId(),
-                    i.getProduct().getId(),
-                    i.getProduct().getTitle(),
+                    product.getId(),
+                    product.getTitle(),
                     price,
-                    i.getProduct().getImageUrl(),
+                    product.getImageUrl(),
                     i.getQuantity(),
                     lineTotal
             );
@@ -213,5 +243,17 @@ public class CartService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new CartDto(cart.getId(), items, total);
+    }
+
+    private BigDecimal effectivePrice(Product product) {
+        BigDecimal price = product.getPrice();
+        BigDecimal discount = product.getDiscount();
+        if (discount == null || discount.compareTo(BigDecimal.ZERO) <= 0) {
+            return price;
+        }
+        BigDecimal multiplier = BigDecimal.ONE.subtract(
+                discount.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+        );
+        return price.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
     }
 }

@@ -29,4 +29,13 @@ public class OrderController {
     public OrderDetailResponse getOrderById(@PathVariable UUID id, Authentication auth) {
         return orderService.getOrderById(auth.getName(), id);
     }
+
+    /**
+     * B6: User cancels their own order. Allowed only while still in
+     * CREATED/PAID — see {@link OrderService#cancelOwnOrder}.
+     */
+    @DeleteMapping("/{id}")
+    public OrderResponse cancel(@PathVariable UUID id, Authentication auth) {
+        return orderService.cancelOwnOrder(auth.getName(), id);
+    }
 }

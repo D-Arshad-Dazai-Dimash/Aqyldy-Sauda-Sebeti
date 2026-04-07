@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -31,6 +32,17 @@ public class CartItem {
 
     @Column(nullable = false)
     private int quantity;
+
+    /**
+     * Effective unit price snapshotted at the moment the item was added
+     * (= product.price * (1 - discount/100), see {@code CartService.effectivePrice}).
+     * Frozen so that a merchant price change between "add to cart" and
+     * "checkout" cannot silently change the cart total under the user.
+     * Nullable for legacy rows written before V6 — code that reads this
+     * must fall back to the live product price if null.
+     */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal price;
 
     @Column(nullable = false)
     private OffsetDateTime createdAt;

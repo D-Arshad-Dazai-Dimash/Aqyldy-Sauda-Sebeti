@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -38,4 +39,15 @@ public class CatalogAdminController {
         productService.delete(id);
     }
 
+    /**
+     * B8: Multipart upload of a product image. Stored to the local
+     * uploads directory and the public URL is written back to the
+     * product. Returns the updated product DTO so the frontend can
+     * pick up the new {@code imageUrl} without an extra GET.
+     */
+    @PostMapping("/{id}/image")
+    public ProductDto uploadImage(@PathVariable UUID id,
+                                  @RequestParam("file") MultipartFile file) {
+        return productService.uploadImage(id, file);
+    }
 }

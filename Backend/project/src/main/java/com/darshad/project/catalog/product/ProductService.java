@@ -7,24 +7,51 @@ import com.darshad.project.catalog.pricehistory.PriceHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/webp", "image/gif"
+    );
+    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024; // 5 MB
 
     private final ProductRepository productRepo;
     private final CategoryRepository categoryRepo;
     private final PriceHistoryRepository priceHistoryRepo;
+    private final String uploadsDir;
+    private final String publicBaseUrl;
+
+    public ProductService(
+            ProductRepository productRepo,
+            CategoryRepository categoryRepo,
+            PriceHistoryRepository priceHistoryRepo,
+            @Value("${app.uploads.dir}") String uploadsDir,
+            @Value("${app.uploads.public-base-url}") String publicBaseUrl
+    ) {
+        this.productRepo = productRepo;
+        this.categoryRepo = categoryRepo;
+        this.priceHistoryRepo = priceHistoryRepo;
+        this.uploadsDir = uploadsDir;
+        this.publicBaseUrl = publicBaseUrl;
+    }
 
     @Transactional(readOnly = true)
     public Page<ProductDto> search(String q, UUID categoryId, Boolean active, Pageable pageable) {
@@ -149,6 +176,70 @@ public class ProductService {
                 p.isActive(),
                 p.getCategories().stream().map(Category::getId).toList()
         );
+    }
+
+    /**
+     * B8: Stores the uploaded image to the local uploads directory and
+     * persists the public URL on the product. Validates content-type and
+     * size up front. Filename is randomized so a malicious client cannot
+     * collide with or overwrite an existing file.
+     */
+    @Transactional
+    public ProductDto uploadImage(UUID id, MultipartFile file) {
+        log.info("▶ UPLOAD product image: id={}, originalName={}, size={}, contentType={}",
+                id, file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("Empty file");
+        }
+        if (file.getSize() > MAX_IMAGE_BYTES) {
+            throw new IllegalArgumentException("Image too large (max 5 MB)");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("Unsupported image type: " + contentType);
+        }
+
+        var p = productRepo.findById(id)
+                .orElseThrow(() -> new IllegalStateException("Product not found"));
+
+        String ext = extensionFor(contentType);
+        String filename = UUID.randomUUID() + ext;
+
+        try {
+            Path dir = Paths.get(uploadsDir).toAbsolutePath().normalize();
+            Files.createDirectories(dir);
+            Path target = dir.resolve(filename).normalize();
+            // Defence-in-depth: ensure the resolved path is still inside dir.
+            if (!target.startsWith(dir)) {
+                throw new IllegalStateException("Resolved upload path escapes uploads dir");
+            }
+            try (var in = file.getInputStream()) {
+                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException ex) {
+            log.error("  ✗ failed to write upload", ex);
+            throw new IllegalStateException("Failed to store uploaded image", ex);
+        }
+
+        String publicUrl = stripTrailingSlash(publicBaseUrl) + "/" + filename;
+        p.setImageUrl(publicUrl);
+        log.info("✓ product image uploaded: id={}, url={}", id, publicUrl);
+        return toDto(p);
+    }
+
+    private static String extensionFor(String contentType) {
+        return switch (contentType.toLowerCase()) {
+            case "image/jpeg" -> ".jpg";
+            case "image/png"  -> ".png";
+            case "image/webp" -> ".webp";
+            case "image/gif"  -> ".gif";
+            default           -> "";
+        };
+    }
+
+    private static String stripTrailingSlash(String s) {
+        return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
     }
 
     @Transactional(readOnly = true)
