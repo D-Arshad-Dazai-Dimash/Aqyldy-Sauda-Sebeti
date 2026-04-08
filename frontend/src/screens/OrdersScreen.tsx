@@ -43,18 +43,24 @@ export default function OrdersScreen({ navigation }: any) {
 
   const statusColor = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'COMPLETED': return '#22C55E';
+      case 'CREATED': return '#F59E0B';
+      case 'CONFIRMED': return '#3B82F6';
+      case 'SHIPPED': return '#8B5CF6';
+      case 'DELIVERED': return '#22C55E';
       case 'CANCELLED': return '#EF4444';
-      case 'PENDING': return '#F59E0B';
+      case 'PAID': return '#3B82F6';
       default: return '#64748B';
     }
   };
 
   const statusLabel = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'COMPLETED': return 'Орындалды';
+      case 'CREATED': return 'Қабылданды';
+      case 'CONFIRMED': return 'Расталды';
+      case 'SHIPPED': return 'Жолда';
+      case 'DELIVERED': return 'Жеткізілді';
       case 'CANCELLED': return 'Болдырылмады';
-      case 'PENDING': return 'Күтілуде';
+      case 'PAID': return 'Төленді';
       default: return status ?? '—';
     }
   };

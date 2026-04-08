@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -16,12 +17,31 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+
 api.interceptors.response.use(
   (r) => r,
-  (error) => {
-    // Если токен истёк/невалидный — выбрасываем в login
-    if (error?.response?.status === 401) {
-      useAuthStore.getState().logout();
+  async (error) => {
+    if (error?.response?.status === 401 && !isRefreshing) {
+      isRefreshing = true;
+      const refreshToken = await AsyncStorage.getItem('auth:refreshToken');
+      if (refreshToken) {
+        try {
+          const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken });
+          const newToken = res.data.accessToken;
+          await AsyncStorage.setItem('auth:accessToken', newToken);
+          useAuthStore.getState().setAccessToken(newToken);
+          error.config.headers.Authorization = `Bearer ${newToken}`;
+          isRefreshing = false;
+          return api(error.config);
+        } catch {
+          isRefreshing = false;
+          useAuthStore.getState().logout();
+        }
+      } else {
+        isRefreshing = false;
+        useAuthStore.getState().logout();
+      }
     }
     return Promise.reject(error);
   }

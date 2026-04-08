@@ -24,5 +24,6 @@ export type BusinessRegisterRequest = {
 
 export type AuthResponse = {
   accessToken: string;
+  refreshToken?: string;
   role?: Role;
 };

@@ -8,13 +8,15 @@ import {
   ScrollView, 
   SafeAreaView,
   Platform, 
-  StatusBar 
+  StatusBar,
+  Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
 
 export default function ProfileScreen({ navigation }: any) { // navigation қосылды
   const user = useAuthStore((s) => s.user);
+  const role = useAuthStore((s) => s.role);
   const logout = useAuthStore((s) => s.logout);
 
   const MenuEntry = ({ icon, title, color = '#1E293B', onPress }: any) => (
@@ -43,6 +45,7 @@ export default function ProfileScreen({ navigation }: any) { // navigation қо�
         </View>
 
         {/* --- БИЗНЕСКЕ ӨТУ БӨЛІМІ --- */}
+        {(role === 'ADMIN' || role === 'ROLE_ADMIN') && (
         <View style={styles.menuSection}>
   <Text style={styles.sectionTitle}>Режим</Text>
   <MenuEntry 
@@ -50,11 +53,11 @@ export default function ProfileScreen({ navigation }: any) { // navigation қо�
     title="Бизнес режимге өту" 
     color="#27AE60" 
     onPress={() => {
-      // НАЗАР АУДАР: Навигациямен бірге "ADMIN" режимін қосамыз
-      navigation.navigate('BusinessMain', { screen: 'BusinessHome', params: { forceRole: 'ADMIN' } });
+      navigation.navigate('BusinessMain', { screen: 'BusinessHome' });
     }} 
   />
 </View>
+        )}
 
         {/* Статистика */}
         <View style={styles.statsRow}>
