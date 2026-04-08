@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface StoreRepository extends JpaRepository<Store, UUID> {
     List<Store> findAllByActiveTrue();
+
+    List<Store> findByOwnerId(UUID ownerId);
 }

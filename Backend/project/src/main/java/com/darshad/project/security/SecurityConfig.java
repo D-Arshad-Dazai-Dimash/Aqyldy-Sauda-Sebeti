@@ -71,7 +71,8 @@ public class SecurityConfig {
                         // PUBLIC CATALOG
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/**").permitAll()
 
-                        // PUBLIC STORES
+                        // PUBLIC STORES (individual store lookup is public; /my requires auth)
+                        .requestMatchers(HttpMethod.GET, "/api/stores/my").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/stores/**").permitAll()
 
                         // SCAN (authenticated)

@@ -2,6 +2,7 @@ package com.darshad.project.store;
 
 import com.darshad.project.store.dto.InventoryResponse;
 import com.darshad.project.store.dto.StoreResponse;
+import com.darshad.project.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,20 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final InventoryRepository inventoryRepository;
+    private final UserRepository userRepository;
+
+    /**
+     * ТЗ-14: returns all stores owned by the currently authenticated merchant.
+     */
+    public List<StoreResponse> getMyStores(String email) {
+        log.debug("▶ getMyStores: email={}", email);
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+        var stores = storeRepository.findByOwnerId(user.getId())
+                .stream().map(this::toDto).toList();
+        log.debug("  found {} stores for owner={}", stores.size(), email);
+        return stores;
+    }
 
     public List<StoreResponse> getAllActive() {
         log.debug("▶ getAllActive stores");

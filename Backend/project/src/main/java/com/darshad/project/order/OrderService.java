@@ -4,10 +4,13 @@ import com.darshad.project.cart.CartRepository;
 import com.darshad.project.catalog.product.ProductRepository;
 import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.Store;
+import com.darshad.project.store.StoreRepository;
 import com.darshad.project.user.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +30,7 @@ public class OrderService {
     private final ProductRepository productRepo;
     private final UserRepository userRepo;
     private final InventoryRepository inventoryRepo;
+    private final StoreRepository storeRepo;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -304,6 +308,68 @@ public class OrderService {
                 order.getStatus().name(),
                 order.getTotalAmount(),
                 order.getCreatedAt()
+        );
+    }
+
+    // ===========================================================
+    // ТЗ-11: merchant order listing
+    // ===========================================================
+
+    /**
+     * Returns a paginated list of orders placed in the stores owned by the
+     * authenticated merchant. Optionally filters by {@code status}.
+     * If the merchant owns no stores, an empty page is returned immediately
+     * without hitting the orders table.
+     */
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getOrdersForMerchant(String email,
+                                                     OrderStatus status,
+                                                     Pageable pageable) {
+        log.debug("▶ getOrdersForMerchant: email={}, status={}", email, status);
+
+        var user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        var storeIds = storeRepo.findByOwnerId(user.getId())
+                .stream().map(Store::getId).toList();
+
+        if (storeIds.isEmpty()) {
+            log.debug("  merchant has no stores — returning empty page");
+            return Page.empty(pageable);
+        }
+
+        return orderRepo.findByStoreIdInAndStatusOptional(storeIds, status, pageable)
+                .map(this::toOrderResponse);
+    }
+
+    /**
+     * Returns full order detail for any order (admin/merchant view — no ownership check
+     * on the caller; the controller is behind hasRole('ADMIN')).
+     */
+    @Transactional(readOnly = true)
+    public OrderDetailResponse getOrderDetailAdmin(java.util.UUID orderId) {
+        log.debug("▶ getOrderDetailAdmin: orderId={}", orderId);
+
+        var order = orderRepo.findByIdWithItems(orderId)
+                .orElseThrow(() -> new IllegalStateException("Order not found"));
+
+        var items = order.getItems().stream().map(item -> {
+            var p = item.getProduct();
+            return new OrderDetailResponse.OrderItemDetail(
+                    item.getId(), p.getId(), p.getTitle(), p.getImageUrl(),
+                    item.getQuantity(), item.getPrice(), item.getLineTotal()
+            );
+        }).toList();
+
+        return new OrderDetailResponse(
+                order.getId(),
+                order.getStore().getId(),
+                order.getStore().getName(),
+                order.getStatus().name(),
+                order.getTotalAmount(),
+                order.getComment(),
+                order.getCreatedAt(),
+                items
         );
     }
 }
