@@ -86,6 +86,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/**").authenticated()
                         .requestMatchers("/api/favorites/**").authenticated()
                         .requestMatchers("/api/me/**").authenticated()
+                        .requestMatchers("/api/recommendations/**").authenticated()
+                        .requestMatchers("/api/analytics/**").authenticated()
+                        .requestMatchers("/api/price-insights/**").permitAll()
 
                         // EVERYTHING ELSE
                         .anyRequest().authenticated()

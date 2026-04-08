@@ -15,6 +15,9 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
 import { api } from '../api/client';
+import { getPriceInsight } from '../api/priceInsights';
+import { getFrequentlyBoughtTogether } from '../api/recommendations';
+import type { PriceInsight, RecommendedProduct } from '../types/api';
 
 export default function ProductScreen({ route, navigation }: any) {
   const { productId, storeId: routeStoreId } = route.params;
@@ -23,6 +26,8 @@ export default function ProductScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartMessage, setCartMessage] = useState('');
+  const [priceInsight, setPriceInsight] = useState<PriceInsight | null>(null);
+  const [related, setRelated] = useState<RecommendedProduct[]>([]);
 
   const { toggleFavorite, isFavorite } = useFavoritesStore();
   const { addItem, storeId: cartStoreId } = useCartStore();
@@ -41,6 +46,10 @@ export default function ProductScreen({ route, navigation }: any) {
       }
     };
     fetchProduct();
+
+    // Load AI features in parallel (non-blocking)
+    getPriceInsight(productId).then(setPriceInsight).catch(() => {});
+    getFrequentlyBoughtTogether(productId, 6).then(setRelated).catch(() => {});
   }, [productId]);
 
   const handleAddToCart = async () => {
@@ -127,6 +136,48 @@ export default function ProductScreen({ route, navigation }: any) {
             )}
           </View>
 
+          {/* AI PRICE INSIGHT */}
+          {priceInsight && priceInsight.history.length > 0 && (
+            <View style={styles.insightContainer}>
+              {priceInsight.goodDeal && (
+                <View style={styles.goodDealBadge}>
+                  <Feather name="trending-down" size={14} color="#166534" />
+                  <Text style={styles.goodDealText}>Тиімді баға!</Text>
+                </View>
+              )}
+              <View style={styles.insightRow}>
+                <View style={styles.insightItem}>
+                  <Text style={styles.insightLabel}>Орташа</Text>
+                  <Text style={styles.insightValue}>{priceInsight.averagePrice.toFixed(0)} ₸</Text>
+                </View>
+                <View style={styles.insightItem}>
+                  <Text style={styles.insightLabel}>Ең төмен</Text>
+                  <Text style={styles.insightValue}>{priceInsight.lowestPrice.toFixed(0)} ₸</Text>
+                </View>
+                <View style={styles.insightItem}>
+                  <Text style={styles.insightLabel}>Тренд</Text>
+                  <View style={styles.trendRow}>
+                    <Feather
+                      name={priceInsight.trend === 'UP' ? 'trending-up' : priceInsight.trend === 'DOWN' ? 'trending-down' : 'minus'}
+                      size={14}
+                      color={priceInsight.trend === 'UP' ? '#EF4444' : priceInsight.trend === 'DOWN' ? '#22C55E' : '#94A3B8'}
+                    />
+                    <Text style={[
+                      styles.trendText,
+                      { color: priceInsight.trend === 'UP' ? '#EF4444' : priceInsight.trend === 'DOWN' ? '#22C55E' : '#94A3B8' }
+                    ]}>
+                      {priceInsight.changePercentage > 0 ? '+' : ''}{priceInsight.changePercentage}%
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.insightAiBadge}>
+                <Feather name="cpu" size={10} color="#4AB7B6" />
+                <Text style={styles.insightAiText}>AI баға талдауы</Text>
+              </View>
+            </View>
+          )}
+
           {/* DESCRIPTION */}
           {product.description ? (
             <View style={styles.section}>
@@ -170,6 +221,34 @@ export default function ProductScreen({ route, navigation }: any) {
             </Text>
           </View>
         </View>
+
+        {/* AI: FREQUENTLY BOUGHT TOGETHER */}
+        {related.length > 0 && (
+          <View style={styles.relatedSection}>
+            <View style={styles.relatedHeader}>
+              <Feather name="cpu" size={14} color="#4AB7B6" />
+              <Text style={styles.relatedTitle}>Бірге сатып алатындар</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.relatedScroll}>
+              {related.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.relatedCard}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.push('ProductScreen', { productId: item.id, storeId })}
+                >
+                  <Image
+                    source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                    style={styles.relatedImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.relatedName} numberOfLines={2}>{item.title}</Text>
+                  <Text style={styles.relatedPrice}>{item.price} ₸</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
 
       {/* ADD TO CART */}
@@ -252,6 +331,71 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
   stockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   stockText: { fontSize: 14, fontWeight: '500' },
+
+  // AI Price Insight
+  insightContainer: {
+    backgroundColor: '#F0FDFA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  goodDealBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+    marginBottom: 8,
+  },
+  goodDealText: { fontSize: 12, fontWeight: '700', color: '#166534' },
+  insightRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  insightItem: { alignItems: 'center', flex: 1 },
+  insightLabel: { fontSize: 10, color: '#64748B', marginBottom: 2, textTransform: 'uppercase' },
+  insightValue: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  trendText: { fontSize: 13, fontWeight: '700' },
+  insightAiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    alignSelf: 'flex-end',
+  },
+  insightAiText: { fontSize: 10, color: '#4AB7B6', fontWeight: '500' },
+
+  // Related Products
+  relatedSection: {
+    marginHorizontal: 15,
+    marginTop: 16,
+  },
+  relatedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  relatedTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  relatedScroll: { gap: 10, paddingRight: 15 },
+  relatedCard: {
+    width: 120,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  relatedImage: { width: '100%', height: 70, borderRadius: 8, marginBottom: 6 },
+  relatedName: { fontSize: 11, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
+  relatedPrice: { fontSize: 13, fontWeight: '800', color: '#4AB7B6' },
+
   footer: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
