@@ -15,6 +15,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
 import { api } from '../api/client';
+import RecommendationsSection from '../components/RecommendationsSection';
+import PriceTrendSection from '../components/PriceTrendSection';
 
 export default function ProductScreen({ route, navigation }: any) {
   const { productId, storeId: routeStoreId } = route.params;
@@ -170,6 +172,15 @@ export default function ProductScreen({ route, navigation }: any) {
             </Text>
           </View>
         </View>
+
+        {/* AI: PRICE TRENDS */}
+        <PriceTrendSection productId={productId} />
+
+        {/* AI: RECOMMENDATIONS */}
+        <RecommendationsSection
+          productId={productId}
+          onProductPress={(id: string) => navigation.push('ProductScreen', { productId: id })}
+        />
       </ScrollView>
 
       {/* ADD TO CART */}

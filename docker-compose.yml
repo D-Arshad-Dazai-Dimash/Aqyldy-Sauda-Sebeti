@@ -17,5 +17,22 @@ services:
       timeout: 3s
       retries: 20
 
+  ai-service:
+    build: ./ai-service
+    container_name: aqyldy_ai_service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: dbaqyldy
+      DB_USER: aqsa
+      DB_PASS: aqyldysebet123
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   aqyldy_pg:
