@@ -27,6 +27,10 @@ import OrdersScreen from '../screens/OrdersScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 import BusinessRegisterScreen from '../screens/BusinessRegisterScreen';
 import PaymentScreen from '../screens/PaymentScreen';
+import BusinessOrdersScreen from '../screens/BusinessOrdersScreen';
+import BusinessOrderDetailScreen from '../screens/BusinessOrderDetailScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -88,7 +92,7 @@ function BusinessTabs() {
       />
       <Tab.Screen
         name="BusinessOrders"
-        component={OrdersScreen}
+        component={BusinessOrdersScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <Feather name="file-text" size={28} color={focused ? '#4AB7B6' : '#CBD5E1'} />
@@ -157,6 +161,7 @@ function AppStack() {
       <Stack.Screen name="ScanScreen" component={ScanScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <Stack.Screen name="BusinessOrderDetail" component={BusinessOrderDetailScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
     </Stack.Navigator>
   );
@@ -181,6 +186,8 @@ export default function RootNavigation() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="BusinessRegister" component={BusinessRegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

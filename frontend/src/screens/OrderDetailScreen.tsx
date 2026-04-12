@@ -10,6 +10,7 @@ import {
   Platform,
   StatusBar,
   Image,
+  Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
@@ -18,6 +19,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
   const { orderId } = route.params;
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -121,6 +123,45 @@ export default function OrderDetailScreen({ route, navigation }: any) {
             <Text style={styles.totalLabel}>Жалпы сома</Text>
             <Text style={styles.totalAmount}>{Number(order.totalAmount ?? 0).toFixed(0)} ₸</Text>
           </View>
+
+          {/* Cancel button for CREATED / PAID */}
+          {(order.status?.toUpperCase() === 'CREATED' || order.status?.toUpperCase() === 'PAID') && (
+            <TouchableOpacity
+              style={[styles.cancelBtn, cancelling && { opacity: 0.6 }]}
+              disabled={cancelling}
+              onPress={() => {
+                Alert.alert(
+                  'Тапсырысты болдырмау',
+                  'Тапсырысты болдырмауға сенімдісіз бе?',
+                  [
+                    { text: 'Жоқ', style: 'cancel' },
+                    {
+                      text: 'Иә, болдырмау',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          setCancelling(true);
+                          await api.delete(`/api/orders/${orderId}`);
+                          setOrder((prev: any) => ({ ...prev, status: 'CANCELLED' }));
+                          Alert.alert('Дайын', 'Тапсырыс болдырылмады');
+                        } catch (e: any) {
+                          Alert.alert('Қате', e?.response?.data?.message || 'Болдырмау мүмкін болмады');
+                        } finally {
+                          setCancelling(false);
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+            >
+              {cancelling ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.cancelBtnText}>Тапсырысты болдырмау</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -206,6 +247,14 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: 15, color: '#64748B', fontWeight: '500' },
   totalAmount: { fontSize: 22, fontWeight: '800', color: '#1E293B' },
+  cancelBtn: {
+    backgroundColor: '#EF4444',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  cancelBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { marginTop: 16, fontSize: 18, color: '#94A3B8', fontWeight: '500' },
 });

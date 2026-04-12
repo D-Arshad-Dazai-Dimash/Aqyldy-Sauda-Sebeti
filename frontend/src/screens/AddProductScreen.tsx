@@ -109,7 +109,6 @@ export default function AddProductScreen({ route, navigation }: any) {
         price: Number(price),
         stock: Number(stock) || 0,
         description: selectedSubcategory || '',
-        imageUrl: photoUri || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400',
         active: true,
       };
 
@@ -121,13 +120,30 @@ export default function AddProductScreen({ route, navigation }: any) {
         payload.weight = weight;
       }
 
+      // Step 1: create product
       const response = await api.post('/api/admin/products', payload);
+      const productId = response.data?.id;
 
-      if (response.status === 201 || response.status === 200) {
-        Alert.alert('Сәтті!', 'Тауар базаға қосылды', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+      // Step 2: upload photo if selected
+      if (photoUri && productId) {
+        try {
+          const formData = new FormData();
+          formData.append('file', {
+            uri: photoUri,
+            type: 'image/jpeg',
+            name: 'photo.jpg',
+          } as any);
+          await api.post(`/api/admin/products/${productId}/image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        } catch (imgErr) {
+          console.warn('Image upload failed:', imgErr);
+        }
       }
+
+      Alert.alert('Сәтті!', 'Тауар базаға қосылды', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (error: any) {
       console.error('SERVER ERROR:', error.response?.data || error.message);
       const errorMessage = error.response?.data?.message || 'Тауарды сақтау мүмкін болмады';

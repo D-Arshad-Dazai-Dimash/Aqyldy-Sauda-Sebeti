@@ -11,6 +11,7 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState<string | null>(null);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -18,49 +19,75 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
     }
   }, [route.params]);
 
+  // Fetch merchant's store
+  useEffect(() => {
+    const fetchStore = async () => {
+      try {
+        const res = await api.get('/api/stores/my');
+        const stores = res.data;
+        if (Array.isArray(stores) && stores.length > 0) {
+          setStoreId(stores[0].id);
+        }
+      } catch (e) {
+        console.log('Store fetch error:', e);
+      }
+    };
+    fetchStore();
+  }, []);
+
   const fetchProducts = useCallback(async () => {
+    if (!storeId) return;
     try {
       setLoading(true);
-      const res = await api.get('/api/products', { params: { size: 100 } });
-      setAllProducts(res.data?.content || []);
+      const res = await api.get('/api/admin/inventory', { params: { storeId } });
+      setAllProducts(res.data || []);
     } catch (e) {
       console.log('Inventory fetch error:', e);
+      // Fallback to products endpoint
+      try {
+        const res = await api.get('/api/products', { params: { size: 100 } });
+        setAllProducts(res.data?.content || []);
+      } catch {}
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [storeId]);
 
   useEffect(() => {
-    fetchProducts();
-    const unsubscribe = navigation.addListener('focus', fetchProducts);
-    return unsubscribe;
-  }, [navigation, fetchProducts]);
+    if (storeId) {
+      fetchProducts();
+    }
+  }, [storeId, fetchProducts]);
 
-  const inStock = allProducts.filter((p) => p.stock > 0);
-  const outOfStock = allProducts.filter((p) => p.stock === 0);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (storeId) fetchProducts();
+    });
+    return unsubscribe;
+  }, [navigation, storeId, fetchProducts]);
+
+  const inStock = allProducts.filter((p) => (p.quantity ?? p.stock ?? 0) > 0);
+  const outOfStock = allProducts.filter((p) => (p.quantity ?? p.stock ?? 0) === 0);
 
   const updateStock = async (item: any, delta: number) => {
-    const newStock = (item.stock ?? 0) + delta;
-    if (newStock < 0) return;
+    const currentQty = item.quantity ?? item.stock ?? 0;
+    const newQty = currentQty + delta;
+    if (newQty < 0) return;
 
-    setUpdatingId(item.id);
+    const productId = item.productId ?? item.id;
+    setUpdatingId(productId);
     try {
-      await api.put(`/api/admin/products/${item.id}`, {
-        title: item.title,
-        description: item.description,
-        price: item.price,
-        barcode: item.barcode,
-        stock: newStock,
-        discount: item.discount,
-        imageUrl: item.imageUrl,
-        unit: item.unit,
-        weight: item.weight,
-        active: item.active,
-        categoryIds: item.categoryIds ?? [],
+      await api.post('/api/admin/inventory', {
+        storeId,
+        productId,
+        quantity: newQty,
       });
       // Optimistic update
       setAllProducts((prev) =>
-        prev.map((p) => (p.id === item.id ? { ...p, stock: newStock } : p))
+        prev.map((p) => {
+          const pid = p.productId ?? p.id;
+          return pid === productId ? { ...p, quantity: newQty, stock: newQty } : p;
+        })
       );
     } catch (e: any) {
       Alert.alert('Қате', e?.response?.data?.detail || 'Жаңарту мүмкін болмады');
@@ -73,7 +100,8 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
   const displayList = activeTab === 'inStock' ? inStock : outOfStock;
 
   const ProductItem = ({ item }: { item: any }) => {
-    const isUpdating = updatingId === item.id;
+    const isUpdating = updatingId === (item.productId ?? item.id);
+    const qty = item.quantity ?? item.stock ?? 0;
     return (
       <View style={[styles.productCard, activeTab === 'inStock' ? styles.shadowGreen : styles.shadowRed]}>
         <Image
@@ -83,7 +111,7 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
         />
 
         <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.productName} numberOfLines={2}>{item.productTitle ?? item.title}</Text>
           {item.barcode ? (
             <Text style={styles.productBarcode}>barcode: {item.barcode}</Text>
           ) : null}
@@ -94,7 +122,7 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.stockContainer}>
-          <Text style={styles.stockLabel}>Қоймада: {item.stock}</Text>
+          <Text style={styles.stockLabel}>Қоймада: {qty}</Text>
           {isUpdating ? (
             <ActivityIndicator size="small" color="#4AB7B6" />
           ) : (
@@ -155,7 +183,7 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
         <FlatList
           data={displayList}
           renderItem={({ item }) => <ProductItem item={item} />}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.productId ?? item.id}
           contentContainerStyle={styles.listPadding}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={

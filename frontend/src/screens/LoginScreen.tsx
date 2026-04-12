@@ -115,6 +115,14 @@ export default function LoginScreen({ navigation }: any) {
                 </>
               )}
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              activeOpacity={0.6}
+              style={styles.forgotBtn}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={styles.forgotText}>Құпия сөзді ұмыттым?</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
@@ -207,6 +215,8 @@ const styles = StyleSheet.create({
   },
   disabledButton: { opacity: 0.7, backgroundColor: '#94A3B8' },
   buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginRight: 10 },
+  forgotBtn: { alignItems: 'center', marginTop: 16 },
+  forgotText: { fontSize: 14, color: '#27AE60', fontWeight: '700' },
   footer: { marginTop: 35, alignItems: 'center' },
   footerText: { fontSize: 15, color: '#64748B', fontWeight: '500' },
   linkText: { color: '#27AE60', fontWeight: '800' },
