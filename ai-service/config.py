@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     db_port: int = 55432
     db_name: str = "dbaqyldy"
     db_user: str = "aqsa"
-    db_pass: str = "aqyldysebet123"
+    db_pass: str = ""
 
     # Google Gemini (for chatbot)
     gemini_api_key: str = ""

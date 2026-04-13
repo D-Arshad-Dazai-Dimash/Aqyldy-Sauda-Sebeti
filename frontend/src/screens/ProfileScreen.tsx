@@ -1,23 +1,31 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Image, 
-  ScrollView, 
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
   SafeAreaView,
-  Platform, 
+  Platform,
   StatusBar,
   Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
+import { api } from '../api/client';
 
 export default function ProfileScreen({ navigation }: any) { // navigation қосылды
   const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
   const logout = useAuthStore((s) => s.logout);
+  const [profile, setProfile] = useState<any>(null);
+  const [orderCount, setOrderCount] = useState(0);
+
+  useEffect(() => {
+    api.get('/api/me').then(r => setProfile(r.data)).catch(() => {});
+    api.get('/api/orders/my').then(r => setOrderCount(r.data?.length ?? 0)).catch(() => {});
+  }, []);
 
   const MenuEntry = ({ icon, title, color = '#1E293B', onPress }: any) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
@@ -40,8 +48,8 @@ export default function ProfileScreen({ navigation }: any) { // navigation қо�
               style={styles.avatar} 
             />
           </View>
-          <Text style={styles.userName}>{user?.email?.split('@')[0] || 'Пайдаланушы'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'email@example.com'}</Text>
+          <Text style={styles.userName}>{profile?.name || user?.email?.split('@')[0] || 'Пайдаланушы'}</Text>
+          <Text style={styles.userEmail}>{profile?.email || user?.email || 'email@example.com'}</Text>
         </View>
 
         {/* --- БИЗНЕСКЕ ӨТУ БӨЛІМІ --- */}
@@ -62,12 +70,12 @@ export default function ProfileScreen({ navigation }: any) { // navigation қо�
         {/* Статистика */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{orderCount}</Text>
             <Text style={styles.statLabel}>Сатып алу</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>4.5к</Text>
-            <Text style={styles.statLabel}>Бонустар</Text>
+            <Text style={styles.statValue}>{profile?.phone || '—'}</Text>
+            <Text style={styles.statLabel}>Телефон</Text>
           </View>
         </View>
 
@@ -82,6 +90,7 @@ export default function ProfileScreen({ navigation }: any) { // navigation қо�
           <Text style={styles.sectionTitle}>Баптаулар</Text>
           <MenuEntry icon="bell" title="Хабарландырулар" />
           <MenuEntry icon="shield" title="Қауіпсіздік" />
+          <MenuEntry icon="message-circle" title="AI Көмекші" color="#4AB7B6" onPress={() => navigation.navigate('Chatbot')} />
         </View>
 
         {/* Кнопка выхода */}

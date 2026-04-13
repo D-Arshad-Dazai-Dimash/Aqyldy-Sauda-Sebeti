@@ -4,12 +4,13 @@ import {
   TouchableOpacity, Image, Platform, StatusBar, ActivityIndicator
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import { api } from '../api/client'; // Сенің API клиентің
+import { api } from '../api/client';
 
 export default function BusinessDashboard({ navigation }: any) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, outOfStock: 0 });
+  const [userName, setUserName] = useState('');
 
   // Базадан нақты мәліметтерді алу
   const fetchBusinessData = async () => {
@@ -28,6 +29,7 @@ export default function BusinessDashboard({ navigation }: any) {
 
   useEffect(() => {
     fetchBusinessData();
+    api.get('/api/me').then(r => setUserName(r.data?.name || '')).catch(() => {});
     // Экранға қайта оралғанда тізімді жаңарту
     const unsubscribe = navigation.addListener('focus', fetchBusinessData);
     return unsubscribe;
@@ -64,7 +66,7 @@ export default function BusinessDashboard({ navigation }: any) {
           <View>
             <Text style={styles.logoText}>Aqyldy<Text style={{color: '#4AB7B6'}}>Sebet</Text></Text>
             <Text style={styles.welcomeText}>Қош келдіңіз</Text>
-            <Text style={styles.userName}>Нұрсұлтан Болатович</Text>
+            <Text style={styles.userName}>{userName || 'Бизнес'}</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.langSelector}>

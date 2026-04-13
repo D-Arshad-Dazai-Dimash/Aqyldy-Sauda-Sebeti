@@ -75,7 +75,7 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.cardTitle}>Акциялар</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF9C3' }]}>
+          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF9C3' }]} onPress={() => navigation.navigate('Orders')}>
             <View style={styles.cardIcon}>
                <Feather name="clock" size={24} color="#854D0E" />
             </View>
@@ -99,6 +99,15 @@ export default function HomeScreen({ navigation }: any) {
         </TouchableOpacity>
 
       </ScrollView>
+
+      {/* Floating AI Chatbot button */}
+      <TouchableOpacity
+        style={styles.chatFab}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('Chatbot')}
+      >
+        <Feather name="message-circle" size={26} color="#FFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -185,5 +194,23 @@ const styles = StyleSheet.create({
     marginTop: 40,
     paddingBottom: 20
   },
-  logoutText: { marginLeft: 8, color: '#94A3B8', fontWeight: '600' }
+  logoutText: { marginLeft: 8, color: '#94A3B8', fontWeight: '600' },
+
+  chatFab: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#4AB7B6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#4AB7B6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    zIndex: 100,
+  },
 });
