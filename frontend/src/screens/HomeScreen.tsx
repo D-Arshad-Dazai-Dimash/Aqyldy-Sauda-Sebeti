@@ -7,18 +7,21 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Image,
-  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
+import SkeletonBlock from '../components/SkeletonBlock';
 
 export default function HomeScreen({ navigation }: any) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
+
+  const recommendationSkeletons = Array.from({ length: 4 }, (_, index) => index);
 
   const loadRecommendations = useCallback(async () => {
     try {
@@ -48,11 +51,11 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.logoTextSub}>Sebet</Text>
         </View>
         <View style={styles.headerIcons}>
-           <TouchableOpacity style={styles.langBtn}>
+           <TouchableOpacity style={styles.langBtn} onPress={() => Alert.alert('Тіл', 'Қазіргі уақытта тек қазақ тілі қолдарылады.')}>
               <Text style={styles.langText}>Қазақша</Text>
               <Feather name="chevron-down" size={14} color="#64748B" />
            </TouchableOpacity>
-           <TouchableOpacity style={styles.iconCircle}>
+           <TouchableOpacity style={styles.iconCircle} onPress={() => Alert.alert('Хабарландырулар', 'Жаңа хабарландырулар жоқ.')}>
               <Feather name="bell" size={20} color="#EF4444" />
            </TouchableOpacity>
         </View>
@@ -63,7 +66,7 @@ export default function HomeScreen({ navigation }: any) {
         {/* Приветствие */}
         <View style={styles.welcomeSection}>
           <Text style={styles.greeting}>Қайырлы күн!</Text>
-          <Text style={styles.userName}>{user?.username || 'Пайдаланушы'}</Text>
+          <Text style={styles.userName}>{user?.name || user?.username || 'Пайдаланушы'}</Text>
         </View>
 
         {/* Кнопка поиска (как в категориях) */}
@@ -78,21 +81,21 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* Сетка быстрых сервисов (Тот самый старый стиль) */}
         <View style={styles.grid}>
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#DCFCE7' }]}>
+          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#DCFCE7' }]} onPress={() => navigation.navigate('Search')}>
             <View style={styles.cardIcon}>
                <Feather name="shopping-cart" size={24} color="#166534" />
             </View>
             <Text style={styles.cardTitle}>Дүкендер</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#E0F2FE' }]}>
+          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#E0F2FE' }]} onPress={() => Alert.alert('Карта', 'Бұл мүмкіндік жақын арада қосылады.')}>
             <View style={styles.cardIcon}>
                <Feather name="map-pin" size={24} color="#075985" />
             </View>
             <Text style={styles.cardTitle}>Карта</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEE2E2' }]}>
+          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEE2E2' }]} onPress={() => navigation.navigate('Search')}>
             <View style={styles.cardIcon}>
                <Feather name="percent" size={24} color="#991B1B" />
             </View>
@@ -176,7 +179,25 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         )}
         {recsLoading && !recommendations.length && (
-          <ActivityIndicator size="small" color="#4AB7B6" style={{ marginTop: 20 }} />
+          <View style={styles.recsSection}>
+            <View style={styles.recsSectionHeader}>
+              <View style={styles.recsTitleRow}>
+                <Feather name="cpu" size={16} color="#4AB7B6" />
+                <Text style={styles.recsSectionTitle}>Сізге ұсынылады</Text>
+              </View>
+              <Text style={styles.recsSubtitle}>AI негізінде</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recsScroll}>
+              {recommendationSkeletons.map((item) => (
+                <View key={item} style={styles.recCard}>
+                  <SkeletonBlock height={90} borderRadius={10} />
+                  <SkeletonBlock height={12} style={styles.recSkeletonTitle} />
+                  <SkeletonBlock width="65%" height={12} style={styles.recSkeletonText} />
+                  <SkeletonBlock width="45%" height={16} style={styles.recSkeletonPrice} />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
         )}
 
         {/* Кнопка логаута (внизу, чтобы не мешала) */}
@@ -330,6 +351,9 @@ const styles = StyleSheet.create({
   recPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   recPrice: { fontSize: 14, fontWeight: '800', color: '#4AB7B6' },
   recOldPrice: { fontSize: 11, color: '#94A3B8', textDecorationLine: 'line-through' },
+  recSkeletonTitle: { marginTop: 6, marginBottom: 6 },
+  recSkeletonText: { marginBottom: 10 },
+  recSkeletonPrice: { marginTop: 'auto' },
 
   logoutBtn: {
     flexDirection: 'row',

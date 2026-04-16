@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Image, Platform, StatusBar, ActivityIndicator
+  TouchableOpacity, Image, Platform, StatusBar, ActivityIndicator, Alert
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
@@ -20,8 +20,8 @@ export default function BusinessDashboard({ navigation }: any) {
       setProducts(content);
       const outOfStockCount = content.filter((p: any) => p.stock === 0).length;
       setStats({ total: content.length, outOfStock: outOfStockCount });
-    } catch (e) {
-      console.log('Бизнес деректерін алу қатесі:', e);
+    } catch {
+      // silent — dashboard shows empty state
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function BusinessDashboard({ navigation }: any) {
             <Text style={styles.userName}>{userName || 'Бизнес'}</Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.langSelector}>
+            <TouchableOpacity style={styles.langSelector} onPress={() => Alert.alert('Тіл', 'Қазіргі уақытта тек қазақ тілі қолданылады.')}>
               <Text style={styles.langText}>Қазақша </Text>
               <Feather name="chevron-down" size={16} color="#64748B" />
             </TouchableOpacity>

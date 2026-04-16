@@ -7,8 +7,9 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Image,
-  Platform, // ҚОСЫЛДЫ
-  StatusBar // ҚОСЫЛДЫ
+  Alert,
+  Platform,
+  StatusBar
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { PRODUCT_CATEGORIES, Category } from '../constants/categories';
@@ -20,11 +21,11 @@ export default function CategoriesScreen({ navigation }: any) {
       <View style={styles.header}>
         <Text style={styles.logoText}>Aqyldy<Text style={{color: '#4AB7B6'}}>Sebet</Text></Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.langSelector} onPress={() => {}}>
+          <TouchableOpacity style={styles.langSelector} onPress={() => Alert.alert('Тіл', 'Қазіргі уақытта тек қазақ тілі қолданылады.')}>
             <Text style={styles.langText}>Қазақша </Text>
             <Feather name="chevron-down" size={16} color="#64748B" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.notificationBtn}>
+          <TouchableOpacity style={styles.notificationBtn} onPress={() => Alert.alert('Хабарландырулар', 'Жаңа хабарландырулар жоқ.')}>
             <Feather name="bell" size={22} color="#EF4444" />
           </TouchableOpacity>
         </View>

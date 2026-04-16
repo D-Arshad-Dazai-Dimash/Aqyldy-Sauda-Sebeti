@@ -165,11 +165,8 @@ function AppStack() {
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
       <Stack.Screen name="BusinessOrderDetail" component={BusinessOrderDetailScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
-<<<<<<< HEAD
       <Stack.Screen name="Chatbot" component={ChatbotScreen} />
-=======
       <Stack.Screen name="Analytics" component={AnalyticsScreen} />
->>>>>>> feature/ai-ml-integration
     </Stack.Navigator>
   );
 }

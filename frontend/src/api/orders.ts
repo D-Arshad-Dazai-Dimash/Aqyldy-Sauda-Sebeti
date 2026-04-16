@@ -10,3 +10,13 @@ export async function getMyOrders(): Promise<OrderResponse[]> {
   const res = await api.get<OrderResponse[]>('/api/orders/my');
   return res.data;
 }
+
+export async function getOrderById(orderId: string): Promise<any> {
+  const res = await api.get(`/api/orders/${orderId}`);
+  return res.data;
+}
+
+export async function cancelOrder(orderId: string): Promise<OrderResponse> {
+  const res = await api.delete<OrderResponse>(`/api/orders/${orderId}`);
+  return res.data;
+}

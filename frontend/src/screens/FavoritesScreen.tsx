@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,23 +10,20 @@ import {
   Alert,
   Platform,
   StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import * as ProductsApi from '../api/products';
 import type { Product } from '../types/api';
+import SkeletonBlock from '../components/SkeletonBlock';
 
 export default function FavoritesScreen({ navigation }: any) {
   const { favorites, toggleFavorite } = useFavoritesStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const skeletonItems = Array.from({ length: 4 }, (_, index) => ({ id: `favorite-skeleton-${index}` }));
 
-  useEffect(() => {
-    loadFavorites();
-  }, [favorites]);
-
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     if (favorites.length === 0) {
       setProducts([]);
       return;
@@ -46,7 +43,11 @@ export default function FavoritesScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [favorites]);
+
+  useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
 
   const removeItem = (id: string, name: string) => {
     Alert.alert(
@@ -93,6 +94,17 @@ export default function FavoritesScreen({ navigation }: any) {
     </TouchableOpacity>
   );
 
+  const renderSkeletonItem = ({ item }: { item: { id: string } }) => (
+    <View key={item.id} style={styles.card}>
+      <SkeletonBlock width={70} height={70} borderRadius={12} />
+      <View style={styles.info}>
+        <SkeletonBlock height={14} style={styles.skeletonLine} />
+        <SkeletonBlock width="55%" height={14} style={styles.skeletonLine} />
+      </View>
+      <SkeletonBlock width={24} height={24} borderRadius={12} />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -101,9 +113,13 @@ export default function FavoritesScreen({ navigation }: any) {
       </View>
 
       {loading && products.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4AB7B6" />
-        </View>
+        <FlatList
+          data={skeletonItems}
+          renderItem={renderSkeletonItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          scrollEnabled={false}
+        />
       ) : favorites.length > 0 ? (
         <FlatList
           data={products}
@@ -161,6 +177,7 @@ const styles = StyleSheet.create({
   info: { flex: 1, marginLeft: 15 },
   name: { fontSize: 16, fontWeight: '600', color: '#1E293B' },
   price: { fontSize: 15, fontWeight: '700', color: '#27AE60', marginTop: 4 },
+  skeletonLine: { marginBottom: 10 },
   actions: { alignItems: 'center' },
   removeButton: {
     width: 36,

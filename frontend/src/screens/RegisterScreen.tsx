@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
+import { getApiErrorMessage, isStrongEnoughPassword, isValidEmail } from '../utils/validation';
 
 const { width } = Dimensions.get('window');
 
@@ -27,9 +28,18 @@ export default function RegisterScreen({ navigation }: any) {
   const [loading, setLoading] = React.useState(false);
 
   const onSubmit = async () => {
-    // Енді name-ді де тексереміз
     if (!email || !password || !name) {
       setError('Пожалуйста, заполните все поля');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError('Введите корректный email');
+      return;
+    }
+
+    if (!isStrongEnoughPassword(password)) {
+      setError('Пароль должен содержать минимум 6 символов');
       return;
     }
     
@@ -39,11 +49,7 @@ export default function RegisterScreen({ navigation }: any) {
     try {
       await register(email.trim(), password, name.trim());
     } catch (e: any) {
-      // МЫНА ЖЕРГЕ ҚОС:
-      console.log('--- ТОЛЫҚ ҚАТЕ (ERROR) ---');
-      console.log(e); // Бұл жерде Network Error немесе басқа қате шығады
-      
-      setError(e?.response?.data?.message ?? 'Ошибка регистрации. Проверьте сеть!');
+      setError(getApiErrorMessage(e, 'Ошибка регистрации. Проверьте сеть!'));
     } finally {
       setLoading(false);
     }

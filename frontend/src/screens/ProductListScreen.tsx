@@ -10,11 +10,11 @@ import {
   Image,
   Platform,
   StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { api } from '../api/client';
+import SkeletonBlock from '../components/SkeletonBlock';
 
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = (width - (20 * 2) - 15) / 2;
@@ -24,18 +24,22 @@ export default function ProductListScreen({ route, navigation }: any) {
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toggleFavorite, isFavorite } = useFavoritesStore();
+  const skeletonItems = Array.from({ length: 6 }, (_, index) => ({ id: `skeleton-${index}` }));
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
+        setError(null);
         const params: any = { active: true };
         if (categoryId) params.categoryId = categoryId;
+        if (subCategoryName) params.subCategory = subCategoryName;
         const res = await api.get('/api/products', { params });
         setProducts(res.data?.content || []);
-      } catch (error) {
-        console.log('Деректерді алу мүмкін болмады:', error);
+      } catch {
+        setError('Тауарларды жүктеу мүмкін болмады');
       } finally {
         setLoading(false);
       }
@@ -81,6 +85,21 @@ export default function ProductListScreen({ route, navigation }: any) {
     );
   };
 
+  const renderSkeletonItem = () => (
+    <View style={styles.productCard}>
+      <View style={styles.favoriteBtn}>
+        <SkeletonBlock width={20} height={20} borderRadius={10} />
+      </View>
+      <View style={styles.imageWrapper}>
+        <SkeletonBlock height={100} borderRadius={18} />
+      </View>
+      <View style={styles.infoContainer}>
+        <SkeletonBlock height={12} style={styles.skeletonTitle} />
+        <SkeletonBlock width="60%" height={12} style={styles.skeletonPrice} />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -88,14 +107,25 @@ export default function ProductListScreen({ route, navigation }: any) {
           <Feather name="chevron-left" size={32} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{subCategoryName}</Text>
-        <TouchableOpacity style={styles.searchBtn}>
+        <TouchableOpacity style={styles.searchBtn} onPress={() => navigation.navigate('Search')}>
           <Feather name="search" size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
       {loading ? (
+        <FlatList
+          data={skeletonItems}
+          renderItem={renderSkeletonItem}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listPadding}
+          scrollEnabled={false}
+        />
+      ) : error ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#4AB7B6" />
+          <Feather name="alert-circle" size={42} color="#CBD5E1" />
+          <Text style={styles.emptyText}>{error}</Text>
         </View>
       ) : (
         <FlatList
@@ -165,6 +195,8 @@ const styles = StyleSheet.create({
   infoContainer: { alignItems: 'center', width: '100%' },
   productTitle: { fontSize: 12, fontWeight: '500', color: '#1E293B', textAlign: 'center', marginBottom: 4 },
   productPrice: { fontSize: 14, fontWeight: '700', color: '#4AB7B6' },
+  skeletonTitle: { marginBottom: 8 },
+  skeletonPrice: { alignSelf: 'center' },
   // ИНЛАЙН СТИЛЬДЕРДІ ОСЫ ЖЕРГЕ КӨШІРДІК (ESLint үшін):
   centerContainer: {
     flex: 1,

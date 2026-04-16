@@ -136,8 +136,8 @@ export default function AddProductScreen({ route, navigation }: any) {
           await api.post(`/api/admin/products/${productId}/image`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
-        } catch (imgErr) {
-          console.warn('Image upload failed:', imgErr);
+        } catch {
+          // image upload failed — product saved without image
         }
       }
 
@@ -145,7 +145,6 @@ export default function AddProductScreen({ route, navigation }: any) {
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
-      console.error('SERVER ERROR:', error.response?.data || error.message);
       const errorMessage = error.response?.data?.message || 'Тауарды сақтау мүмкін болмады';
       Alert.alert('Қате', errorMessage);
     } finally {

@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
+import { getApiErrorMessage, isValidEmail } from '../utils/validation';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -17,14 +18,19 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       setError('Email енгізіңіз');
       return;
     }
+
+    if (!isValidEmail(email)) {
+      setError('Дұрыс email енгізіңіз');
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
       const res = await api.post('/api/auth/forgot-password', { email: email.trim() });
       const devToken = res.data?.devResetToken;
       if (devToken) {
-        // Dev mode: auto-navigate with token
-        Alert.alert('Dev Token', devToken, [
+        Alert.alert('Сәтті', 'Қалпына келтіру бетіне өтеміз', [
           { text: 'OK', onPress: () => navigation.navigate('ResetPassword', { token: devToken }) },
         ]);
       } else {
@@ -33,7 +39,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
         ]);
       }
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Қате орын алды');
+      setError(getApiErrorMessage(e, 'Қате орын алды'));
     } finally {
       setLoading(false);
     }

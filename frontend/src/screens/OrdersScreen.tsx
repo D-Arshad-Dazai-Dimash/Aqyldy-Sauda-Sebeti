@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useIsFocused } from '@react-navigation/native';
-import { api } from '../api/client';
+import { getMyOrders } from '../api/orders';
 
 export default function OrdersScreen({ navigation }: any) {
   const isFocused = useIsFocused();
@@ -22,10 +22,10 @@ export default function OrdersScreen({ navigation }: any) {
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/api/orders/my');
-      setOrders(res.data || []);
-    } catch (e) {
-      console.log('Orders fetch error:', e);
+      const data = await getMyOrders();
+      setOrders(data || []);
+    } catch {
+      // silent — orders list shows empty state
     } finally {
       setLoading(false);
     }

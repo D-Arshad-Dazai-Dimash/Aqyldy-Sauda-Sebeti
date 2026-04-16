@@ -17,13 +17,15 @@ import { useIsFocused } from '@react-navigation/native';
 import { useCartStore } from '../store/cartStore';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
+import SkeletonBlock from '../components/SkeletonBlock';
 
 export default function CartScreen({ navigation }: any) {
   const isFocused = useIsFocused();
 
-  const { cart, storeId, loading, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
+  const { cart, storeId, loading, error, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
   const cartItems = cart?.items ?? [];
   const [cartRecs, setCartRecs] = useState<RecommendedProduct[]>([]);
+  const skeletonRows = Array.from({ length: 3 }, (_, index) => index);
 
   const load = useCallback(() => {
     if (storeId) {
@@ -163,8 +165,30 @@ export default function CartScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Feather name="alert-circle" size={16} color="#EF4444" />
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      ) : null}
+
       {loading && cartItems.length === 0 ? (
-        <ActivityIndicator size="large" color="#4AB7B6" style={{ flex: 1 }} />
+        <ScrollView contentContainerStyle={styles.scrollList}>
+          {skeletonRows.map((item) => (
+            <View key={item} style={styles.card}>
+              <SkeletonBlock width={75} height={75} borderRadius={14} />
+              <View style={styles.infoContainer}>
+                <SkeletonBlock height={14} style={styles.cartSkeletonLine} />
+                <SkeletonBlock width="35%" height={12} style={styles.cartSkeletonLine} />
+                <SkeletonBlock width={90} height={28} borderRadius={10} />
+              </View>
+              <View style={styles.rightCol}>
+                <SkeletonBlock width={20} height={20} borderRadius={10} />
+                <SkeletonBlock width={54} height={16} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
       ) : !storeId ? (
         <View style={styles.emptyContainer}>
           <Feather name="shopping-bag" size={80} color="#CBD5E1" />
@@ -264,6 +288,15 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 },
   emptyText: { marginTop: 16, fontSize: 18, color: '#94A3B8', fontWeight: '500' },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  errorBannerText: { flex: 1, color: '#B91C1C', fontWeight: '500' },
   browseBtn: {
     marginTop: 20,
     backgroundColor: '#4AB7B6',
@@ -298,6 +331,7 @@ const styles = StyleSheet.create({
   },
   productImage: { width: 55, height: 55 },
   infoContainer: { flex: 1, marginLeft: 12 },
+  cartSkeletonLine: { marginBottom: 10 },
   productName: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
   unitPrice: { fontSize: 13, color: '#64748B', marginBottom: 8 },
   controls: {

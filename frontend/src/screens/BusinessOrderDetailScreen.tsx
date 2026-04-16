@@ -34,8 +34,8 @@ export default function BusinessOrderDetailScreen({ route, navigation }: any) {
       setLoading(true);
       const res = await api.get(`/api/admin/orders/${orderId}`);
       setOrder(res.data);
-    } catch (e) {
-      console.log('Admin order detail fetch error:', e);
+    } catch {
+      // order not found
     } finally {
       setLoading(false);
     }

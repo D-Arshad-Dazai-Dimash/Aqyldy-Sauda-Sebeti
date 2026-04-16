@@ -15,17 +15,17 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
 import { api } from '../api/client';
-import RecommendationsSection from '../components/RecommendationsSection';
-import PriceTrendSection from '../components/PriceTrendSection';
 import { getPriceInsight } from '../api/priceInsights';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { PriceInsight, RecommendedProduct } from '../types/api';
+import SkeletonBlock from '../components/SkeletonBlock';
 
 export default function ProductScreen({ route, navigation }: any) {
   const { productId, storeId: routeStoreId } = route.params;
 
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartMessage, setCartMessage] = useState('');
   const [priceInsight, setPriceInsight] = useState<PriceInsight | null>(null);
@@ -39,10 +39,11 @@ export default function ProductScreen({ route, navigation }: any) {
     const fetchProduct = async () => {
       try {
         setLoading(true);
+        setLoadError(null);
         const res = await api.get(`/api/products/${productId}`);
         setProduct(res.data);
-      } catch (error) {
-        console.log('Тауарды жүктеу мүмкін болмады:', error);
+      } catch {
+        setLoadError('Тауарды жүктеу мүмкін болмады');
       } finally {
         setLoading(false);
       }
@@ -61,7 +62,13 @@ export default function ProductScreen({ route, navigation }: any) {
     }
     try {
       setAddingToCart(true);
-      await addItem(storeId, productId, 1);
+      setCartMessage('Себет жаңартылып жатыр...');
+      await addItem(storeId, productId, 1, {
+        productId,
+        productTitle: product.title,
+        price: product.price,
+        imageUrl: product.imageUrl,
+      });
       setCartMessage('Себетке қосылды!');
     } catch {
       setCartMessage('Себетке қосу мүмкін болмады');
@@ -74,9 +81,26 @@ export default function ProductScreen({ route, navigation }: any) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#4AB7B6" />
-        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+              <Feather name="chevron-left" size={30} color="#1E293B" />
+            </TouchableOpacity>
+            <SkeletonBlock width="45%" height={18} />
+            <SkeletonBlock width={24} height={24} borderRadius={12} />
+          </View>
+          <View style={styles.imageContainer}>
+            <SkeletonBlock width="80%" height={220} borderRadius={24} />
+          </View>
+          <View style={styles.infoCard}>
+            <SkeletonBlock height={24} style={styles.skeletonSpacing} />
+            <SkeletonBlock width="40%" height={20} style={styles.skeletonSpacing} />
+            <SkeletonBlock height={80} borderRadius={12} style={styles.skeletonSpacing} />
+            <SkeletonBlock height={16} style={styles.skeletonSpacing} />
+            <SkeletonBlock width="85%" height={16} style={styles.skeletonSpacing} />
+            <SkeletonBlock width="70%" height={16} />
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -85,7 +109,10 @@ export default function ProductScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
-          <Text style={styles.errorText}>Тауар табылмады</Text>
+          <Text style={styles.errorText}>{loadError || 'Тауар табылмады'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => navigation.replace('ProductScreen', { productId, storeId })}>
+            <Text style={styles.retryButtonText}>Қайта көру</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -286,6 +313,14 @@ const styles = StyleSheet.create({
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { color: '#94A3B8', fontSize: 16 },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: '#4AB7B6',
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retryButtonText: { color: '#FFFFFF', fontWeight: '700' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,6 +342,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   productImage: { width: '80%', height: '80%' },
+  skeletonSpacing: { marginBottom: 12 },
   infoCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,

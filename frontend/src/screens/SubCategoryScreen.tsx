@@ -31,10 +31,10 @@ export default function SubCategoryScreen({ route, navigation }: any) {
       </View>
 
       {/* 2. SEARCH BOX */}
-      <View style={styles.searchBox}>
+      <TouchableOpacity style={styles.searchBox} onPress={() => navigation.navigate('Search')}>
         <Feather name="search" size={20} color="#94A3B8" />
         <Text style={styles.searchText}>Іздеу...</Text>
-      </View>
+      </TouchableOpacity>
 
       {/* 3. GRID ТІЗІМІ */}
       <FlatList

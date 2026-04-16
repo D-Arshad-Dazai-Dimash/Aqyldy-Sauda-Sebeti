@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -36,11 +36,7 @@ export default function StoreScreen({ route, navigation }: any) {
   const { toggleFavorite, isFavorite } = useFavoritesStore();
   const addItem = useCartStore((s) => s.addItem);
 
-  useEffect(() => {
-    loadData();
-  }, [storeId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -55,11 +51,21 @@ export default function StoreScreen({ route, navigation }: any) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleAddToCart = async (productId: string) => {
+    const product = products.find((entry) => entry.productId === productId);
     try {
-      await addItem(storeId, productId);
+      await addItem(storeId, productId, 1, {
+        productId,
+        productTitle: product?.productTitle,
+        price: product?.price,
+        imageUrl: product?.imageUrl,
+      });
     } catch {}
   };
 

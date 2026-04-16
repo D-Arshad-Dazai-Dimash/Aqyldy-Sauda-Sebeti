@@ -13,7 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import { api } from '../api/client';
+import { getOrderById, cancelOrder } from '../api/orders';
 
 export default function OrderDetailScreen({ route, navigation }: any) {
   const { orderId } = route.params;
@@ -24,10 +24,10 @@ export default function OrderDetailScreen({ route, navigation }: any) {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await api.get(`/api/orders/${orderId}`);
-        setOrder(res.data);
-      } catch (e) {
-        console.log('Order detail fetch error:', e);
+        const data = await getOrderById(orderId);
+        setOrder(data);
+      } catch {
+        // order not found — empty state shown below
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
                       onPress: async () => {
                         try {
                           setCancelling(true);
-                          await api.delete(`/api/orders/${orderId}`);
+                          await cancelOrder(orderId);
                           setOrder((prev: any) => ({ ...prev, status: 'CANCELLED' }));
                           Alert.alert('Дайын', 'Тапсырыс болдырылмады');
                         } catch (e: any) {

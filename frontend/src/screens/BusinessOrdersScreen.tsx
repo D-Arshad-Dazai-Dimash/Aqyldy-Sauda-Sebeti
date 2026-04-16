@@ -29,8 +29,8 @@ export default function BusinessOrdersScreen({ navigation }: any) {
       if (filter !== 'ALL') params.status = filter;
       const res = await api.get('/api/admin/orders', { params });
       setOrders(res.data?.content || []);
-    } catch (e) {
-      console.log('Admin orders fetch error:', e);
+    } catch {
+      // silent — orders list shows empty state
     } finally {
       setLoading(false);
     }

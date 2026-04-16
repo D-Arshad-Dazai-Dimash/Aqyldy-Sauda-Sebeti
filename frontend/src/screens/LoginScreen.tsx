@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
+import { getApiErrorMessage, isStrongEnoughPassword, isValidEmail } from '../utils/validation';
 
 const { width } = Dimensions.get('window');
 
@@ -30,12 +31,23 @@ export default function LoginScreen({ navigation }: any) {
       setError('Введите email и пароль');
       return;
     }
+
+    if (!isValidEmail(email)) {
+      setError('Введите корректный email');
+      return;
+    }
+
+    if (!isStrongEnoughPassword(password)) {
+      setError('Пароль должен содержать минимум 6 символов');
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
       await login(email.trim(), password);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Неверный логин или пароль');
+      setError(getApiErrorMessage(e, 'Неверный логин или пароль'));
     } finally {
       setLoading(false);
     }

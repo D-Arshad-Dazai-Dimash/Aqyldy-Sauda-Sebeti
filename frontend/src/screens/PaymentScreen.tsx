@@ -16,6 +16,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkout } from '../api/orders';
 import { useCartStore } from '../store/cartStore';
+import { getApiErrorMessage, isValidCardNumber, isValidExpiry } from '../utils/validation';
 
 const CARDS_KEY = '@saved_cards';
 
@@ -79,11 +80,11 @@ export default function PaymentScreen({ route, navigation }: any) {
 
   const handleAddCard = async () => {
     const digits = cardNumber.replace(/\s/g, '');
-    if (digits.length < 16) {
+    if (!isValidCardNumber(digits)) {
       Alert.alert('Қате', 'Карта нөмірін толық жазыңыз');
       return;
     }
-    if (expiry.length < 5) {
+    if (!isValidExpiry(expiry)) {
       Alert.alert('Қате', 'Жарамдылық мерзімін жазыңыз (АА/ЖЖ)');
       return;
     }
@@ -144,7 +145,7 @@ export default function PaymentScreen({ route, navigation }: any) {
         },
       ]);
     } catch (e: any) {
-      Alert.alert('Қате', e?.message || 'Төлем жасау мүмкін болмады');
+      Alert.alert('Қате', getApiErrorMessage(e, 'Төлем жасау мүмкін болмады'));
     } finally {
       setLoading(false);
     }

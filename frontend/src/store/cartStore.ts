@@ -10,11 +10,15 @@ interface CartState {
 
   setStore: (storeId: string) => void;
   fetchCart: (storeId: string) => Promise<void>;
-  addItem: (storeId: string, productId: string, quantity?: number) => Promise<void>;
+  addItem: (storeId: string, productId: string, quantity?: number, optimisticItem?: Partial<CartItem>) => Promise<void>;
   updateItem: (storeId: string, itemId: string, quantity: number) => Promise<void>;
   removeItem: (storeId: string, itemId: string) => Promise<void>;
   clearCart: (storeId: string) => Promise<void>;
   reset: () => void;
+}
+
+function calculateTotal(items: CartItem[]) {
+  return items.reduce((sum, item) => sum + Number(item.lineTotal ?? item.price * item.quantity), 0);
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -40,45 +44,109 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
   },
 
-  addItem: async (storeId, productId, quantity = 1) => {
-    set({ loading: true, error: null, storeId });
+  addItem: async (storeId, productId, quantity = 1, optimisticItem) => {
+    const previousCart = get().cart;
+    const currentItems = previousCart?.items ?? [];
+    const existingItem = currentItems.find((item) => item.productId === productId);
+
+    if (existingItem || optimisticItem?.productTitle) {
+      const nextItems = existingItem
+        ? currentItems.map((item) => item.productId === productId
+          ? {
+              ...item,
+              quantity: item.quantity + quantity,
+              lineTotal: Number(item.price) * (item.quantity + quantity),
+            }
+          : item)
+        : [
+            ...currentItems,
+            {
+              id: `temp-${productId}`,
+              productId,
+              productTitle: optimisticItem?.productTitle ?? 'Тауар',
+              price: Number(optimisticItem?.price ?? 0),
+              imageUrl: optimisticItem?.imageUrl ?? null,
+              quantity,
+              lineTotal: Number(optimisticItem?.price ?? 0) * quantity,
+            },
+          ];
+
+      set({
+        cart: {
+          id: previousCart?.id ?? null,
+          items: nextItems,
+          total: calculateTotal(nextItems),
+        },
+        error: null,
+        storeId,
+      });
+    } else {
+      set({ error: null, storeId });
+    }
+
     try {
       const cart = await CartApi.addToCart(storeId, productId, quantity);
-      set({ cart, storeId, loading: false });
+      set({ cart, storeId, loading: false, error: null });
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'Failed to add item';
-      set({ loading: false, error: msg });
+      set({ cart: previousCart, loading: false, error: msg });
       throw new Error(msg);
     }
   },
 
   updateItem: async (storeId, itemId, quantity) => {
-    set({ loading: true, error: null });
+    const previousCart = get().cart;
+    const nextItems = previousCart?.items
+      ?.map((item) => item.id === itemId
+        ? { ...item, quantity, lineTotal: Number(item.price) * quantity }
+        : item)
+      ?? [];
+
+    set({
+      cart: previousCart ? { ...previousCart, items: nextItems, total: calculateTotal(nextItems) } : previousCart,
+      error: null,
+    });
+
     try {
       const cart = await CartApi.updateCartItem(storeId, itemId, quantity);
-      set({ cart, loading: false });
+      set({ cart, loading: false, error: null });
     } catch (e: any) {
-      set({ loading: false, error: e?.response?.data?.detail || 'Failed to update item' });
+      set({ cart: previousCart, loading: false, error: e?.response?.data?.detail || 'Failed to update item' });
+      throw e;
     }
   },
 
   removeItem: async (storeId, itemId) => {
-    set({ loading: true, error: null });
+    const previousCart = get().cart;
+    const nextItems = previousCart?.items?.filter((item) => item.id !== itemId) ?? [];
+
+    set({
+      cart: previousCart ? { ...previousCart, items: nextItems, total: calculateTotal(nextItems) } : previousCart,
+      error: null,
+    });
+
     try {
       const cart = await CartApi.removeCartItem(storeId, itemId);
-      set({ cart, loading: false });
+      set({ cart, loading: false, error: null });
     } catch (e: any) {
-      set({ loading: false, error: e?.response?.data?.detail || 'Failed to remove item' });
+      set({ cart: previousCart, loading: false, error: e?.response?.data?.detail || 'Failed to remove item' });
+      throw e;
     }
   },
 
   clearCart: async (storeId) => {
-    set({ loading: true, error: null });
+    const previousCart = get().cart;
+    set({
+      cart: previousCart ? { ...previousCart, items: [], total: 0 } : previousCart,
+      error: null,
+    });
+
     try {
       const cart = await CartApi.clearCart(storeId);
-      set({ cart, loading: false });
+      set({ cart, loading: false, error: null });
     } catch (e: any) {
-      set({ loading: false, error: e?.response?.data?.detail || 'Failed to clear cart' });
+      set({ cart: previousCart, loading: false, error: e?.response?.data?.detail || 'Failed to clear cart' });
+      throw e;
     }
   },
 

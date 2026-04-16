@@ -28,8 +28,8 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
         if (Array.isArray(stores) && stores.length > 0) {
           setStoreId(stores[0].id);
         }
-      } catch (e) {
-        console.log('Store fetch error:', e);
+      } catch {
+        // store not found — show empty state
       }
     };
     fetchStore();
@@ -41,8 +41,7 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
       setLoading(true);
       const res = await api.get('/api/admin/inventory', { params: { storeId } });
       setAllProducts(res.data || []);
-    } catch (e) {
-      console.log('Inventory fetch error:', e);
+    } catch {
       // Fallback to products endpoint
       try {
         const res = await api.get('/api/products', { params: { size: 100 } });

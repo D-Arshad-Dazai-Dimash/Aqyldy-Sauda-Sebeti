@@ -12,6 +12,7 @@ export default function ScanScreen({ route, navigation }: any) {
   const device = useCameraDevice('back');
   const [hasPermission, setHasPermission] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [torch, setTorch] = useState<'off' | 'on'>('off');
 
   useEffect(() => {
     (async () => {
@@ -57,6 +58,7 @@ export default function ScanScreen({ route, navigation }: any) {
         device={device}
         isActive={isActive}
         codeScanner={codeScanner}
+        torch={torch}
       />
 
       <View style={styles.header}>
@@ -89,8 +91,8 @@ export default function ScanScreen({ route, navigation }: any) {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.flashButton}>
-          <Feather name="zap" size={24} color="#FFF" />
+        <TouchableOpacity style={styles.flashButton} onPress={() => setTorch(t => t === 'off' ? 'on' : 'off')}>
+          <Feather name="zap" size={24} color={torch === 'on' ? '#FCD34D' : '#FFF'} />
         </TouchableOpacity>
         <TouchableOpacity 
             style={styles.manualButton}

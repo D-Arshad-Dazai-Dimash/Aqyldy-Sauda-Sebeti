@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
+import { getApiErrorMessage, isStrongEnoughPassword } from '../utils/validation';
 
 export default function ResetPasswordScreen({ route, navigation }: any) {
   const routeToken = route.params?.token || '';
@@ -20,7 +21,7 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
       setError('Токенді енгізіңіз');
       return;
     }
-    if (!newPassword || newPassword.length < 6) {
+    if (!isStrongEnoughPassword(newPassword)) {
       setError('Құпия сөз кемінде 6 таңбадан тұруы керек');
       return;
     }
@@ -36,7 +37,7 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
         { text: 'OK', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Қате орын алды');
+      setError(getApiErrorMessage(e, 'Қате орын алды'));
     } finally {
       setLoading(false);
     }
