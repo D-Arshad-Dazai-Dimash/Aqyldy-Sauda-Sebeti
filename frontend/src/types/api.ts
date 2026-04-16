@@ -85,3 +85,64 @@ export interface Page<T> {
   first: boolean;
   last: boolean;
 }
+
+// ===== RECOMMENDATION (AI/ML) =====
+export interface RecommendedProduct {
+  id: string;
+  title: string;
+  price: number;
+  discount: number | null;
+  imageUrl: string | null;
+  active: boolean;
+  score: number;
+}
+
+// ===== SPENDING ANALYTICS (AI/ML) =====
+export interface MonthlySpending {
+  month: string;
+  amount: number;
+  orderCount: number;
+}
+
+export interface CategorySpending {
+  categoryId: string;
+  categoryName: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface FrequentProduct {
+  productId: string;
+  title: string;
+  imageUrl: string | null;
+  purchaseCount: number;
+  avgPrice: number;
+}
+
+export interface SpendingAnalytics {
+  totalSpent: number;
+  averageOrderAmount: number;
+  orderCount: number;
+  monthlyTrend: MonthlySpending[];
+  categoryBreakdown: CategorySpending[];
+  predictedNextMonthSpending: number;
+  frequentProducts: FrequentProduct[];
+}
+
+// ===== PRICE INSIGHTS (AI/ML) =====
+export interface PricePoint {
+  price: number;
+  date: string;
+}
+
+export interface PriceInsight {
+  productId: string;
+  currentPrice: number;
+  averagePrice: number;
+  lowestPrice: number;
+  highestPrice: number;
+  changePercentage: number;
+  trend: 'UP' | 'DOWN' | 'STABLE';
+  goodDeal: boolean;
+  history: PricePoint[];
+}

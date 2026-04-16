@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -6,14 +6,38 @@ import {
   SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
-  Image 
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
+import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
+import type { RecommendedProduct } from '../types/api';
 
 export default function HomeScreen({ navigation }: any) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
+
+  const loadRecommendations = useCallback(async () => {
+    try {
+      setRecsLoading(true);
+      let recs = await getPersonalRecommendations(8);
+      if (recs.length === 0) {
+        recs = await getPopularProducts(8);
+      }
+      setRecommendations(recs);
+    } catch {
+      // silent — recommendations are non-critical
+    } finally {
+      setRecsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecommendations();
+  }, [loadRecommendations]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,13 +99,30 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.cardTitle}>Акциялар</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF9C3' }]} onPress={() => navigation.navigate('Orders')}>
+          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF9C3' }]} onPress={() => navigation.navigate('Analytics')}>
             <View style={styles.cardIcon}>
                <Feather name="clock" size={24} color="#854D0E" />
             </View>
             <Text style={styles.cardTitle}>Тарихы</Text>
           </TouchableOpacity>
         </View>
+
+        {/* AI Аналитика карточкасы */}
+        <TouchableOpacity
+          style={styles.analyticsBanner}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Analytics')}
+        >
+          <View style={styles.analyticsBannerLeft}>
+            <View style={styles.aiBadge}>
+              <Feather name="cpu" size={12} color="#FFF" />
+              <Text style={styles.aiBadgeText}>AI</Text>
+            </View>
+            <Text style={styles.analyticsTitle}>Смарт Аналитика</Text>
+            <Text style={styles.analyticsSub}>Шығындарды бақылаңыз</Text>
+          </View>
+          <Feather name="bar-chart-2" size={36} color="#4AB7B6" />
+        </TouchableOpacity>
 
         {/* Промо-блок (Минималистичный) */}
         <View style={styles.promoBanner}>
@@ -91,6 +132,52 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <Feather name="trending-up" size={40} color="#27AE60" />
         </View>
+
+        {/* AI Ұсыныстар секциясы */}
+        {recommendations.length > 0 && (
+          <View style={styles.recsSection}>
+            <View style={styles.recsSectionHeader}>
+              <View style={styles.recsTitleRow}>
+                <Feather name="cpu" size={16} color="#4AB7B6" />
+                <Text style={styles.recsSectionTitle}>Сізге ұсынылады</Text>
+              </View>
+              <Text style={styles.recsSubtitle}>AI негізінде</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recsScroll}>
+              {recommendations.map((item) => {
+                const discounted = item.discount
+                  ? item.price - (item.price * item.discount) / 100
+                  : null;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.recCard}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('ProductScreen', { productId: item.id })}
+                  >
+                    <Image
+                      source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                      style={styles.recImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.recTitle} numberOfLines={2}>{item.title}</Text>
+                    {discounted ? (
+                      <View style={styles.recPriceRow}>
+                        <Text style={styles.recPrice}>{discounted.toFixed(0)} ₸</Text>
+                        <Text style={styles.recOldPrice}>{item.price} ₸</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.recPrice}>{item.price} ₸</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+        {recsLoading && !recommendations.length && (
+          <ActivityIndicator size="small" color="#4AB7B6" style={{ marginTop: 20 }} />
+        )}
 
         {/* Кнопка логаута (внизу, чтобы не мешала) */}
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
@@ -186,6 +273,63 @@ const styles = StyleSheet.create({
   },
   promoTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
   promoSub: { fontSize: 14, color: '#64748B', marginTop: 4 },
+
+  // AI Analytics Banner
+  analyticsBanner: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  analyticsBannerLeft: { gap: 4 },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4AB7B6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  aiBadgeText: { fontSize: 10, fontWeight: '700', color: '#FFF' },
+  analyticsTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  analyticsSub: { fontSize: 12, color: '#94A3B8' },
+
+  // Recommendations
+  recsSection: { marginTop: 24 },
+  recsSectionHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recsTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  recsSectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
+  recsSubtitle: { fontSize: 11, color: '#94A3B8' },
+  recsScroll: { paddingHorizontal: 16, gap: 12 },
+  recCard: {
+    width: 140,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  recImage: { width: '100%', height: 90, borderRadius: 10, marginBottom: 8 },
+  recTitle: { fontSize: 12, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
+  recPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  recPrice: { fontSize: 14, fontWeight: '800', color: '#4AB7B6' },
+  recOldPrice: { fontSize: 11, color: '#94A3B8', textDecorationLine: 'line-through' },
 
   logoutBtn: {
     flexDirection: 'row',

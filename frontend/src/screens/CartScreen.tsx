@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,15 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 import { useIsFocused } from '@react-navigation/native';
 import { useCartStore } from '../store/cartStore';
+import { getFrequentlyBoughtTogether } from '../api/recommendations';
+import type { RecommendedProduct } from '../types/api';
 
 export default function CartScreen({ navigation }: any) {
   const isFocused = useIsFocused();
 
   const { cart, storeId, loading, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
   const cartItems = cart?.items ?? [];
+  const [cartRecs, setCartRecs] = useState<RecommendedProduct[]>([]);
 
   const load = useCallback(() => {
     if (storeId) {
@@ -33,6 +36,16 @@ export default function CartScreen({ navigation }: any) {
       load();
     }
   }, [isFocused, load]);
+
+  // Load recommendations based on first cart item
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const firstProductId = cartItems[0].productId;
+      getFrequentlyBoughtTogether(firstProductId, 6)
+        .then(setCartRecs)
+        .catch(() => {});
+    }
+  }, [cartItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpdateQty = async (itemId: string, newQty: number) => {
     if (!storeId) return;
@@ -177,6 +190,34 @@ export default function CartScreen({ navigation }: any) {
       ) : (
         <ScrollView contentContainerStyle={styles.scrollList}>
           {cartItems.map(renderItem)}
+
+          {/* AI: You might also like */}
+          {cartRecs.length > 0 && (
+            <View style={styles.cartRecsSection}>
+              <View style={styles.cartRecsHeader}>
+                <Feather name="cpu" size={14} color="#4AB7B6" />
+                <Text style={styles.cartRecsTitle}>Сізге ұнауы мүмкін</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cartRecsScroll}>
+                {cartRecs.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.cartRecCard}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('ProductScreen', { productId: item.id, storeId })}
+                  >
+                    <Image
+                      source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                      style={styles.cartRecImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.cartRecName} numberOfLines={2}>{item.title}</Text>
+                    <Text style={styles.cartRecPrice}>{item.price} ₸</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </ScrollView>
       )}
 
@@ -296,4 +337,32 @@ const styles = StyleSheet.create({
   },
   disabledBtn: { backgroundColor: '#CBD5E1' },
   checkoutText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
+
+  // AI Cart Recommendations
+  cartRecsSection: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  cartRecsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  cartRecsTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+  cartRecsScroll: { gap: 10, paddingRight: 16 },
+  cartRecCard: {
+    width: 120,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  cartRecImage: { width: '100%', height: 70, borderRadius: 8, marginBottom: 6 },
+  cartRecName: { fontSize: 11, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
+  cartRecPrice: { fontSize: 13, fontWeight: '800', color: '#4AB7B6' },
 });
