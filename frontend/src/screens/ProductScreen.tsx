@@ -10,7 +10,16 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
@@ -19,6 +28,27 @@ import { getPriceInsight } from '../api/priceInsights';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { PriceInsight, RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
+
+const P = {
+  bg: '#F7F8FC', surface: '#FFFFFF', navy: '#0F172A', ink: '#1E293B',
+  muted: '#64748B', faint: '#CBD5E1', border: '#E2E8F0',
+  teal: '#0EA5E9', tealL: '#E0F2FE', rose: '#F43F5E', roseL: '#FFE4E6',
+  emerald: '#10B981', emeraldL: '#D1FAE5', amber: '#F59E0B', amberL: '#FEF3C7',
+};
+
+function PressCard({ children, onPress, style }: any) {
+  const scale = useSharedValue(1);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Pressable
+      onPressIn={() => { scale.value = withSpring(0.96, { damping: 15 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 12 }); }}
+      onPress={onPress}
+    >
+      <Animated.View style={[style, anim]}>{children}</Animated.View>
+    </Pressable>
+  );
+}
 
 export default function ProductScreen({ route, navigation }: any) {
   const { productId, storeId: routeStoreId } = route.params;
@@ -84,21 +114,19 @@ export default function ProductScreen({ route, navigation }: any) {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-              <Feather name="chevron-left" size={30} color="#1E293B" />
+              <Feather name="chevron-left" size={24} color={P.ink} />
             </TouchableOpacity>
-            <SkeletonBlock width="45%" height={18} />
-            <SkeletonBlock width={24} height={24} borderRadius={12} />
+            <SkeletonBlock width="45%" height={16} />
+            <SkeletonBlock width={36} height={36} borderRadius={12} />
           </View>
-          <View style={styles.imageContainer}>
-            <SkeletonBlock width="80%" height={220} borderRadius={24} />
-          </View>
+          <SkeletonBlock height={280} style={{ margin: 18, borderRadius: 24 }} />
           <View style={styles.infoCard}>
-            <SkeletonBlock height={24} style={styles.skeletonSpacing} />
-            <SkeletonBlock width="40%" height={20} style={styles.skeletonSpacing} />
-            <SkeletonBlock height={80} borderRadius={12} style={styles.skeletonSpacing} />
-            <SkeletonBlock height={16} style={styles.skeletonSpacing} />
-            <SkeletonBlock width="85%" height={16} style={styles.skeletonSpacing} />
-            <SkeletonBlock width="70%" height={16} />
+            <SkeletonBlock height={22} style={{ marginBottom: 12 }} />
+            <SkeletonBlock width="40%" height={28} style={{ marginBottom: 18 }} />
+            <SkeletonBlock height={80} borderRadius={14} style={{ marginBottom: 14 }} />
+            <SkeletonBlock height={15} style={{ marginBottom: 8 }} />
+            <SkeletonBlock width="80%" height={15} style={{ marginBottom: 8 }} />
+            <SkeletonBlock width="60%" height={15} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -109,9 +137,15 @@ export default function ProductScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
+          <View style={styles.errorIcon}>
+            <Feather name="alert-circle" size={32} color={P.rose} />
+          </View>
           <Text style={styles.errorText}>{loadError || 'Тауар табылмады'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => navigation.replace('ProductScreen', { productId, storeId })}>
-            <Text style={styles.retryButtonText}>Қайта көру</Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => navigation.replace('ProductScreen', { productId, storeId })}
+          >
+            <Text style={styles.retryText}>Қайта көру</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -126,28 +160,34 @@ export default function ProductScreen({ route, navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
+      <Animated.View entering={FadeIn.duration(200)} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Feather name="chevron-left" size={30} color="#1E293B" />
+          <Feather name="chevron-left" size={24} color={P.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{product.title}</Text>
         <TouchableOpacity onPress={() => toggleFavorite(product.id)} style={styles.iconBtn}>
-          <Feather name="heart" size={24} color={isFav ? '#EF4444' : '#CBD5E1'} />
+          <Feather name="heart" size={20} color={isFav ? P.rose : P.faint} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* IMAGE */}
-        <View style={styles.imageContainer}>
+
+        {/* IMAGE HERO */}
+        <Animated.View entering={FadeInDown.delay(60).springify()} style={styles.imageHero}>
+          {product.discount ? (
+            <Animated.View entering={ZoomIn.delay(200).springify()} style={styles.discountBadge}>
+              <Text style={styles.discountBadgeText}>-{product.discount}%</Text>
+            </Animated.View>
+          ) : null}
           <Image
             source={product.imageUrl ? { uri: product.imageUrl } : require('../assets/p1.png')}
             style={styles.productImage}
             resizeMode="contain"
           />
-        </View>
+        </Animated.View>
 
-        {/* INFO */}
-        <View style={styles.infoCard}>
+        {/* INFO CARD */}
+        <Animated.View entering={FadeInDown.delay(120).springify()} style={styles.infoCard}>
           <Text style={styles.productTitle}>{product.title}</Text>
 
           {/* PRICE */}
@@ -156,67 +196,83 @@ export default function ProductScreen({ route, navigation }: any) {
               <>
                 <Text style={styles.discountedPrice}>{discountedPrice.toFixed(0)} ₸</Text>
                 <Text style={styles.originalPrice}>{product.price} ₸</Text>
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>-{product.discount}%</Text>
-                </View>
               </>
             ) : (
               <Text style={styles.price}>{product.price} ₸</Text>
             )}
           </View>
 
-          {/* AI PRICE INSIGHT */}
-          {priceInsight && priceInsight.history.length > 0 && (
-            <View style={styles.insightContainer}>
+          {/* STOCK */}
+          <View style={[styles.stockRow, { backgroundColor: product.active && product.stock > 0 ? P.emeraldL : P.roseL }]}>
+            <Feather
+              name={product.active && product.stock > 0 ? 'check-circle' : 'x-circle'}
+              size={16}
+              color={product.active && product.stock > 0 ? P.emerald : P.rose}
+            />
+            <Text style={[styles.stockText, { color: product.active && product.stock > 0 ? P.emerald : P.rose }]}>
+              {product.active && product.stock > 0
+                ? `Қоймада бар · ${product.stock} дана`
+                : 'Қоймада жоқ'}
+            </Text>
+          </View>
+        </Animated.View>
+
+        {/* AI PRICE INSIGHT */}
+        {priceInsight && priceInsight.history.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(180).springify()} style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <View style={styles.aiBadge}>
+                <Feather name="cpu" size={11} color="#FFF" />
+                <Text style={styles.aiBadgeText}>AI БАҒА</Text>
+              </View>
               {priceInsight.goodDeal && (
                 <View style={styles.goodDealBadge}>
-                  <Feather name="trending-down" size={14} color="#166534" />
+                  <Feather name="trending-down" size={13} color={P.emerald} />
                   <Text style={styles.goodDealText}>Тиімді баға!</Text>
                 </View>
               )}
-              <View style={styles.insightRow}>
-                <View style={styles.insightItem}>
-                  <Text style={styles.insightLabel}>Орташа</Text>
-                  <Text style={styles.insightValue}>{priceInsight.averagePrice.toFixed(0)} ₸</Text>
-                </View>
-                <View style={styles.insightItem}>
-                  <Text style={styles.insightLabel}>Ең төмен</Text>
-                  <Text style={styles.insightValue}>{priceInsight.lowestPrice.toFixed(0)} ₸</Text>
-                </View>
-                <View style={styles.insightItem}>
-                  <Text style={styles.insightLabel}>Тренд</Text>
-                  <View style={styles.trendRow}>
-                    <Feather
-                      name={priceInsight.trend === 'UP' ? 'trending-up' : priceInsight.trend === 'DOWN' ? 'trending-down' : 'minus'}
-                      size={14}
-                      color={priceInsight.trend === 'UP' ? '#EF4444' : priceInsight.trend === 'DOWN' ? '#22C55E' : '#94A3B8'}
-                    />
-                    <Text style={[
-                      styles.trendText,
-                      { color: priceInsight.trend === 'UP' ? '#EF4444' : priceInsight.trend === 'DOWN' ? '#22C55E' : '#94A3B8' }
-                    ]}>
-                      {priceInsight.changePercentage > 0 ? '+' : ''}{priceInsight.changePercentage}%
-                    </Text>
-                  </View>
+            </View>
+            <View style={styles.insightRow}>
+              <View style={styles.insightItem}>
+                <Text style={styles.insightLabel}>Орташа</Text>
+                <Text style={styles.insightValue}>{priceInsight.averagePrice.toFixed(0)} ₸</Text>
+              </View>
+              <View style={styles.insightDivider} />
+              <View style={styles.insightItem}>
+                <Text style={styles.insightLabel}>Ең төмен</Text>
+                <Text style={styles.insightValue}>{priceInsight.lowestPrice.toFixed(0)} ₸</Text>
+              </View>
+              <View style={styles.insightDivider} />
+              <View style={styles.insightItem}>
+                <Text style={styles.insightLabel}>Тренд</Text>
+                <View style={styles.trendRow}>
+                  <Feather
+                    name={priceInsight.trend === 'UP' ? 'trending-up' : priceInsight.trend === 'DOWN' ? 'trending-down' : 'minus'}
+                    size={14}
+                    color={priceInsight.trend === 'UP' ? P.rose : priceInsight.trend === 'DOWN' ? P.emerald : P.faint}
+                  />
+                  <Text style={[styles.trendText, {
+                    color: priceInsight.trend === 'UP' ? P.rose : priceInsight.trend === 'DOWN' ? P.emerald : P.faint,
+                  }]}>
+                    {priceInsight.changePercentage > 0 ? '+' : ''}{priceInsight.changePercentage}%
+                  </Text>
                 </View>
               </View>
-              <View style={styles.insightAiBadge}>
-                <Feather name="cpu" size={10} color="#4AB7B6" />
-                <Text style={styles.insightAiText}>AI баға талдауы</Text>
-              </View>
             </View>
-          )}
+          </Animated.View>
+        )}
 
-          {/* DESCRIPTION */}
-          {product.description ? (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Сипаттамасы</Text>
-              <Text style={styles.description}>{product.description}</Text>
-            </View>
-          ) : null}
+        {/* DESCRIPTION */}
+        {product.description ? (
+          <Animated.View entering={FadeInDown.delay(220).springify()} style={styles.section}>
+            <Text style={styles.sectionLabel}>Сипаттамасы</Text>
+            <Text style={styles.description}>{product.description}</Text>
+          </Animated.View>
+        ) : null}
 
-          {/* DETAILS */}
-          <View style={styles.section}>
+        {/* DETAILS */}
+        {(product.unit || product.weight || product.barcode) ? (
+          <Animated.View entering={FadeInDown.delay(260).springify()} style={styles.detailsCard}>
             <Text style={styles.sectionLabel}>Мәліметтер</Text>
             {product.unit ? (
               <View style={styles.detailRow}>
@@ -231,74 +287,71 @@ export default function ProductScreen({ route, navigation }: any) {
               </View>
             ) : null}
             {product.barcode ? (
-              <View style={styles.detailRow}>
+              <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                 <Text style={styles.detailKey}>Штрих-код</Text>
                 <Text style={styles.detailValue}>{product.barcode}</Text>
               </View>
             ) : null}
-          </View>
+          </Animated.View>
+        ) : null}
 
-          {/* STOCK */}
-          <View style={styles.stockRow}>
-            <Feather
-              name={product.active && product.stock > 0 ? 'check-circle' : 'x-circle'}
-              size={18}
-              color={product.active && product.stock > 0 ? '#22C55E' : '#EF4444'}
-            />
-            <Text style={[styles.stockText, { color: product.active && product.stock > 0 ? '#22C55E' : '#EF4444' }]}>
-              {product.active && product.stock > 0 ? `Қоймада бар (${product.stock} дана)` : 'Қоймада жоқ'}
-            </Text>
-          </View>
-        </View>
-
-        {/* AI: FREQUENTLY BOUGHT TOGETHER */}
+        {/* RELATED PRODUCTS */}
         {related.length > 0 && (
-          <View style={styles.relatedSection}>
+          <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.relatedSection}>
             <View style={styles.relatedHeader}>
-              <Feather name="cpu" size={14} color="#4AB7B6" />
+              <View style={styles.relatedAiBadge}>
+                <Feather name="cpu" size={12} color="#FFF" />
+              </View>
               <Text style={styles.relatedTitle}>Бірге сатып алатындар</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.relatedScroll}>
-              {related.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.relatedCard}
-                  activeOpacity={0.8}
-                  onPress={() => navigation.push('ProductScreen', { productId: item.id, storeId })}
-                >
-                  <Image
-                    source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
-                    style={styles.relatedImage}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.relatedName} numberOfLines={2}>{item.title}</Text>
-                  <Text style={styles.relatedPrice}>{item.price} ₸</Text>
-                </TouchableOpacity>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.relatedScroll}
+            >
+              {related.map((item, idx) => (
+                <Animated.View key={item.id} entering={FadeInDown.delay(320 + idx * 50).springify()}>
+                  <PressCard
+                    style={styles.relatedCard}
+                    onPress={() => navigation.push('ProductScreen', { productId: item.id, storeId })}
+                  >
+                    <Image
+                      source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                      style={styles.relatedImage}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.relatedName} numberOfLines={2}>{item.title}</Text>
+                    <Text style={styles.relatedPrice}>{item.price} ₸</Text>
+                  </PressCard>
+                </Animated.View>
               ))}
             </ScrollView>
-          </View>
+          </Animated.View>
         )}
       </ScrollView>
 
-      {/* ADD TO CART */}
+      {/* FOOTER — ADD TO CART */}
       <View style={styles.footer}>
         {cartMessage ? (
-          <Text style={styles.cartMessage}>{cartMessage}</Text>
+          <Animated.Text entering={FadeIn.duration(200)} style={styles.cartMessage}>
+            {cartMessage}
+          </Animated.Text>
         ) : null}
         <TouchableOpacity
           style={[styles.addToCartBtn, (!product.active || product.stock === 0) && styles.disabledBtn]}
           onPress={handleAddToCart}
           disabled={addingToCart || !product.active || product.stock === 0}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          {addingToCart ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <>
-              <Feather name="shopping-cart" size={20} color="#FFF" />
-              <Text style={styles.addToCartText}>Себетке қосу</Text>
-            </>
-          )}
+          {addingToCart
+            ? <ActivityIndicator size="small" color="#FFF" />
+            : (
+              <>
+                <Feather name="shopping-cart" size={20} color="#FFF" />
+                <Text style={styles.addToCartText}>Себетке қосу</Text>
+              </>
+            )
+          }
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -308,153 +361,230 @@ export default function ProductScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: P.bg,
+    paddingTop: 0,
   },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#94A3B8', fontSize: 16 },
-  retryButton: {
-    marginTop: 16,
-    backgroundColor: '#4AB7B6',
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  errorIcon: {
+    width: 64, height: 64, borderRadius: 20,
+    backgroundColor: P.roseL, justifyContent: 'center', alignItems: 'center',
+    marginBottom: 14,
   },
-  retryButtonText: { color: '#FFFFFF', fontWeight: '700' },
+  errorText: { color: P.muted, fontSize: 15, textAlign: 'center', marginBottom: 16 },
+  retryBtn: {
+    backgroundColor: P.teal, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14,
+  },
+  retryText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingHorizontal: 14,
+    paddingTop: Platform.OS === 'ios' ? 4 : (StatusBar.currentHeight ?? 0) + 6,
+    paddingBottom: 8,
+    backgroundColor: P.bg,
   },
-  headerTitle: { fontSize: 17, fontWeight: '600', color: '#1E293B', flex: 1, marginHorizontal: 10 },
-  iconBtn: { padding: 5 },
-  scrollContent: { paddingBottom: 120 },
-  imageContainer: {
-    backgroundColor: '#FFFFFF',
-    height: 280,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  productImage: { width: '80%', height: '80%' },
-  skeletonSpacing: { marginBottom: 12 },
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginHorizontal: 15,
-    padding: 20,
-    elevation: 3,
+  headerTitle: { fontSize: 15, fontWeight: '700', color: P.ink, flex: 1, marginHorizontal: 10 },
+  iconBtn: {
+    width: 40, height: 40, borderRadius: 13,
+    backgroundColor: P.surface, borderWidth: 1, borderColor: P.border,
+    justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-  },
-  productTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B', marginBottom: 12 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 10 },
-  price: { fontSize: 24, fontWeight: '800', color: '#4AB7B6' },
-  discountedPrice: { fontSize: 24, fontWeight: '800', color: '#4AB7B6' },
-  originalPrice: { fontSize: 16, color: '#94A3B8', textDecorationLine: 'line-through' },
-  discountBadge: { backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  discountText: { color: '#EF4444', fontWeight: '700', fontSize: 13 },
-  section: { marginBottom: 16 },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: '#94A3B8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  description: { fontSize: 14, color: '#475569', lineHeight: 22 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  detailKey: { fontSize: 14, color: '#64748B' },
-  detailValue: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  stockText: { fontSize: 14, fontWeight: '500' },
-
-  // AI Price Insight
-  insightContainer: {
-    backgroundColor: '#F0FDFA',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-  },
-  goodDealBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4,
-    marginBottom: 8,
-  },
-  goodDealText: { fontSize: 12, fontWeight: '700', color: '#166534' },
-  insightRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  insightItem: { alignItems: 'center', flex: 1 },
-  insightLabel: { fontSize: 10, color: '#64748B', marginBottom: 2, textTransform: 'uppercase' },
-  insightValue: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  trendText: { fontSize: 13, fontWeight: '700' },
-  insightAiBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
-    alignSelf: 'flex-end',
-  },
-  insightAiText: { fontSize: 10, color: '#4AB7B6', fontWeight: '500' },
-
-  // Related Products
-  relatedSection: {
-    marginHorizontal: 15,
-    marginTop: 16,
-  },
-  relatedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  relatedTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  relatedScroll: { gap: 10, paddingRight: 15 },
-  relatedCard: {
-    width: 120,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
+    elevation: 2,
   },
-  relatedImage: { width: '100%', height: 70, borderRadius: 8, marginBottom: 6 },
-  relatedName: { fontSize: 11, fontWeight: '600', color: '#1E293B', marginBottom: 4 },
-  relatedPrice: { fontSize: 13, fontWeight: '800', color: '#4AB7B6' },
 
-  footer: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 15,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    elevation: 10,
+  scrollContent: { paddingBottom: 130 },
+
+  // Image hero
+  imageHero: {
+    backgroundColor: P.surface,
+    marginHorizontal: 14,
+    marginTop: 2,
+    borderRadius: 22,
+    height: 252,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: P.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    elevation: 4,
+    overflow: 'hidden',
   },
-  cartMessage: { textAlign: 'center', color: '#4AB7B6', fontWeight: '500', marginBottom: 8 },
+  discountBadge: {
+    position: 'absolute', top: 14, right: 14, zIndex: 5,
+    backgroundColor: P.rose, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  discountBadgeText: { fontSize: 13, fontWeight: '800', color: '#FFF' },
+  productImage: { width: '75%', height: '75%' },
+
+  // Info card
+  infoCard: {
+    backgroundColor: P.surface,
+    borderRadius: 20,
+    marginHorizontal: 14,
+    marginTop: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: P.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  productTitle: { fontSize: 18, fontWeight: '800', color: P.ink, letterSpacing: -0.25, marginBottom: 8 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  price: { fontSize: 24, fontWeight: '800', color: P.teal },
+  discountedPrice: { fontSize: 24, fontWeight: '800', color: P.teal },
+  originalPrice: { fontSize: 16, color: P.faint, textDecorationLine: 'line-through' },
+  stockRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  stockText: { fontSize: 13, fontWeight: '600' },
+
+  // AI Insight
+  insightCard: {
+    backgroundColor: P.navy,
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 18,
+    shadowColor: P.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  aiBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: P.teal, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8,
+  },
+  aiBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+  goodDealBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: P.emeraldL, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+  },
+  goodDealText: { fontSize: 12, fontWeight: '700', color: P.emerald },
+  insightRow: { flexDirection: 'row', alignItems: 'center' },
+  insightItem: { flex: 1, alignItems: 'center' },
+  insightDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.15)' },
+  insightLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4, textTransform: 'uppercase' },
+  insightValue: { fontSize: 15, fontWeight: '800', color: '#FFF' },
+  trendRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  trendText: { fontSize: 14, fontWeight: '700' },
+
+  // Description
+  section: {
+    backgroundColor: P.surface,
+    borderRadius: 18,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: P.border,
+  },
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', color: P.muted,
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10,
+  },
+  description: { fontSize: 14, color: '#475569', lineHeight: 22 },
+
+  // Details table
+  detailsCard: {
+    backgroundColor: P.surface,
+    borderRadius: 18,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: P.border,
+  },
+  detailRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: P.border,
+  },
+  detailKey: { fontSize: 14, color: P.muted },
+  detailValue: { fontSize: 14, fontWeight: '700', color: P.ink },
+
+  // Related
+  relatedSection: { marginTop: 20 },
+  relatedHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 20, marginBottom: 14,
+  },
+  relatedAiBadge: {
+    width: 26, height: 26, borderRadius: 8,
+    backgroundColor: P.teal, justifyContent: 'center', alignItems: 'center',
+  },
+  relatedTitle: { fontSize: 15, fontWeight: '800', color: P.ink },
+  relatedScroll: { paddingHorizontal: 18, paddingVertical: 8, gap: 10 },
+  relatedCard: {
+    width: 130,
+    backgroundColor: P.surface,
+    borderRadius: 18,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: P.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  relatedImage: { width: '100%', height: 80, borderRadius: 10, marginBottom: 8 },
+  relatedName: { fontSize: 11, fontWeight: '600', color: P.ink, marginBottom: 5, lineHeight: 16 },
+  relatedPrice: { fontSize: 13, fontWeight: '800', color: P.teal },
+
+  // Footer
+  footer: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: P.surface,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    borderTopWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  cartMessage: {
+    textAlign: 'center', color: P.teal, fontWeight: '600',
+    fontSize: 13, marginBottom: 8,
+  },
   addToCartBtn: {
-    backgroundColor: '#4AB7B6',
-    borderRadius: 16,
+    backgroundColor: P.teal,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 17,
     gap: 10,
+    shadowColor: P.teal,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  disabledBtn: { backgroundColor: '#CBD5E1' },
-  addToCartText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+  disabledBtn: {
+    backgroundColor: P.faint,
+    shadowColor: 'transparent',
+    elevation: 0,
+  },
+  addToCartText: { color: '#FFF', fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
+  skeletonSpacing: { marginBottom: 12 },
 });

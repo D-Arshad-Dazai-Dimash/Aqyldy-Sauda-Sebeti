@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 30,
     paddingBottom: 12,
     borderBottomColor: 'transparent',
     shadowColor: '#000',
@@ -428,10 +428,10 @@ const styles = StyleSheet.create({
   },
 
   // Scroll
-  scrollContent: { paddingTop: 80, paddingBottom: 110 },
+  scrollContent: { paddingTop: 72, paddingBottom: 110 },
 
   // Hero
-  heroSection: { paddingHorizontal: 22, marginTop: 20, marginBottom: 22 },
+  heroSection: { paddingHorizontal: 22, marginTop: 8, marginBottom: 22 },
   greetSmall: { fontSize: 15, color: P.muted, fontWeight: '500', marginBottom: 4 },
   greetName: {
     fontSize: 30,
