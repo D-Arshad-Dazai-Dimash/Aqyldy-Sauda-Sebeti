@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -108,6 +109,7 @@ public class ProductService {
         return toDto(saved);
     }
 
+    @CacheEvict(value = "price-insights", key = "#id")
     @Transactional
     public ProductDto update(UUID id, ProductUpsertRequest req) {
         log.info("▶ UPDATE product: id={}, title={}", id, req.title());

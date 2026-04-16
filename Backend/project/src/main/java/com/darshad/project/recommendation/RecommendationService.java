@@ -9,6 +9,7 @@ import com.darshad.project.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class RecommendationService {
      * Products frequently bought together with the given product.
      * Algorithm: find all orders containing productId → rank co-occurring products by frequency.
      */
+    @Cacheable(value = "recommendations:together", key = "#productId + '_' + #limit")
     @Transactional(readOnly = true)
     public List<RecommendedProductDto> frequentlyBoughtTogether(UUID productId, int limit) {
         log.debug("▶ frequently-bought-together: productId={}, limit={}", productId, limit);
@@ -81,6 +83,7 @@ public class RecommendationService {
      * Globally popular products based on order frequency.
      * Used as cold-start fallback when user has no order history.
      */
+    @Cacheable(value = "recommendations:popular", key = "'top' + #limit")
     @Transactional(readOnly = true)
     public List<RecommendedProductDto> popularProducts(int limit) {
         log.debug("▶ popular products: limit={}", limit);

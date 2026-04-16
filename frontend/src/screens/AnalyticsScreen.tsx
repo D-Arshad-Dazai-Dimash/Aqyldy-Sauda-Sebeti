@@ -73,6 +73,27 @@ export default function AnalyticsScreen({ navigation }: any) {
     );
   }
 
+  if (data.orderCount === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Feather name="chevron-left" size={30} color="#1E293B" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Аналитика</Text>
+          <View style={{ width: 30 }} />
+        </View>
+        <View style={styles.emptyContainer}>
+          <Feather name="bar-chart-2" size={60} color="#CBD5E1" />
+          <Text style={styles.emptyText}>Аналитика жоқ</Text>
+          <Text style={styles.emptySubtext}>
+            Сатып алу жасағаннан кейін мұнда статистика пайда болады
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const maxMonthly = Math.max(...data.monthlyTrend.map(m => m.amount), 1);
 
   return (
@@ -391,6 +412,8 @@ const styles = StyleSheet.create({
   // Empty
   emptySection: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText: { color: '#94A3B8', fontSize: 14, textAlign: 'center' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  emptySubtext: { color: '#CBD5E1', fontSize: 12, textAlign: 'center', marginTop: 8 },
   retryBtn: {
     marginTop: 12,
     backgroundColor: '#4AB7B6',

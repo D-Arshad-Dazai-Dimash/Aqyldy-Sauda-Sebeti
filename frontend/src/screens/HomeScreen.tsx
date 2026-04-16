@@ -99,7 +99,7 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.cardTitle}>Акциялар</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF9C3' }]}>
+          <TouchableOpacity style={[styles.gridCard, { backgroundColor: '#FEF9C3' }]} onPress={() => navigation.navigate('Analytics')}>
             <View style={styles.cardIcon}>
                <Feather name="clock" size={24} color="#854D0E" />
             </View>

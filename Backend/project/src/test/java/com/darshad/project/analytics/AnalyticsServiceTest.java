@@ -14,6 +14,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -65,10 +68,10 @@ class AnalyticsServiceTest {
         UUID userId = UUID.randomUUID();
         User user = User.builder().id(userId).email(email).build();
 
-        List<Object[]> monthlyData = List.of(
+        List<Object[]> monthlyData = Arrays.<Object[]>asList(
                 new Object[]{2024, 1, BigDecimal.valueOf(3000), 3L} // 3 orders, total 3000
         );
-        List<Object[]> categoryData = Arrays.asList(
+        List<Object[]> categoryData = Arrays.<Object[]>asList(
                 new Object[]{UUID.randomUUID(), "Dairy", BigDecimal.valueOf(2250)}, // 2250 / 3000 = 75%
                 new Object[]{UUID.randomUUID(), "Snacks", BigDecimal.valueOf(750)}  // 750 / 3000 = 25%
         );
@@ -210,7 +213,7 @@ class AnalyticsServiceTest {
         User user = User.builder().id(userId).email(email).build();
 
         // Only 1 month data → prediction = last month value
-        List<Object[]> monthlyData = Arrays.asList(
+        List<Object[]> monthlyData = Arrays.<Object[]>asList(
                 new Object[]{2024, 1, BigDecimal.valueOf(5000), 1L}
         );
 

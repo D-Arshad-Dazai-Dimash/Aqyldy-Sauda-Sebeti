@@ -7,6 +7,7 @@ import com.darshad.project.catalog.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class PriceInsightService {
     private final PriceHistoryRepository priceHistoryRepo;
     private final ProductRepository productRepo;
 
+    @Cacheable(value = "price-insights", key = "#productId")
     @Transactional(readOnly = true)
     public PriceInsightDto getInsight(UUID productId) {
         log.debug("▶ price insight: productId={}", productId);

@@ -5,10 +5,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 
 @SpringBootApplication
+@EnableCaching
 public class ProjectApplication {
 
     private static final Logger log = LoggerFactory.getLogger(ProjectApplication.class);
