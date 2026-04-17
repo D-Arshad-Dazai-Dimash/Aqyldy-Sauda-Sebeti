@@ -33,6 +33,9 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import ChatbotScreen from '../screens/ChatbotScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
+import AppPinScreen from '../screens/AppPinScreen';
+import ChangePinScreen from '../screens/ChangePinScreen';
+import { authenticateWithBiometric, canUseBiometricUnlock, verifyAppPin } from '../utils/appPin';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -175,6 +178,7 @@ function AppStack() {
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
       <Stack.Screen name="Chatbot" component={ChatbotScreen} />
       <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+      <Stack.Screen name="ChangePin" component={ChangePinScreen} />
     </Stack.Navigator>
   );
 }
@@ -182,12 +186,47 @@ function AppStack() {
 export default function RootNavigation() {
   const token = useAuthStore((s) => s.accessToken);
   const isBootstrapping = useAuthStore((s) => s.isBootstrapping);
+  const isPinVerified = useAuthStore((s) => s.isPinVerified);
+  const requiresPinSetup = useAuthStore((s) => s.requiresPinSetup);
+  const setPinVerified = useAuthStore((s) => s.setPinVerified);
+  const setupPin = useAuthStore((s) => s.setupPin);
+  const logout = useAuthStore((s) => s.logout);
 
   if (isBootstrapping) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#27AE60" />
       </View>
+    );
+  }
+
+  if (token && !isPinVerified) {
+    return (
+      <AppPinScreen
+        mode={requiresPinSetup ? 'setup' : 'unlock'}
+        onSetupSuccess={async (pin) => {
+          await setupPin(pin);
+        }}
+        onUnlockSuccess={async (pin) => {
+          const ok = await verifyAppPin(pin);
+          if (!ok) throw new Error('PIN дұрыс емес');
+          setPinVerified(true);
+        }}
+        onBiometricUnlock={async () => {
+          const available = await canUseBiometricUnlock();
+          if (!available) {
+            throw new Error('Биометрия бұл құрылғыда қолжетімсіз');
+          }
+
+          const ok = await authenticateWithBiometric();
+          if (!ok) {
+            throw new Error('Биометриямен растау сәтсіз аяқталды');
+          }
+
+          setPinVerified(true);
+        }}
+        onLogout={logout}
+      />
     );
   }
 

@@ -176,10 +176,10 @@ export default function ProfileScreen({ navigation }: any) {
             delay={280}
           />
           <MenuEntry
-            icon="shield"
-            title="Қауіпсіздік"
-            subtitle="Құпия сөз және қорғаныс"
-            onPress={() => Alert.alert('Қауіпсіздік', 'Бұл мүмкіндік жақын арада қосылады.')}
+            icon="lock"
+            title="PIN-кодты өзгерту"
+            subtitle="Жылдам кіру PIN-кодын жаңарту"
+            onPress={() => navigation.navigate('ChangePin')}
             delay={320}
           />
           <MenuEntry

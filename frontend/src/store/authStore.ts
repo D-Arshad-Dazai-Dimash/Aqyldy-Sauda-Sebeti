@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { Role } from '../types/auth';
 import * as AuthApi from '../api/auth';
 import { useFavoritesStore } from './favoritesStore';
+import { changeAppPin, clearAppPin, hasAppPin, setupAppPin } from '../utils/appPin';
 
 type AuthState = {
   accessToken: string | null;
@@ -10,6 +11,8 @@ type AuthState = {
   role: Role | null;
   user: any | null;
   isBootstrapping: boolean;
+  isPinVerified: boolean;
+  requiresPinSetup: boolean;
 
   bootstrap: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
@@ -21,6 +24,9 @@ type AuthState = {
   }) => Promise<void>;
   logout: () => Promise<void>;
   setAccessToken: (token: string) => void;
+  setPinVerified: (verified: boolean) => void;
+  setupPin: (pin: string) => Promise<void>;
+  changePin: (currentPin: string, nextPin: string) => Promise<boolean>;
 };
 
 const KEY_TOKEN = 'auth:accessToken';
@@ -33,8 +39,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   role: null,
   user: null,
   isBootstrapping: true,
+  isPinVerified: false,
+  requiresPinSetup: false,
 
   setAccessToken: (token: string) => set({ accessToken: token }),
+  setPinVerified: (verified: boolean) => set({ isPinVerified: verified }),
+
+  setupPin: async (pin: string) => {
+    await setupAppPin(pin);
+    set({ requiresPinSetup: false, isPinVerified: true });
+  },
+
+  changePin: async (currentPin: string, nextPin: string) => {
+    return changeAppPin(currentPin, nextPin);
+  },
 
   bootstrap: async () => {
     const [t, r, rt] = await Promise.all([
@@ -48,11 +66,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (t) {
       try {
         const user = await AuthApi.me();
+        const pinExists = await hasAppPin();
         set({ user });
+        set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
         await useFavoritesStore.getState().load();
       } catch {
         await get().logout();
       }
+    } else {
+      set({ isPinVerified: false, requiresPinSetup: false });
     }
   },
 
@@ -70,7 +92,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // подтягиваем user
     const user = await AuthApi.me();
+    const pinExists = await hasAppPin();
     set({ user });
+    set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
     await useFavoritesStore.getState().load();
   },
 
@@ -87,7 +111,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ accessToken: token, refreshToken: data.refreshToken ?? null, role });
 
     const user = await AuthApi.me();
+    const pinExists = await hasAppPin();
     set({ user });
+    set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
     await useFavoritesStore.getState().load();
   },
 
@@ -104,7 +130,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ accessToken: token, refreshToken: data.refreshToken ?? null, role });
 
     const user = await AuthApi.me();
+    const pinExists = await hasAppPin();
     set({ user });
+    set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
     await useFavoritesStore.getState().load();
   },
 
@@ -114,8 +142,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { api } = require('../api/client');
       api.post('/api/auth/logout', { refreshToken }).catch(() => {});
     }
+    await clearAppPin();
     await AsyncStorage.multiRemove([KEY_TOKEN, KEY_REFRESH, KEY_ROLE]);
-    set({ accessToken: null, refreshToken: null, role: null, user: null });
+    set({
+      accessToken: null,
+      refreshToken: null,
+      role: null,
+      user: null,
+      isPinVerified: false,
+      requiresPinSetup: false,
+    });
     useFavoritesStore.setState({ favorites: [], loaded: false });
   },
 }));
