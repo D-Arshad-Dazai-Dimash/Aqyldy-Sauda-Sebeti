@@ -37,6 +37,8 @@ import AppPinScreen from '../screens/AppPinScreen';
 import ChangePinScreen from '../screens/ChangePinScreen';
 import MapScreen from '../screens/MapScreen';
 import PersonalDataScreen from '../screens/PersonalDataScreen';
+import PromotionsScreen from '../screens/PromotionsScreen';
+import SmartShoppingScreen from '../screens/SmartShoppingScreen';
 import { authenticateWithBiometric, canUseBiometricUnlock, verifyAppPin } from '../utils/appPin';
 
 const Stack = createNativeStackNavigator();
@@ -183,6 +185,8 @@ function AppStack() {
       <Stack.Screen name="ChangePin" component={ChangePinScreen} />
       <Stack.Screen name="Map" component={MapScreen} />
       <Stack.Screen name="PersonalData" component={PersonalDataScreen} />
+      <Stack.Screen name="Promotions" component={PromotionsScreen} />
+      <Stack.Screen name="SmartShopping" component={SmartShoppingScreen} />
     </Stack.Navigator>
   );
 }

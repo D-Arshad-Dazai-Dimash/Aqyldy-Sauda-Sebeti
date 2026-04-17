@@ -21,19 +21,23 @@ import Animated, {
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
 import { getMyOrders } from '../api/orders';
+import { useHeaderLayout } from '../utils/useHeaderLayout';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 const palette = {
-  background: '#F2F6F7',
+  background: '#F3F8F7',
   surface: '#FFFFFF',
-  cardSoft: '#EEF7F7',
-  text: '#0F172A',
-  textMuted: '#64748B',
-  border: '#DBE7E7',
-  mint: '#2BAE9A',
-  mintSoft: '#DFF5F1',
-  rose: '#EF4444',
+  cardSoft: '#E8F5F3',
+  text: '#0A1E1D',
+  textMuted: '#527673',
+  border: '#CAE5E1',
+  mint: '#1A9A88',
+  mintDark: '#0D6B5C',
+  mintSoft: '#D4F0EB',
+  dark: '#0A2422',
+  rose: '#E63946',
+  gold: '#D97706',
 };
 
 function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }: any) {
@@ -59,6 +63,7 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
 }
 
 export default function ProfileScreen({ navigation }: any) {
+  const { contentTopOffset } = useHeaderLayout();
   const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
   const logout = useAuthStore((s) => s.logout);
@@ -88,10 +93,10 @@ export default function ProfileScreen({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <Animated.ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: contentTopOffset }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeIn.duration(420)} style={styles.heroCard}>
@@ -214,65 +219,64 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 0,
     paddingBottom: 130,
   },
   heroCard: {
-    backgroundColor: palette.surface,
+    backgroundColor: palette.dark,
     borderRadius: 26,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 18,
     paddingBottom: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    shadowColor: '#0B4B4A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowColor: palette.dark,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 8,
   },
   heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   avatarRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     padding: 3,
-    backgroundColor: palette.mintSoft,
+    backgroundColor: palette.gold,
   },
   avatar: {
     width: '100%',
     height: '100%',
-    borderRadius: 32,
+    borderRadius: 34,
   },
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: palette.mintSoft,
+    backgroundColor: 'rgba(43,174,154,0.18)',
     borderWidth: 1,
-    borderColor: '#C8ECE5',
+    borderColor: 'rgba(43,174,154,0.35)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
   },
   rolePillText: {
-    color: '#167B6F',
+    color: '#7DE8DA',
     fontSize: 12,
     fontWeight: '700',
   },
   userName: {
-    color: palette.text,
+    color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '800',
     marginTop: 4,
+    letterSpacing: -0.4,
   },
   userEmail: {
-    color: palette.textMuted,
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
     marginTop: 4,
     marginBottom: 14,
@@ -283,20 +287,21 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: palette.cardSoft,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#DBECEB',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   statValue: {
-    color: palette.text,
+    color: '#FFCA28',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   statLabel: {
-    color: palette.textMuted,
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
     marginTop: 2,
   },
@@ -304,10 +309,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   sectionTitle: {
-    color: '#7B8A9E',
+    color: '#7B9B99',
     fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.7,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 10,
     paddingHorizontal: 4,
@@ -319,19 +324,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: palette.border,
+    borderLeftWidth: 3,
+    borderLeftColor: palette.mint,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     marginBottom: 8,
-    shadowColor: '#0B4B4A',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.05,
+    shadowColor: palette.mintDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 2,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -342,6 +349,7 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 15,
     fontWeight: '700',
+    color: palette.text,
   },
   menuSubText: {
     color: palette.textMuted,
@@ -354,20 +362,22 @@ const styles = StyleSheet.create({
   logoutCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F5',
+    backgroundColor: '#FFF0F0',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#FFD7D7',
+    borderColor: '#FECACA',
+    borderLeftWidth: 3,
+    borderLeftColor: palette.rose,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   logoutIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFE8E8',
+    backgroundColor: '#FFE4E4',
     marginRight: 10,
   },
   logoutText: {

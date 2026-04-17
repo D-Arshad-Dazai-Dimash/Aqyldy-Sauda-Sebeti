@@ -26,20 +26,25 @@ import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
 import { useI18n } from '../i18n/useI18n';
+import { useHeaderLayout } from '../utils/useHeaderLayout';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 const palette = {
-  background: '#F2F6F7',
+  background: '#F4F9F8',
   surface: '#FFFFFF',
-  surfaceSoft: '#EEF7F7',
-  text: '#0F172A',
-  textMuted: '#64748B',
-  border: '#DBE7E7',
-  mint: '#2BAE9A',
-  mintSoft: '#DFF5F1',
-  rose: '#EF4444',
-  roseSoft: '#FEF2F2',
+  surfaceSoft: '#E8F5F3',
+  text: '#0A1E1D',
+  textMuted: '#5A7A78',
+  border: '#CCE8E5',
+  mint: '#1A9A88',
+  mintDark: '#0D6B5C',
+  mintSoft: '#D4F0EB',
+  rose: '#E63946',
+  roseSoft: '#FFF0F0',
+  gold: '#D97706',
+  goldSoft: '#FEF3C7',
+  dark: '#0A2E2C',
 };
 
 function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }: any) {
@@ -65,6 +70,7 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
 }
 
 export default function CartScreen({ navigation }: any) {
+  const { topPadding, contentTopOffset } = useHeaderLayout();
   const { t } = useI18n();
   const isFocused = useIsFocused();
   const { cart, storeId, loading, error, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
@@ -171,11 +177,11 @@ export default function CartScreen({ navigation }: any) {
 
           <View style={styles.controls}>
             <TouchableOpacity onPress={() => handleUpdateQty(item.id, item.quantity - 1)} style={styles.qtyBtn}>
-              <Feather name="minus" size={16} color={palette.text} />
+              <Feather name="minus" size={16} color="#FFFFFF" />
             </TouchableOpacity>
             <Text style={styles.qtyText}>{item.quantity}</Text>
             <TouchableOpacity onPress={() => handleUpdateQty(item.id, item.quantity + 1)} style={styles.qtyBtn}>
-              <Feather name="plus" size={16} color={palette.text} />
+              <Feather name="plus" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -191,8 +197,8 @@ export default function CartScreen({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <View style={[styles.header, { paddingTop: topPadding }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Feather name="chevron-left" size={22} color={palette.text} />
         </TouchableOpacity>
@@ -219,7 +225,7 @@ export default function CartScreen({ navigation }: any) {
       ) : null}
 
       {loading && cartItems.length === 0 ? (
-        <ScrollView contentContainerStyle={styles.scrollList}>
+        <ScrollView contentContainerStyle={[styles.scrollList, { paddingTop: contentTopOffset }]}>
           {skeletonRows.map((item) => (
             <View key={item} style={styles.card}>
               <SkeletonBlock width={78} height={78} borderRadius={14} />
@@ -260,7 +266,7 @@ export default function CartScreen({ navigation }: any) {
       ) : (
         <Animated.ScrollView
           entering={FadeIn.duration(260)}
-          contentContainerStyle={styles.scrollList}
+          contentContainerStyle={[styles.scrollList, { paddingTop: contentTopOffset }]}
           showsVerticalScrollIndicator={false}
         >
           {cartItems.map((item, index) => renderItem(item, index))}
@@ -324,49 +330,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: palette.background,
-    paddingTop: 0,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 12,
+    backgroundColor: 'transparent',
   },
   headerBtn: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(10,30,29,0.08)',
     borderWidth: 1,
     borderColor: palette.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerBtnDisabled: {
-    backgroundColor: '#F1F5F9',
+    opacity: 0.4,
   },
   headerTitleWrap: {
     alignItems: 'center',
   },
   headerTitle: {
     color: palette.text,
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
+    letterSpacing: -0.4,
   },
   headerSubtitle: {
     color: palette.textMuted,
     fontSize: 12,
-    marginTop: 1,
+    marginTop: 2,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginHorizontal: 16,
-    marginTop: 6,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 4,
     backgroundColor: palette.roseSoft,
     borderRadius: 12,
     borderWidth: 1,
@@ -381,38 +392,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   scrollList: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 180,
+    paddingHorizontal: 14,
+    paddingTop: 0,
+    paddingBottom: 190,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: palette.surface,
-    borderRadius: 18,
+    borderRadius: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: palette.mint,
     borderWidth: 1,
     borderColor: palette.border,
-    padding: 12,
+    padding: 13,
     marginBottom: 10,
-    shadowColor: '#0B4B4A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowColor: palette.mintDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
   },
   imageContainer: {
-    width: 78,
-    height: 78,
+    width: 80,
+    height: 80,
     borderRadius: 14,
     backgroundColor: palette.surfaceSoft,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D8ECEB',
+    borderColor: palette.border,
   },
   productImage: {
-    width: 58,
-    height: 58,
+    width: 62,
+    height: 62,
   },
   infoContainer: {
     flex: 1,
@@ -425,7 +438,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 3,
+    lineHeight: 19,
   },
   unitPrice: {
     color: palette.textMuted,
@@ -437,18 +451,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     borderRadius: 11,
-    backgroundColor: '#F3F7F7',
+    backgroundColor: palette.surfaceSoft,
     borderWidth: 1,
-    borderColor: '#D9E6E8',
+    borderColor: palette.border,
     padding: 3,
   },
   qtyBtn: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: palette.mint,
   },
   qtyText: {
     marginHorizontal: 12,
@@ -461,23 +475,24 @@ const styles = StyleSheet.create({
   rightCol: {
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    height: 78,
+    height: 80,
     paddingVertical: 4,
   },
   removeBtn: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF4F4',
+    backgroundColor: palette.roseSoft,
     borderWidth: 1,
-    borderColor: '#FFD7D7',
+    borderColor: '#FECACA',
   },
   lineTotal: {
-    color: palette.text,
-    fontSize: 15,
-    fontWeight: '800',
+    color: palette.gold,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   emptyContainer: {
     flex: 1,
@@ -487,31 +502,34 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   emptyIconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
+    width: 100,
+    height: 100,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EAF0F8',
-    marginBottom: 14,
+    backgroundColor: palette.surfaceSoft,
+    borderWidth: 2,
+    borderColor: palette.border,
+    marginBottom: 16,
   },
   emptyTitle: {
     color: palette.text,
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 6,
+    letterSpacing: -0.3,
   },
   emptyDesc: {
     color: palette.textMuted,
     textAlign: 'center',
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   browseBtn: {
-    marginTop: 16,
-    height: 46,
+    marginTop: 18,
+    height: 48,
     borderRadius: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     backgroundColor: palette.mint,
     justifyContent: 'center',
     alignItems: 'center',
@@ -525,32 +543,31 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     right: 12,
-    bottom: 84,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 14,
-    shadowColor: '#0B4B4A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.09,
-    shadowRadius: 14,
-    elevation: 6,
+    bottom: 86,
+    backgroundColor: palette.dark,
+    borderRadius: 22,
+    padding: 16,
+    shadowColor: palette.dark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 10,
   },
   totalBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 13,
   },
   totalLabel: {
-    color: palette.textMuted,
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 13,
   },
   totalPrice: {
-    color: palette.text,
-    fontSize: 22,
+    color: '#FFCA28',
+    fontSize: 24,
     fontWeight: '900',
+    letterSpacing: -0.5,
   },
   checkoutBtn: {
     height: 54,
@@ -558,17 +575,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: palette.mint,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   disabledBtn: {
-    backgroundColor: '#A9BCCC',
+    backgroundColor: '#3A5A58',
   },
   checkoutText: {
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '900',
+    letterSpacing: 0.3,
   },
   cartRecsSection: {
-    marginTop: 14,
+    marginTop: 16,
   },
   cartRecsHeader: {
     flexDirection: 'row',
@@ -582,13 +602,13 @@ const styles = StyleSheet.create({
     gap: 4,
     backgroundColor: palette.mintSoft,
     borderWidth: 1,
-    borderColor: '#C8ECE5',
+    borderColor: '#A8DDD7',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
   },
   aiBadgeText: {
-    color: '#167B6F',
+    color: palette.mintDark,
     fontSize: 11,
     fontWeight: '800',
   },

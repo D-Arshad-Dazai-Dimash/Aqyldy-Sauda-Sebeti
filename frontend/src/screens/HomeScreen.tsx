@@ -20,8 +20,6 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  interpolate,
-  Extrapolation,
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
@@ -30,6 +28,7 @@ import { useLanguageStore } from '../store/languageStore';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
+import { useHeaderLayout } from '../utils/useHeaderLayout';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -109,6 +108,7 @@ function ServiceCard({
 }
 
 export default function HomeScreen({ navigation }: any) {
+  const { topPadding, contentTopOffset } = useHeaderLayout();
   const user = useAuthStore((s) => s.user);
   const language = useLanguageStore((s) => s.language);
   const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
@@ -175,11 +175,10 @@ export default function HomeScreen({ navigation }: any) {
     scrollY.value = e.contentOffset.y;
   });
   const headerBgStyle = useAnimatedStyle(() => {
-    const progress = interpolate(scrollY.value, [0, 60], [0, 1], Extrapolation.CLAMP);
     return {
-      backgroundColor: `rgba(247,248,252,${progress})`,
-      shadowOpacity: progress * 0.1,
-      elevation: progress * 6,
+      backgroundColor: 'transparent',
+      shadowOpacity: 0,
+      elevation: 0,
     };
   });
 
@@ -200,10 +199,10 @@ export default function HomeScreen({ navigation }: any) {
   useEffect(() => { loadRecommendations(); }, [loadRecommendations]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
 
       {/* ── Floating header ─────────────────────────────────────────── */}
-      <Animated.View style={[styles.header, headerBgStyle]}>
+      <Animated.View style={[styles.header, headerBgStyle, { paddingTop: topPadding }]}>
         <Animated.View entering={FadeInDown.delay(50).springify()} style={styles.logoRow}>
           <View style={styles.logoAccent} />
           <Text style={styles.logoA}>Aqyldy</Text>
@@ -237,7 +236,7 @@ export default function HomeScreen({ navigation }: any) {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: contentTopOffset }]}
       >
 
         {/* Hero greeting */}
@@ -279,7 +278,7 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.servicesGrid}>
           <ServiceCard icon="shopping-bag"  label={t.stores} iconColor={P.teal}    bgColor={P.tealLight}   onPress={() => navigation.navigate('Search')}    delay={400} />
           <ServiceCard icon="map-pin"       label={t.map} iconColor={P.purple}  bgColor={P.purpleL} onPress={() => navigation.navigate('Map')} delay={450} />
-          <ServiceCard icon="tag"           label={t.promos} iconColor={P.rose}    bgColor={P.roseL}       onPress={() => navigation.navigate('Search', { filterDiscount: true })} delay={500} />
+          <ServiceCard icon="tag"           label={t.promos} iconColor={P.rose}    bgColor={P.roseL}       onPress={() => navigation.navigate('Promotions')} delay={500} />
           <ServiceCard icon="clock"         label={t.history} iconColor={P.amber}   bgColor={P.amberL}      onPress={() => navigation.navigate('Orders')} delay={550} />
         </View>
 
@@ -312,7 +311,7 @@ export default function HomeScreen({ navigation }: any) {
 
         {/* ── Promo strip ───────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(660).springify().damping(14)}>
-          <PressCard onPress={() => navigation.navigate('Search')} style={styles.promoBanner}>
+          <PressCard onPress={() => navigation.navigate('SmartShopping')} style={styles.promoBanner}>
             <View>
               <Text style={styles.promoEyebrow}>{t.specialOffer}</Text>
               <Text style={styles.promoTitle}>{t.smartShopping}</Text>
@@ -441,7 +440,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 30,
     paddingBottom: 12,
     borderBottomColor: 'transparent',
     shadowColor: '#000',
@@ -496,7 +494,7 @@ const styles = StyleSheet.create({
   },
 
   // Scroll
-  scrollContent: { paddingTop: 72, paddingBottom: 110 },
+  scrollContent: { paddingTop: 0, paddingBottom: 110 },
 
   // Hero
   heroSection: { paddingHorizontal: 22, marginTop: 8, marginBottom: 22 },
