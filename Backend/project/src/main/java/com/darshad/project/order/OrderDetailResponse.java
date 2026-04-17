@@ -10,6 +10,7 @@ public record OrderDetailResponse(
         UUID storeId,
         String storeName,
         String status,
+        String paymentMethod,
         BigDecimal totalAmount,
         String comment,
         OffsetDateTime createdAt,

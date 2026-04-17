@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  SafeAreaView,
   Platform,
   ScrollView,
   Image,
@@ -15,6 +14,7 @@ import {
   Pressable,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeInDown,
   FadeIn,
@@ -145,7 +145,7 @@ export default function StoreScreen({ route, navigation }: any) {
   }, [storeId, page, pageSize, query, inStockOnly, sort, patchCatalogState]);
 
   useEffect(() => {
-    clearExpiredCatalog();
+    clearExpiredCatalog(20 * 60 * 1000);
     loadStore();
   }, [clearExpiredCatalog, loadStore]);
 

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  SafeAreaView,
   Platform,
   ScrollView,
   Image,
@@ -14,8 +13,8 @@ import {
   Pressable,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
-  FadeInDown,
   FadeInRight,
   FadeIn,
   ZoomIn,
@@ -33,6 +32,7 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import * as ProductsApi from '../api/products';
 import * as StoresApi from '../api/stores';
 import type { Product, Store } from '../types/api';
+import { safeJsonParse } from '../utils/storage';
 
 // @ts-ignore
 import VerifiedIcon from '../assets/icons/verified.svg';
@@ -63,14 +63,14 @@ const STORE_ACCENTS = [
 ];
 
 const QUICK_CATEGORIES = [
-  { label: 'Супермаркет', icon: 'shopping-cart' as const },
-  { label: 'Аптека', icon: 'crosshair' as const },
-  { label: 'Электроника', icon: 'cpu' as const },
-  { label: 'Косметика', icon: 'sun' as const },
-  { label: 'У дома', icon: 'home' as const },
+  { label: 'Жақын', icon: 'map-pin' as const },
+  { label: 'Ашық', icon: 'clock' as const },
+  { label: 'Жеңілдік', icon: 'tag' as const },
+  { label: 'Жаңа', icon: 'star' as const },
+  { label: 'Үйде', icon: 'home' as const },
 ];
 
-const POPULAR_QUERIES = ['Молоко', 'Яйца', 'Кофе', 'Хлеб', 'Сахар', 'Сок'];
+const POPULAR_QUERIES = ['Сүт', 'Жұмыртқа', 'Нан', 'Ет', 'Су'];
 
 function PressCard({ children, onPress, style }: any) {
   const scale = useSharedValue(1);
@@ -88,7 +88,8 @@ function PressCard({ children, onPress, style }: any) {
 
 const HISTORY_KEY = 'search:history';
 
-export default function SearchScreen({ navigation }: any) {
+export default function SearchScreen({ navigation, route }: any) {
+  const filterDiscount = route?.params?.filterDiscount ?? false;
   const [searchQuery, setSearchQuery] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -100,14 +101,18 @@ export default function SearchScreen({ navigation }: any) {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 15000]);
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const [discountOnly, setDiscountOnly] = useState(Boolean(filterDiscount));
 
   // Load search history and stores on mount
   useEffect(() => {
     AsyncStorage.getItem(HISTORY_KEY).then((raw) => {
-      if (raw) setHistory(JSON.parse(raw));
+      setHistory(safeJsonParse<string[]>(raw, []));
     });
     StoresApi.getStores().then(setStores).catch(() => {});
   }, []);
+useEffect(() => {
+    setDiscountOnly(Boolean(filterDiscount));
+  }, [filterDiscount]);
 
   // Search with debounce
   useEffect(() => {
@@ -121,11 +126,14 @@ export default function SearchScreen({ navigation }: any) {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, priceRange, selectedStores]);
+  }, [searchQuery, priceRange, selectedStores, discountOnly]);
 
   const performSearch = async (q: string) => {
     setLoading(true);
     try {
+      if (discountOnly) {
+        filtered = filtered.filter((p: any) => Number(p.discount ?? 0) > 0);
+      }
       const result = await ProductsApi.searchProducts({ q, active: true, size: 40 });
       // Client-side price filter (backend doesn't have price filter yet)
       let filtered = result.content.filter(

@@ -114,11 +114,16 @@ export async function getStoreProductsPaged(
       first: safePage === 0,
       last: safePage >= totalPages - 1,
     };
-  } catch {
+  } catch (err: any) {
+    const status = err?.response?.status;
+    if (status !== 404 && status !== undefined) {
+      throw err;
+    }
+
     // Fallback for backends that still return full list without pagination params.
-    let raw = await getStoreProducts(storeId);
-    if (raw.length === 0) {
-      raw = await getStoreInventory(storeId);
+    const raw = await getStoreProducts(storeId);
+    if (!Array.isArray(raw)) {
+      throw new Error('Unexpected response format');
     }
     let filtered = raw;
 

@@ -40,6 +40,16 @@ public class Order {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private PaymentMethod paymentMethod;
+
+    @Column(length = 4)
+    private String cardLast4;
+
+    @Column(length = 32)
+    private String cardBrand;
+
     // доставки нет — оставим только comment
     private String comment;
 
@@ -56,6 +66,7 @@ public class Order {
     void prePersist() {
         createdAt = OffsetDateTime.now();
         if (status == null) status = OrderStatus.CREATED;
+        if (paymentMethod == null) paymentMethod = PaymentMethod.CASH;
     }
 
     @PreUpdate

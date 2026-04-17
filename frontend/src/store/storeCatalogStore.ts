@@ -41,21 +41,27 @@ function buildDefaultSnapshot(): StoreCatalogSnapshot {
   };
 }
 
+const EMPTY_SNAPSHOT: StoreCatalogSnapshot = Object.freeze(buildDefaultSnapshot());
+
 export const useStoreCatalogStore = create<StoreCatalogState>((set, get) => ({
   snapshots: {},
 
-  getStateForStore: (storeId) => get().snapshots[storeId] ?? buildDefaultSnapshot(),
+  getStateForStore: (storeId) => get().snapshots[storeId] ?? EMPTY_SNAPSHOT,
 
   patchState: (storeId, patch) => {
     set((state) => {
       const prev = state.snapshots[storeId] ?? buildDefaultSnapshot();
+      const isDataPatch =
+        Object.prototype.hasOwnProperty.call(patch, 'items') ||
+        Object.prototype.hasOwnProperty.call(patch, 'totalElements') ||
+        Object.prototype.hasOwnProperty.call(patch, 'totalPages');
       return {
         snapshots: {
           ...state.snapshots,
           [storeId]: {
             ...prev,
             ...patch,
-            updatedAt: Date.now(),
+            updatedAt: isDataPatch ? Date.now() : (prev.updatedAt ?? Date.now()),
           },
         },
       };

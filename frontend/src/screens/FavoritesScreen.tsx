@@ -6,11 +6,11 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   Platform,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import * as ProductsApi from '../api/products';
@@ -31,19 +31,14 @@ export default function FavoritesScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      const results = await Promise.allSettled(
-        favorites.map((id) => ProductsApi.getProduct(id))
-      );
-      const loaded = results
-        .filter((r): r is PromiseFulfilledResult<Product> => r.status === 'fulfilled')
-        .map((r) => r.value);
+      const loaded = await ProductsApi.getProductsBatch(favorites);
       setProducts(loaded);
     } catch {
-      // Keep whatever we have
+      setProducts([]);
     } finally {
       setLoading(false);
     }
-  }, [favorites]);
+  }, [favorites.join(',')]);
 
   useEffect(() => {
     loadFavorites();
@@ -58,7 +53,10 @@ export default function FavoritesScreen({ navigation }: any) {
         {
           text: 'Өшіру',
           style: 'destructive',
-          onPress: () => toggleFavorite(id),
+          onPress: () => {
+            setProducts((prev) => prev.filter((product) => product.id !== id));
+            toggleFavorite(id);
+          },
         },
       ]
     );
@@ -148,7 +146,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: 0,
   },
   header: {
     padding: 20,

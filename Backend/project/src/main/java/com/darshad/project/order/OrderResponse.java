@@ -8,6 +8,7 @@ public record OrderResponse(
         UUID id,
         UUID storeId,
         String status,
+        String paymentMethod,
         BigDecimal totalAmount,
         OffsetDateTime createdAt
 ) {}

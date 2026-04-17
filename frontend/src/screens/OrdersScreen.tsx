@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { useIsFocused } from '@react-navigation/native';
 import { getMyOrders } from '../api/orders';
@@ -18,14 +18,16 @@ export default function OrdersScreen({ navigation }: any) {
   const isFocused = useIsFocused();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await getMyOrders();
       setOrders(data || []);
     } catch {
-      // silent — orders list shows empty state
+      setError('Тапсырыстарды жүктеу мүмкін болмады');
     } finally {
       setLoading(false);
     }
@@ -103,6 +105,14 @@ export default function OrdersScreen({ navigation }: any) {
 
       {loading ? (
         <ActivityIndicator size="large" color="#4AB7B6" style={{ flex: 1 }} />
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Feather name="wifi-off" size={64} color="#CBD5E1" />
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity style={styles.browseBtn} onPress={fetchOrders}>
+            <Text style={styles.browseBtnText}>Қайта көру</Text>
+          </TouchableOpacity>
+        </View>
       ) : orders.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Feather name="shopping-bag" size={80} color="#CBD5E1" />
@@ -131,7 +141,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',

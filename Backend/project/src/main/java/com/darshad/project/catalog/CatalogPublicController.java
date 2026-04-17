@@ -2,8 +2,10 @@ package com.darshad.project.catalog;
 
 import com.darshad.project.catalog.category.CategoryDto;
 import com.darshad.project.catalog.category.CategoryService;
+import com.darshad.project.catalog.product.BatchRequest;
 import com.darshad.project.catalog.product.ProductDto;
 import com.darshad.project.catalog.product.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,5 +50,10 @@ public class CatalogPublicController {
     @GetMapping("/products/barcode/{barcode}")
     public ProductDto productByBarcode(@PathVariable String barcode) {
         return productService.findByBarcode(barcode);
+    }
+
+    @PostMapping("/products/batch")
+    public List<ProductDto> productsBatch(@Valid @RequestBody BatchRequest req) {
+        return productService.findAllByIds(req.ids());
     }
 }

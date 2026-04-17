@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   TextInput,
   Alert,
@@ -12,20 +11,15 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { checkout } from '../api/orders';
 import { useCartStore } from '../store/cartStore';
 import { getApiErrorMessage, isValidCardNumber, isValidExpiry } from '../utils/validation';
-
-const CARDS_KEY = '@saved_cards';
-
-interface SavedCard {
-  id: string;
-  last4: string;
-  brand: string;
-  expiry: string;
-}
+import {
+  loadCards as loadSecureCards,
+  saveCards as saveSecureCards,
+  type SavedCard,
+} from '../utils/secureStorage';
 
 export default function PaymentScreen({ route, navigation }: any) {
   const { storeId, total } = route.params;
@@ -45,18 +39,13 @@ export default function PaymentScreen({ route, navigation }: any) {
   }, []);
 
   const loadCards = async () => {
-    try {
-      const raw = await AsyncStorage.getItem(CARDS_KEY);
-      if (raw) {
-        const parsed: SavedCard[] = JSON.parse(raw);
-        setCards(parsed);
-        if (parsed.length > 0) setSelectedCardId(parsed[0].id);
-      }
-    } catch {}
+    const parsed = await loadSecureCards();
+    setCards(parsed);
+    if (parsed.length > 0) setSelectedCardId(parsed[0].id);
   };
 
   const saveCards = async (list: SavedCard[]) => {
-    await AsyncStorage.setItem(CARDS_KEY, JSON.stringify(list));
+    await saveSecureCards(list);
     setCards(list);
   };
 
@@ -130,9 +119,16 @@ export default function PaymentScreen({ route, navigation }: any) {
       Alert.alert('Қате', 'Алдымен карта қосыңыз немесе таңдаңыз');
       return;
     }
+
+    const selectedCard = cards.find((card) => card.id === selectedCardId);
     setLoading(true);
     try {
-      const order = await checkout(storeId);
+      const order = await checkout({
+        storeId,
+        paymentMethod: method === 'card' ? 'CARD' : 'CASH',
+        cardLast4: method === 'card' ? selectedCard?.last4 : undefined,
+        cardBrand: method === 'card' ? selectedCard?.brand : undefined,
+      });
       reset();
       Alert.alert('Сәтті!', 'Тапсырыс рәсімделді', [
         {
@@ -329,7 +325,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',

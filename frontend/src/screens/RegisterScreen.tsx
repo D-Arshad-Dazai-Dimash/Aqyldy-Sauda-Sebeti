@@ -7,11 +7,11 @@ import {
   StyleSheet, 
   KeyboardAvoidingView, 
   Platform, 
-  SafeAreaView, 
   StatusBar,
   ScrollView,
   Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
 import { getApiErrorMessage, isStrongEnoughPassword, isValidEmail } from '../utils/validation';
@@ -24,22 +24,30 @@ export default function RegisterScreen({ navigation }: any) {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
   const onSubmit = async () => {
-    if (!email || !password || !name) {
-      setError('Пожалуйста, заполните все поля');
+    if (!email || !password || !name || !confirmPassword) {
+      setError('Барлық өрістерді толтырыңыз');
       return;
     }
 
     if (!isValidEmail(email)) {
-      setError('Введите корректный email');
+      setError('Жарамды email енгізіңіз');
       return;
     }
 
     if (!isStrongEnoughPassword(password)) {
-      setError('Пароль должен содержать минимум 6 символов');
+      setError('Құпия сөз кемінде 6 таңбадан тұруы керек');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Құпия сөздер сәйкес келмейді');
       return;
     }
     
@@ -49,7 +57,7 @@ export default function RegisterScreen({ navigation }: any) {
     try {
       await register(email.trim(), password, name.trim());
     } catch (e: any) {
-      setError(getApiErrorMessage(e, 'Ошибка регистрации. Проверьте сеть!'));
+      setError(getApiErrorMessage(e, 'Тіркелу қатесі. Желіні тексеріңіз!'));
     } finally {
       setLoading(false);
     }
@@ -80,16 +88,16 @@ export default function RegisterScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Регистрация</Text>
-            <Text style={styles.subtitle}>Создайте аккаунт для умных покупок</Text>
+            <Text style={styles.title}>Тіркелу</Text>
+            <Text style={styles.subtitle}>Ақылды сатып алу үшін аккаунт жасаңыз</Text>
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.inputLabel}>Ваше имя</Text>
+            <Text style={styles.inputLabel}>Аты-жөніңіз</Text>
             <View style={styles.inputContainer}>
               <Feather name="user" size={20} color="#94A3B8" />
               <TextInput 
-                placeholder="Имя пользователя" 
+                placeholder="Пайдаланушы аты" 
                 value={name} 
                 onChangeText={setName} 
                 style={styles.input}
@@ -97,7 +105,7 @@ export default function RegisterScreen({ navigation }: any) {
               />
             </View>
 
-            <Text style={styles.inputLabel}>Электронная почта</Text>
+            <Text style={styles.inputLabel}>Электрондық пошта</Text>
             <View style={styles.inputContainer}>
               <Feather name="mail" size={20} color="#94A3B8" />
               <TextInput 
@@ -111,17 +119,40 @@ export default function RegisterScreen({ navigation }: any) {
               />
             </View>
 
-            <Text style={styles.inputLabel}>Пароль</Text>
+            <Text style={styles.inputLabel}>Құпия сөз</Text>
             <View style={styles.inputContainer}>
               <Feather name="lock" size={20} color="#94A3B8" />
               <TextInput 
-                placeholder="Минимум 6 символов" 
-                secureTextEntry 
+                placeholder="Кемінде 6 таңба" 
+                secureTextEntry={!showPassword}
                 value={password} 
                 onChangeText={setPassword} 
                 style={styles.input}
                 placeholderTextColor="#CBD5E1"
+                textContentType="newPassword"
+                autoComplete="new-password"
               />
+              <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Құпия сөзді растаңыз</Text>
+            <View style={styles.inputContainer}>
+              <Feather name="lock" size={20} color="#94A3B8" />
+              <TextInput 
+                placeholder="Құпия сөзді қайталаңыз" 
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword} 
+                onChangeText={setConfirmPassword} 
+                style={styles.input}
+                placeholderTextColor="#CBD5E1"
+                textContentType="newPassword"
+                autoComplete="new-password"
+              />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(v => !v)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#94A3B8" />
+              </TouchableOpacity>
             </View>
 
             {error && (
@@ -138,7 +169,7 @@ export default function RegisterScreen({ navigation }: any) {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Создание...' : 'Зарегистрироваться'}
+                {loading ? 'Жүктелуде...' : 'Тіркелу'}
               </Text>
               {!loading && <Feather name="check" size={20} color="#FFF" style={{marginLeft: 8}} />}
             </TouchableOpacity>
@@ -146,8 +177,8 @@ export default function RegisterScreen({ navigation }: any) {
 
           <View style={styles.footer}>
             <Text style={styles.termsText}>
-              Нажимая кнопку, вы принимаете условия {'\n'} 
-              <Text style={styles.linkTextInline}>Пользовательского соглашения</Text>
+              Түймені басу арқылы сіз {'\n'} 
+              <Text style={styles.linkTextInline}>Пайдаланушы келісімін</Text> қабылдайсыз
             </Text>
 
             <TouchableOpacity

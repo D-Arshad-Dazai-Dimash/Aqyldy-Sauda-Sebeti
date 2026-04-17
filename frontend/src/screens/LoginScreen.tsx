@@ -7,15 +7,15 @@ import {
   StyleSheet, 
   KeyboardAvoidingView, 
   Platform, 
-  SafeAreaView, 
   StatusBar,
   Dimensions,
   ScrollView,
   ActivityIndicator
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
-import { getApiErrorMessage, isStrongEnoughPassword, isValidEmail } from '../utils/validation';
+import { getApiErrorMessage, isValidEmail } from '../utils/validation';
 
 const { width } = Dimensions.get('window');
 
@@ -23,22 +23,18 @@ export default function LoginScreen({ navigation }: any) {
   const login = useAuthStore((s) => s.login);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
   const onSubmit = async () => {
-    if (!email || !password) {
-      setError('Введите email и пароль');
-      return;
-    }
-
     if (!isValidEmail(email)) {
-      setError('Введите корректный email');
+      setError('Дұрыс email енгізіңіз');
       return;
     }
 
-    if (!isStrongEnoughPassword(password)) {
-      setError('Пароль должен содержать минимум 6 символов');
+    if (!password.length) {
+      setError('Құпия сөзді енгізіңіз');
       return;
     }
 
@@ -47,7 +43,7 @@ export default function LoginScreen({ navigation }: any) {
     try {
       await login(email.trim(), password);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, 'Неверный логин или пароль'));
+      setError(getApiErrorMessage(e, 'Логин немесе құпия сөз қате'));
     } finally {
       setLoading(false);
     }
@@ -78,7 +74,7 @@ export default function LoginScreen({ navigation }: any) {
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.inputLabel}>Электронная почта</Text>
+            <Text style={styles.inputLabel}>Email</Text>
             <View style={styles.inputContainer}>
               <Feather name="mail" size={20} color="#94A3B8" />
               <TextInput 
@@ -92,17 +88,20 @@ export default function LoginScreen({ navigation }: any) {
               />
             </View>
 
-            <Text style={styles.inputLabel}>Пароль</Text>
+            <Text style={styles.inputLabel}>Құпия сөз</Text>
             <View style={styles.inputContainer}>
               <Feather name="lock" size={20} color="#94A3B8" />
               <TextInput 
-                placeholder="Ваш пароль" 
-                secureTextEntry 
+                placeholder="Кемінде 6 таңба" 
+                secureTextEntry={!showPassword}
                 value={password} 
                 onChangeText={setPassword} 
                 style={styles.input}
                 placeholderTextColor="#CBD5E1"
               />
+              <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeBtn}>
+                <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color="#94A3B8" />
+              </TouchableOpacity>
             </View>
 
             {error && (
@@ -122,7 +121,7 @@ export default function LoginScreen({ navigation }: any) {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
-                  <Text style={styles.buttonText}>Войти</Text>
+                  <Text style={styles.buttonText}>Кіру</Text>
                   <Feather name="arrow-right" size={20} color="#FFF" />
                 </>
               )}
@@ -143,7 +142,7 @@ export default function LoginScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Register')}
             >
               <Text style={styles.footerText}>
-                Нет аккаунта? <Text style={styles.linkText}>Создать сейчас</Text>
+                Тіркелмедіңіз бе? <Text style={styles.linkText}>Тіркелу</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -202,6 +201,7 @@ const styles = StyleSheet.create({
     height: 64,
   },
   input: { flex: 1, marginLeft: 12, fontSize: 16, color: '#1E293B', fontWeight: '500' },
+  eyeBtn: { padding: 4, marginLeft: 8 },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',

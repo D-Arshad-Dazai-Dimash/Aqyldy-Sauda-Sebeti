@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -11,6 +10,7 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -220,8 +220,8 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.servicesGrid}>
           <ServiceCard icon="shopping-bag"  label="Дүкендер"  iconColor={P.teal}    bgColor={P.tealLight}   onPress={() => navigation.navigate('Search')}    delay={400} />
           <ServiceCard icon="map-pin"       label="Карта"      iconColor={P.purple}  bgColor={P.purpleL}     onPress={() => Alert.alert('Карта', 'Жақын арада!')} delay={450} />
-          <ServiceCard icon="percent"       label="Акциялар"   iconColor={P.rose}    bgColor={P.roseL}       onPress={() => navigation.navigate('Search')}    delay={500} />
-          <ServiceCard icon="clock"         label="Тарихы"     iconColor={P.amber}   bgColor={P.amberL}      onPress={() => navigation.navigate('Analytics')} delay={550} />
+          <ServiceCard icon="tag"           label="Акциялар"   iconColor={P.rose}    bgColor={P.roseL}       onPress={() => navigation.navigate('Search', { filterDiscount: true })} delay={500} />
+          <ServiceCard icon="clock"         label="Тарихы"     iconColor={P.amber}   bgColor={P.amberL}      onPress={() => navigation.navigate('Orders')} delay={550} />
         </View>
 
         {/* ── AI Analytics banner ───────────────────────────────────── */}

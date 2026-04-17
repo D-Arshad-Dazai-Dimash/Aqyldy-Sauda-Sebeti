@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert 
+  View, Text, StyleSheet, TouchableOpacity, Alert 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 // Code типін осы жерге қостық
 import { Camera, useCameraDevice, useCodeScanner, Code } from 'react-native-vision-camera'; 

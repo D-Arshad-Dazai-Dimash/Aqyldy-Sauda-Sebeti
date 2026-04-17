@@ -1,8 +1,16 @@
 import { api } from './client';
 import type { OrderResponse } from '../types/api';
 
-export async function checkout(storeId: string, comment?: string): Promise<OrderResponse> {
-  const res = await api.post<OrderResponse>('/api/orders/checkout', { storeId, comment });
+export interface CheckoutRequest {
+  storeId: string;
+  paymentMethod: 'CARD' | 'CASH';
+  cardLast4?: string;
+  cardBrand?: string;
+  comment?: string;
+}
+
+export async function checkout(req: CheckoutRequest): Promise<OrderResponse> {
+  const res = await api.post<OrderResponse>('/api/orders/checkout', req);
   return res.data;
 }
 
@@ -17,6 +25,6 @@ export async function getOrderById(orderId: string): Promise<any> {
 }
 
 export async function cancelOrder(orderId: string): Promise<OrderResponse> {
-  const res = await api.delete<OrderResponse>(`/api/orders/${orderId}`);
+  const res = await api.patch<OrderResponse>(`/api/orders/${orderId}/cancel`);
   return res.data;
 }

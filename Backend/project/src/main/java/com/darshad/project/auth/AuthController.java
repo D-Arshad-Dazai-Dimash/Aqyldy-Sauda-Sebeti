@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,9 +18,12 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final boolean exposeDevResetToken;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService,
+                          @Value("${app.security.expose-dev-reset-token:false}") boolean exposeDevResetToken) {
         this.authService = authService;
+        this.exposeDevResetToken = exposeDevResetToken;
     }
 
     @PostMapping("/register")
@@ -60,11 +64,7 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public Map<String, Object> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
         String token = authService.forgotPassword(req.email());
-        // Dev-mode: return the token in the response so the frontend
-        // (or a tester via curl) can immediately call /reset-password.
-        // In prod, replace this with email delivery and stop returning
-        // the token here.
-        if (token != null) {
+        if (exposeDevResetToken && token != null) {
             return Map.of("ok", true, "devResetToken", token);
         }
         return Map.of("ok", true);

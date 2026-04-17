@@ -76,4 +76,55 @@ describe('cartStore optimistic updates', () => {
     expect(useCartStore.getState().cart?.items).toHaveLength(1);
     expect(useCartStore.getState().error).toBe('remove failed');
   });
+
+  it('sets loading=true immediately while addItem request is in flight', async () => {
+    let resolveFn: ((value: any) => void) | null = null;
+    (CartApi.addToCart as jest.Mock).mockImplementation(
+      () => new Promise((resolve) => {
+        resolveFn = resolve;
+      }),
+    );
+
+    const pending = useCartStore.getState().addItem('store-1', 'product-2', 1, {
+      productTitle: 'Bread',
+      price: 200,
+    });
+
+    expect(useCartStore.getState().loading).toBe(true);
+
+    resolveFn?.({
+      id: 'cart-1',
+      items: [
+        {
+          id: 'item-1',
+          productId: 'product-1',
+          productTitle: 'Milk',
+          price: 100,
+          imageUrl: null,
+          quantity: 1,
+          lineTotal: 100,
+        },
+      ],
+      total: 100,
+    });
+
+    await pending;
+    expect(useCartStore.getState().loading).toBe(false);
+  });
+
+  it('does not produce NaN total when optimistic price is invalid', async () => {
+    (CartApi.addToCart as jest.Mock).mockResolvedValue({
+      id: 'cart-1',
+      items: [],
+      total: 0,
+    });
+
+    await useCartStore.getState().addItem('store-1', 'product-3', 1, {
+      productTitle: 'Unknown',
+      // @ts-expect-error validating runtime behavior for malformed data
+      price: 'bad-price',
+    });
+
+    expect(Number.isNaN(useCartStore.getState().cart?.total ?? 0)).toBe(false);
+  });
 });

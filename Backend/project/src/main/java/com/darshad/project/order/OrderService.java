@@ -60,6 +60,9 @@ public class OrderService {
         var order = Order.builder()
                 .user(user)
                 .store(storeRef)
+                .paymentMethod(request.paymentMethod() == null ? PaymentMethod.CASH : request.paymentMethod())
+                .cardLast4(request.cardLast4())
+                .cardBrand(request.cardBrand())
                 .comment(request.comment())
                 .status(OrderStatus.CREATED)
                 .build();
@@ -144,6 +147,7 @@ public class OrderService {
                 order.getId(),
                 storeId,
                 order.getStatus().name(),
+                order.getPaymentMethod().name(),
                 order.getTotalAmount(),
                 order.getCreatedAt()
         );
@@ -162,6 +166,7 @@ public class OrderService {
                         o.getId(),
                         o.getStore().getId(),
                         o.getStatus().name(),
+                        (o.getPaymentMethod() == null ? PaymentMethod.CASH : o.getPaymentMethod()).name(),
                         o.getTotalAmount(),
                         o.getCreatedAt()
                 ))
@@ -200,6 +205,7 @@ public class OrderService {
                 order.getStore().getId(),
                 order.getStore().getName(),
                 order.getStatus().name(),
+                (order.getPaymentMethod() == null ? PaymentMethod.CASH : order.getPaymentMethod()).name(),
                 order.getTotalAmount(),
                 order.getComment(),
                 order.getCreatedAt(),
@@ -306,6 +312,7 @@ public class OrderService {
                 order.getId(),
                 order.getStore().getId(),
                 order.getStatus().name(),
+                (order.getPaymentMethod() == null ? PaymentMethod.CASH : order.getPaymentMethod()).name(),
                 order.getTotalAmount(),
                 order.getCreatedAt()
         );
@@ -366,6 +373,7 @@ public class OrderService {
                 order.getStore().getId(),
                 order.getStore().getName(),
                 order.getStatus().name(),
+                (order.getPaymentMethod() == null ? PaymentMethod.CASH : order.getPaymentMethod()).name(),
                 order.getTotalAmount(),
                 order.getComment(),
                 order.getCreatedAt(),

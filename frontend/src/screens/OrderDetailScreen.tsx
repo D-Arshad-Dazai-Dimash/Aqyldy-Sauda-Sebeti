@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { getOrderById, cancelOrder } from '../api/orders';
 
@@ -19,19 +19,23 @@ export default function OrderDetailScreen({ route, navigation }: any) {
   const { orderId } = route.params;
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  const fetchOrder = async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      const data = await getOrderById(orderId);
+      setOrder(data);
+    } catch {
+      setFetchError('Тапсырысты жүктеу мүмкін болмады');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const data = await getOrderById(orderId);
-        setOrder(data);
-      } catch {
-        // order not found — empty state shown below
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrder();
   }, [orderId]);
 
@@ -65,6 +69,12 @@ export default function OrderDetailScreen({ route, navigation }: any) {
     }
   };
 
+  const paymentMethodLabel = (method?: string) => {
+    if (method?.toUpperCase() === 'CARD') return 'Картамен';
+    if (method?.toUpperCase() === 'CASH') return 'Қолма-қол';
+    return '—';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -77,6 +87,14 @@ export default function OrderDetailScreen({ route, navigation }: any) {
 
       {loading ? (
         <ActivityIndicator size="large" color="#4AB7B6" style={{ flex: 1 }} />
+      ) : fetchError ? (
+        <View style={styles.errorContainer}>
+          <Feather name="wifi-off" size={64} color="#CBD5E1" />
+          <Text style={styles.errorText}>{fetchError}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={fetchOrder}>
+            <Text style={styles.retryBtnText}>Қайта көру</Text>
+          </TouchableOpacity>
+        </View>
       ) : !order ? (
         <View style={styles.errorContainer}>
           <Feather name="alert-circle" size={60} color="#CBD5E1" />
@@ -122,6 +140,11 @@ export default function OrderDetailScreen({ route, navigation }: any) {
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>Жалпы сома</Text>
             <Text style={styles.totalAmount}>{Number(order.totalAmount ?? 0).toFixed(0)} ₸</Text>
+          </View>
+
+          <View style={styles.paymentCard}>
+            <Text style={styles.paymentLabel}>Төлем тәсілі</Text>
+            <Text style={styles.paymentValue}>{paymentMethodLabel(order.paymentMethod)}</Text>
           </View>
 
           {/* Cancel button for CREATED / PAID */}
@@ -172,7 +195,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',
@@ -247,6 +270,22 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: 15, color: '#64748B', fontWeight: '500' },
   totalAmount: { fontSize: 22, fontWeight: '800', color: '#1E293B' },
+  paymentCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  paymentLabel: { fontSize: 15, color: '#64748B', fontWeight: '500' },
+  paymentValue: { fontSize: 16, color: '#1E293B', fontWeight: '700' },
   cancelBtn: {
     backgroundColor: '#EF4444',
     borderRadius: 16,
@@ -256,5 +295,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { marginTop: 16, fontSize: 18, color: '#94A3B8', fontWeight: '500' },
+  errorText: { marginTop: 16, fontSize: 18, color: '#94A3B8', fontWeight: '500', textAlign: 'center' },
+  retryBtn: { marginTop: 20, backgroundColor: '#4AB7B6', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
+  retryBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

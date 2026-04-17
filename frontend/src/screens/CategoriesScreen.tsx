@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -13,6 +12,7 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: P.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: 0,
   },
   bgOrnamentTop: {
     position: 'absolute',

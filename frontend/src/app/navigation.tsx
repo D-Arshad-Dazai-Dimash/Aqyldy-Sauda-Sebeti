@@ -37,6 +37,15 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const linking = {
+  prefixes: ['aqyldysebet://'],
+  config: {
+    screens: {
+      ResetPassword: 'reset-password/:token',
+    },
+  },
+};
+
 // Сканер батырмасының дизайны (ортадағы дөңгелек)
 const ScanButton = ({ children, onPress }: any) => (
   <TouchableOpacity style={styles.scanButtonContainer} onPress={onPress} activeOpacity={0.8}>
@@ -183,7 +192,7 @@ export default function RootNavigation() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {token ? <AppStack /> : (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />

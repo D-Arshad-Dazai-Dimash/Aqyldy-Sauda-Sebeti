@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, SafeAreaView, StatusBar,
+  KeyboardAvoidingView, Platform, StatusBar,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
 import { getApiErrorMessage, isStrongEnoughPassword } from '../utils/validation';
@@ -13,8 +14,23 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
   const [token, setToken] = useState(routeToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!routeToken) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.placeholderWrap}>
+          <Text style={styles.placeholderText}>Электрондық поштаңыздан келген сілтемені басыңыз</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.placeholderBtn}>
+            <Text style={styles.placeholderBtnText}>Артқа</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const onSubmit = async () => {
     if (!token) {
@@ -34,7 +50,13 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
     try {
       await api.post('/api/auth/reset-password', { token, newPassword });
       Alert.alert('Сәтті', 'Құпия сөз өзгертілді. Жаңа құпия сөзбен кіріңіз', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
+        {
+          text: 'OK',
+          onPress: () => navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          }),
+        },
       ]);
     } catch (e: any) {
       setError(getApiErrorMessage(e, 'Қате орын алды'));
@@ -61,34 +83,22 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
           </View>
 
           <View style={styles.formCard}>
-            {!routeToken && (
-              <>
-                <Text style={styles.inputLabel}>Токен</Text>
-                <View style={styles.inputContainer}>
-                  <Feather name="key" size={20} color="#94A3B8" />
-                  <TextInput
-                    placeholder="Токенді енгізіңіз"
-                    autoCapitalize="none"
-                    value={token}
-                    onChangeText={setToken}
-                    style={styles.input}
-                    placeholderTextColor="#CBD5E1"
-                  />
-                </View>
-              </>
-            )}
-
             <Text style={styles.inputLabel}>Жаңа құпия сөз</Text>
             <View style={styles.inputContainer}>
               <Feather name="lock" size={20} color="#94A3B8" />
               <TextInput
                 placeholder="Кемінде 6 таңба"
-                secureTextEntry
+                secureTextEntry={!showNew}
                 value={newPassword}
                 onChangeText={setNewPassword}
                 style={styles.input}
                 placeholderTextColor="#CBD5E1"
+                textContentType="newPassword"
+                autoComplete="new-password"
               />
+              <TouchableOpacity onPress={() => setShowNew((v) => !v)} style={styles.eyeBtn}>
+                <Feather name={showNew ? 'eye-off' : 'eye'} size={18} color="#94A3B8" />
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.inputLabel}>Құпия сөзді растаңыз</Text>
@@ -96,12 +106,17 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
               <Feather name="lock" size={20} color="#94A3B8" />
               <TextInput
                 placeholder="Құпия сөзді қайталаңыз"
-                secureTextEntry
+                secureTextEntry={!showConfirm}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 style={styles.input}
                 placeholderTextColor="#CBD5E1"
+                textContentType="newPassword"
+                autoComplete="new-password"
               />
+              <TouchableOpacity onPress={() => setShowConfirm((v) => !v)} style={styles.eyeBtn}>
+                <Feather name={showConfirm ? 'eye-off' : 'eye'} size={18} color="#94A3B8" />
+              </TouchableOpacity>
             </View>
 
             {error && (
@@ -149,6 +164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18, marginBottom: 22, height: 64,
   },
   input: { flex: 1, marginLeft: 12, fontSize: 16, color: '#1E293B', fontWeight: '500' },
+  eyeBtn: { padding: 4, marginLeft: 8 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF2F2',
     padding: 14, borderRadius: 16, marginBottom: 20,
@@ -162,4 +178,27 @@ const styles = StyleSheet.create({
   },
   disabledButton: { opacity: 0.7, backgroundColor: '#94A3B8' },
   buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  placeholderWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#1E293B',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  placeholderBtn: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
+  placeholderBtnText: {
+    color: '#334155',
+    fontWeight: '700',
+  },
 });

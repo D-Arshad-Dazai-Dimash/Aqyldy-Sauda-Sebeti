@@ -33,6 +33,8 @@ app:
     # Counts per remote IP, resets every window.
     window-seconds: 60
     max-requests: 10
+  security:
+    expose-dev-reset-token: true
 
   # Show SQL params (dev only)
   jpa.properties.hibernate.format_sql: true

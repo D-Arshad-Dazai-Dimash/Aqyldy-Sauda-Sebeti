@@ -107,9 +107,10 @@ class OrderServiceTest {
             });
 
             OrderResponse result = orderService.checkout("buyer@test.com",
-                    new CheckoutRequest(storeId, "test comment"));
+                    new CheckoutRequest(storeId, PaymentMethod.CARD, "1234", "Visa", "test comment"));
 
             assertThat(result.status()).isEqualTo("CREATED");
+            assertThat(result.paymentMethod()).isEqualTo("CARD");
             assertThat(result.totalAmount()).isEqualByComparingTo(BigDecimal.valueOf(1600));
             assertThat(inv.getQuantity()).isEqualTo(8); // 10 - 2
             verify(orderRepo).save(any(Order.class));
@@ -129,7 +130,7 @@ class OrderServiceTest {
             when(cartRepo.findGraphByUserIdAndStoreId(userId, storeId)).thenReturn(Optional.of(cart));
 
             assertThatThrownBy(() ->
-                    orderService.checkout("buyer@test.com", new CheckoutRequest(storeId, null)))
+                    orderService.checkout("buyer@test.com", new CheckoutRequest(storeId, PaymentMethod.CASH, null, null, null)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("empty");
         }
@@ -160,7 +161,7 @@ class OrderServiceTest {
             when(entityManager.getReference(Store.class, storeId)).thenReturn(store);
 
             assertThatThrownBy(() ->
-                    orderService.checkout("buyer@test.com", new CheckoutRequest(storeId, null)))
+                    orderService.checkout("buyer@test.com", new CheckoutRequest(storeId, PaymentMethod.CASH, null, null, null)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Not enough stock");
         }
@@ -181,7 +182,7 @@ class OrderServiceTest {
             when(entityManager.getReference(Store.class, storeId)).thenReturn(store);
 
             assertThatThrownBy(() ->
-                    orderService.checkout("buyer@test.com", new CheckoutRequest(storeId, null)))
+                    orderService.checkout("buyer@test.com", new CheckoutRequest(storeId, PaymentMethod.CASH, null, null, null)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("inactive");
         }

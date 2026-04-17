@@ -21,7 +21,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -249,5 +252,19 @@ public class ProductService {
         return productRepo.findByBarcode(barcode)
                 .map(this::toDto)
                 .orElseThrow(() -> new IllegalStateException("Product not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductDto> findAllByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+
+        Map<UUID, ProductDto> mapped = new HashMap<>();
+        productRepo.findAllById(ids)
+                .forEach(product -> mapped.put(product.getId(), toDto(product)));
+
+        return ids.stream()
+                .map(mapped::get)
+                .filter(dto -> dto != null)
+                .toList();
     }
 }

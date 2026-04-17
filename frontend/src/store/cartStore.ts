@@ -18,7 +18,10 @@ interface CartState {
 }
 
 function calculateTotal(items: CartItem[]) {
-  return items.reduce((sum, item) => sum + Number(item.lineTotal ?? item.price * item.quantity), 0);
+  return items.reduce((sum, item) => {
+    const line = item.lineTotal ?? (Number(item.price) * item.quantity);
+    return sum + (Number.isNaN(line) ? 0 : Number(line));
+  }, 0);
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -46,10 +49,11 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   addItem: async (storeId, productId, quantity = 1, optimisticItem) => {
     const previousCart = get().cart;
+    set({ loading: true, error: null, storeId });
     const currentItems = previousCart?.items ?? [];
     const existingItem = currentItems.find((item) => item.productId === productId);
 
-    if (existingItem || optimisticItem?.productTitle) {
+    if (existingItem || optimisticItem) {
       const nextItems = existingItem
         ? currentItems.map((item) => item.productId === productId
           ? {
@@ -63,7 +67,7 @@ export const useCartStore = create<CartState>((set, get) => ({
             {
               id: `temp-${productId}`,
               productId,
-              productTitle: optimisticItem?.productTitle ?? 'Тауар',
+              productTitle: existingItem?.productTitle ?? optimisticItem?.productTitle ?? 'Тауар',
               price: Number(optimisticItem?.price ?? 0),
               imageUrl: optimisticItem?.imageUrl ?? null,
               quantity,
@@ -73,15 +77,16 @@ export const useCartStore = create<CartState>((set, get) => ({
 
       set({
         cart: {
-          id: previousCart?.id ?? null,
+          id: previousCart?.id ?? `optimistic_${Date.now()}`,
           items: nextItems,
           total: calculateTotal(nextItems),
         },
         error: null,
+        loading: true,
         storeId,
       });
     } else {
-      set({ error: null, storeId });
+      set({ loading: true, error: null, storeId });
     }
 
     try {
@@ -96,6 +101,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   updateItem: async (storeId, itemId, quantity) => {
     const previousCart = get().cart;
+    set({ loading: true, error: null, storeId });
     const nextItems = previousCart?.items
       ?.map((item) => item.id === itemId
         ? { ...item, quantity, lineTotal: Number(item.price) * quantity }
@@ -104,6 +110,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     set({
       cart: previousCart ? { ...previousCart, items: nextItems, total: calculateTotal(nextItems) } : previousCart,
+      loading: true,
       error: null,
     });
 
@@ -118,10 +125,12 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   removeItem: async (storeId, itemId) => {
     const previousCart = get().cart;
+    set({ loading: true, error: null, storeId });
     const nextItems = previousCart?.items?.filter((item) => item.id !== itemId) ?? [];
 
     set({
       cart: previousCart ? { ...previousCart, items: nextItems, total: calculateTotal(nextItems) } : previousCart,
+      loading: true,
       error: null,
     });
 
@@ -136,8 +145,10 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   clearCart: async (storeId) => {
     const previousCart = get().cart;
+    set({ loading: true, error: null, storeId });
     set({
       cart: previousCart ? { ...previousCart, items: [], total: 0 } : previousCart,
+      loading: true,
       error: null,
     });
 

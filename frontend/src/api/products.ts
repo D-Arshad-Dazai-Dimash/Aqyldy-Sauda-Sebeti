@@ -23,3 +23,9 @@ export async function getProductByBarcode(barcode: string): Promise<Product> {
   const res = await api.get<Product>(`/api/products/barcode/${barcode}`);
   return res.data;
 }
+
+export async function getProductsBatch(ids: string[]): Promise<Product[]> {
+  if (ids.length === 0) return [];
+  const res = await api.post<Product[]>('/api/products/batch', { ids });
+  return res.data;
+}

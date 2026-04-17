@@ -1,9 +1,10 @@
 import React from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, SafeAreaView, StatusBar,
+  KeyboardAvoidingView, Platform, StatusBar,
   ScrollView, Dimensions, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
 

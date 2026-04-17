@@ -71,6 +71,7 @@ export interface OrderResponse {
   id: string;
   storeId: string;
   status: string;
+  paymentMethod?: 'CARD' | 'CASH';
   totalAmount: number;
   createdAt: string;
 }

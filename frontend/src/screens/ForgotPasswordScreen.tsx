@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, SafeAreaView, StatusBar,
+  KeyboardAvoidingView, Platform, StatusBar,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
 import { getApiErrorMessage, isValidEmail } from '../utils/validation';
@@ -12,6 +13,15 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const onSubmit = async () => {
     if (!email) {
@@ -28,16 +38,17 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     setLoading(true);
     try {
       const res = await api.post('/api/auth/forgot-password', { email: email.trim() });
-      const devToken = res.data?.devResetToken;
-      if (devToken) {
-        Alert.alert('Сәтті', 'Қалпына келтіру бетіне өтеміз', [
-          { text: 'OK', onPress: () => navigation.navigate('ResetPassword', { token: devToken }) },
-        ]);
-      } else {
-        Alert.alert('Сәтті', 'Құпия сөзді қалпына келтіру сілтемесі email-ге жіберілді', [
-          { text: 'OK', onPress: () => navigation.navigate('ResetPassword', {}) },
-        ]);
+      if (__DEV__ && res.data?.devResetToken) {
+        // eslint-disable-next-line no-console
+        console.log('[DEV] reset token:', res.data.devResetToken);
       }
+
+      Alert.alert(
+        'Сәтті',
+        'Құпия сөзді қалпына келтіру сілтемесі email-ға жіберілді. Хатты тексеріңіз.',
+        [{ text: 'OK' }],
+      );
+      setCooldown(60);
     } catch (e: any) {
       setError(getApiErrorMessage(e, 'Қате орын алды'));
     } finally {
@@ -86,14 +97,14 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 
             <TouchableOpacity
               activeOpacity={0.8}
-              style={[styles.submitButton, loading && styles.disabledButton]}
+              style={[styles.submitButton, (loading || cooldown > 0) && styles.disabledButton]}
               onPress={onSubmit}
-              disabled={loading}
+              disabled={loading || cooldown > 0}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.buttonText}>Жіберу</Text>
+                <Text style={styles.buttonText}>{cooldown > 0 ? `Қайталау ${cooldown}с` : 'Жіберу'}</Text>
               )}
             </TouchableOpacity>
           </View>
