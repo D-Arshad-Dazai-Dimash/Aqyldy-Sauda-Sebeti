@@ -25,6 +25,7 @@ import { useCartStore } from '../store/cartStore';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
+import { useI18n } from '../i18n/useI18n';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -64,6 +65,7 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
 }
 
 export default function CartScreen({ navigation }: any) {
+  const { t } = useI18n();
   const isFocused = useIsFocused();
   const { cart, storeId, loading, error, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
 
@@ -103,22 +105,22 @@ export default function CartScreen({ navigation }: any) {
     try {
       await updateItem(storeId, itemId, newQty);
     } catch (e: any) {
-      Alert.alert('Қате', e?.message || 'Жаңарту мүмкін болмады');
+      Alert.alert(t('Қате', 'Ошибка'), e?.message || t('Жаңарту мүмкін болмады', 'Не удалось обновить'));
     }
   };
 
   const handleRemove = (itemId: string) => {
     if (!storeId) return;
-    Alert.alert('Өшіру', 'Тауарды себеттен өшіресіз бе?', [
-      { text: 'Болдырмау', style: 'cancel' },
+    Alert.alert(t('Өшіру', 'Удаление'), t('Тауарды себеттен өшіресіз бе?', 'Удалить товар из корзины?'), [
+      { text: t('Болдырмау', 'Отмена'), style: 'cancel' },
       {
-        text: 'Өшіру',
+        text: t('Өшіру', 'Удалить'),
         style: 'destructive',
         onPress: async () => {
           try {
             await removeItem(storeId, itemId);
           } catch (e: any) {
-            Alert.alert('Қате', e?.message || 'Өшіру мүмкін болмады');
+            Alert.alert(t('Қате', 'Ошибка'), e?.message || t('Өшіру мүмкін болмады', 'Не удалось удалить'));
           }
         },
       },
@@ -127,16 +129,16 @@ export default function CartScreen({ navigation }: any) {
 
   const handleClear = () => {
     if (!storeId || cartItems.length === 0) return;
-    Alert.alert('Себетті тазалау', 'Барлық тауарларды себеттен өшіресіз бе?', [
-      { text: 'Болдырмау', style: 'cancel' },
+    Alert.alert(t('Себетті тазалау', 'Очистить корзину'), t('Барлық тауарларды себеттен өшіресіз бе?', 'Удалить все товары из корзины?'), [
+      { text: t('Болдырмау', 'Отмена'), style: 'cancel' },
       {
-        text: 'Тазалау',
+        text: t('Тазалау', 'Очистить'),
         style: 'destructive',
         onPress: async () => {
           try {
             await clearCart(storeId);
           } catch (e: any) {
-            Alert.alert('Қате', e?.message || 'Тазалау мүмкін болмады');
+            Alert.alert(t('Қате', 'Ошибка'), e?.message || t('Тазалау мүмкін болмады', 'Не удалось очистить'));
           }
         },
       },
@@ -196,8 +198,8 @@ export default function CartScreen({ navigation }: any) {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Себет</Text>
-          <Text style={styles.headerSubtitle}>{cartItems.length} тауар</Text>
+          <Text style={styles.headerTitle}>{t('Себет', 'Корзина')}</Text>
+          <Text style={styles.headerSubtitle}>{cartItems.length} {t('тауар', 'товаров')}</Text>
         </View>
 
         <TouchableOpacity
@@ -238,10 +240,10 @@ export default function CartScreen({ navigation }: any) {
           <View style={styles.emptyIconWrap}>
             <Feather name="shopping-bag" size={56} color="#9DB2C8" />
           </View>
-          <Text style={styles.emptyTitle}>Алдымен дүкен таңдаңыз</Text>
-          <Text style={styles.emptyDesc}>Категориялардан тауар ашып, себетке қосыңыз.</Text>
+          <Text style={styles.emptyTitle}>{t('Алдымен дүкен таңдаңыз', 'Сначала выберите магазин')}</Text>
+          <Text style={styles.emptyDesc}>{t('Категориялардан тауар ашып, себетке қосыңыз.', 'Откройте товары в категориях и добавьте в корзину.')}</Text>
           <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Categories')}>
-            <Text style={styles.browseBtnText}>Дүкенге өту</Text>
+            <Text style={styles.browseBtnText}>{t('Дүкенге өту', 'Перейти к магазину')}</Text>
           </TouchableOpacity>
         </View>
       ) : cartItems.length === 0 ? (
@@ -249,10 +251,10 @@ export default function CartScreen({ navigation }: any) {
           <View style={styles.emptyIconWrap}>
             <Feather name="shopping-cart" size={56} color="#9DB2C8" />
           </View>
-          <Text style={styles.emptyTitle}>Себет бос</Text>
-          <Text style={styles.emptyDesc}>Қалаған тауарды таңдап, осы жерге қосыңыз.</Text>
+          <Text style={styles.emptyTitle}>{t('Себет бос', 'Корзина пуста')}</Text>
+          <Text style={styles.emptyDesc}>{t('Қалаған тауарды таңдап, осы жерге қосыңыз.', 'Выберите товары и добавьте их сюда.')}</Text>
           <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Categories')}>
-            <Text style={styles.browseBtnText}>Тауар таңдау</Text>
+            <Text style={styles.browseBtnText}>{t('Тауар таңдау', 'Выбрать товары')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -270,7 +272,7 @@ export default function CartScreen({ navigation }: any) {
                   <Feather name="cpu" size={12} color={palette.mint} />
                   <Text style={styles.aiBadgeText}>AI</Text>
                 </View>
-                <Text style={styles.cartRecsTitle}>Сізге ұнауы мүмкін</Text>
+                <Text style={styles.cartRecsTitle}>{t('Сізге ұнауы мүмкін', 'Вам может понравиться')}</Text>
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cartRecsScroll}>
@@ -300,7 +302,7 @@ export default function CartScreen({ navigation }: any) {
       {cartItems.length > 0 && (
         <Animated.View entering={FadeInDown.delay(120).duration(320)} style={styles.footer}>
           <View style={styles.totalBox}>
-            <Text style={styles.totalLabel}>Жалпы сома</Text>
+            <Text style={styles.totalLabel}>{t('Жалпы сома', 'Итого')}</Text>
             <Text style={styles.totalPrice}>{Number(totalPrice).toFixed(0)} ₸</Text>
           </View>
 
@@ -310,7 +312,7 @@ export default function CartScreen({ navigation }: any) {
             disabled={loading}
             activeOpacity={0.85}
           >
-            {loading ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.checkoutText}>Төлеу</Text>}
+            {loading ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.checkoutText}>{t('Төлеу', 'Оплатить')}</Text>}
           </TouchableOpacity>
         </Animated.View>
       )}

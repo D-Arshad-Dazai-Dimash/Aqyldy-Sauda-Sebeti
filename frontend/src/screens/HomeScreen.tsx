@@ -26,6 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
+import { useLanguageStore } from '../store/languageStore';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
@@ -109,10 +110,64 @@ function ServiceCard({
 
 export default function HomeScreen({ navigation }: any) {
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const language = useLanguageStore((s) => s.language);
+  const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
+  const [recsError, setRecsError] = useState<string | null>(null);
   const recommendationSkeletons = Array.from({ length: 4 }, (_, i) => i);
+
+  const t = language === 'kk'
+    ? {
+        lang: 'KZ',
+        languageLabel: 'Тіл',
+        languageChanged: 'Тіл қазақшаға ауыстырылды',
+        notifications: 'Хабарландырулар',
+        noNotifications: 'Жаңа хабарландырулар жоқ.',
+        greetingSmall: 'Қайырлы күн 👋',
+        greetingFallback: 'Пайдаланушы',
+        greetingSub: 'Бүгін не сатып алғыңыз келеді?',
+        searchPlaceholder: 'Қалаған затыңызды іздеңіз…',
+        quickFeatures: 'Жылдам мүмкіндіктер',
+        stores: 'Дүкендер',
+        map: 'Карта',
+        promos: 'Акциялар',
+        history: 'Тарихы',
+        smartAnalytics: 'Смарт Аналитика',
+        trackExpenses: 'Шығындарыңызды бақылаңыз',
+        specialOffer: 'ЕРЕКШЕ ҰСЫНЫС',
+        smartShopping: 'Смарт Сауда',
+        aiDeal: 'AI арқылы тиімді бағаларды тауып ал',
+        recommended: 'Сізге ұсынылады',
+        viewAll: 'Барлығы →',
+        recError: 'Ұсыныстарды жүктеу мүмкін болмады',
+        retry: 'Қайта көру',
+      }
+    : {
+        lang: 'RU',
+        languageLabel: 'Язык',
+        languageChanged: 'Язык переключен на русский',
+        notifications: 'Уведомления',
+        noNotifications: 'Новых уведомлений нет.',
+        greetingSmall: 'Добрый день 👋',
+        greetingFallback: 'Пользователь',
+        greetingSub: 'Что хотите купить сегодня?',
+        searchPlaceholder: 'Найдите нужный товар…',
+        quickFeatures: 'Быстрые возможности',
+        stores: 'Магазины',
+        map: 'Карта',
+        promos: 'Акции',
+        history: 'История',
+        smartAnalytics: 'Смарт-аналитика',
+        trackExpenses: 'Контролируйте свои расходы',
+        specialOffer: 'СПЕЦПРЕДЛОЖЕНИЕ',
+        smartShopping: 'Умные покупки',
+        aiDeal: 'Находите выгодные цены с AI',
+        recommended: 'Рекомендуем вам',
+        viewAll: 'Все →',
+        recError: 'Не удалось загрузить рекомендации',
+        retry: 'Повторить',
+      };
 
   // Scroll-based header opacity
   const scrollY = useSharedValue(0);
@@ -131,15 +186,16 @@ export default function HomeScreen({ navigation }: any) {
   const loadRecommendations = useCallback(async () => {
     try {
       setRecsLoading(true);
+      setRecsError(null);
       let recs = await getPersonalRecommendations(8);
       if (recs.length === 0) recs = await getPopularProducts(8);
       setRecommendations(recs);
     } catch {
-      // silent
+      setRecsError(t.recError);
     } finally {
       setRecsLoading(false);
     }
-  }, []);
+  }, [t.recError]);
 
   useEffect(() => { loadRecommendations(); }, [loadRecommendations]);
 
@@ -157,15 +213,18 @@ export default function HomeScreen({ navigation }: any) {
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.headerRight}>
           <TouchableOpacity
             style={styles.langPill}
-            onPress={() => Alert.alert('Тіл', 'Қазіргі уақытта тек қазақ тілі қолдарылады.')}
+            onPress={async () => {
+              await toggleLanguage();
+              Alert.alert(t.languageLabel, t.languageChanged);
+            }}
           >
             <Feather name="globe" size={13} color={P.muted} />
-            <Text style={styles.langText}>KZ</Text>
+            <Text style={styles.langText}>{t.lang}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={() => Alert.alert('Хабарландырулар', 'Жаңа хабарландырулар жоқ.')}
+            onPress={() => Alert.alert(t.notifications, t.noNotifications)}
           >
             <Feather name="bell" size={19} color={P.ink} />
             <View style={styles.notifDot} />
@@ -184,13 +243,13 @@ export default function HomeScreen({ navigation }: any) {
         {/* Hero greeting */}
         <View style={styles.heroSection}>
           <Animated.Text entering={FadeInDown.delay(150).springify()} style={styles.greetSmall}>
-            Қайырлы күн 👋
+            {t.greetingSmall}
           </Animated.Text>
           <Animated.Text entering={FadeInDown.delay(220).springify()} style={styles.greetName}>
-            {user?.name || user?.username || 'Пайдаланушы'}
+            {user?.name || user?.username || t.greetingFallback}
           </Animated.Text>
           <Animated.Text entering={FadeInDown.delay(280).springify()} style={styles.greetSub}>
-            Бүгін не сатып алғыңыз келеді?
+            {t.greetingSub}
           </Animated.Text>
         </View>
 
@@ -203,7 +262,7 @@ export default function HomeScreen({ navigation }: any) {
             <View style={styles.searchIcon}>
               <Feather name="search" size={18} color={P.teal} />
             </View>
-            <Text style={styles.searchText}>Қалаған затыңызды іздеңіз…</Text>
+            <Text style={styles.searchText}>{t.searchPlaceholder}</Text>
             <View style={styles.searchKbd}>
               <Feather name="sliders" size={14} color={P.muted} />
             </View>
@@ -213,15 +272,15 @@ export default function HomeScreen({ navigation }: any) {
         {/* ── Services grid ─────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Animated.Text entering={FadeIn.delay(370)} style={styles.sectionTitle}>
-            Жылдам мүмкіндіктер
+            {t.quickFeatures}
           </Animated.Text>
         </View>
 
         <View style={styles.servicesGrid}>
-          <ServiceCard icon="shopping-bag"  label="Дүкендер"  iconColor={P.teal}    bgColor={P.tealLight}   onPress={() => navigation.navigate('Search')}    delay={400} />
-          <ServiceCard icon="map-pin"       label="Карта"      iconColor={P.purple}  bgColor={P.purpleL}     onPress={() => Alert.alert('Карта', 'Жақын арада!')} delay={450} />
-          <ServiceCard icon="tag"           label="Акциялар"   iconColor={P.rose}    bgColor={P.roseL}       onPress={() => navigation.navigate('Search', { filterDiscount: true })} delay={500} />
-          <ServiceCard icon="clock"         label="Тарихы"     iconColor={P.amber}   bgColor={P.amberL}      onPress={() => navigation.navigate('Orders')} delay={550} />
+          <ServiceCard icon="shopping-bag"  label={t.stores} iconColor={P.teal}    bgColor={P.tealLight}   onPress={() => navigation.navigate('Search')}    delay={400} />
+          <ServiceCard icon="map-pin"       label={t.map} iconColor={P.purple}  bgColor={P.purpleL} onPress={() => navigation.navigate('Map')} delay={450} />
+          <ServiceCard icon="tag"           label={t.promos} iconColor={P.rose}    bgColor={P.roseL}       onPress={() => navigation.navigate('Search', { filterDiscount: true })} delay={500} />
+          <ServiceCard icon="clock"         label={t.history} iconColor={P.amber}   bgColor={P.amberL}      onPress={() => navigation.navigate('Orders')} delay={550} />
         </View>
 
         {/* ── AI Analytics banner ───────────────────────────────────── */}
@@ -236,8 +295,8 @@ export default function HomeScreen({ navigation }: any) {
                 <Feather name="zap" size={11} color="#FFF" />
                 <Text style={styles.aiBadgeText}>AI POWERED</Text>
               </View>
-              <Text style={styles.bannerTitle}>Смарт Аналитика</Text>
-              <Text style={styles.bannerSub}>Шығындарыңызды бақылаңыз</Text>
+              <Text style={styles.bannerTitle}>{t.smartAnalytics}</Text>
+              <Text style={styles.bannerSub}>{t.trackExpenses}</Text>
             </View>
 
             <View style={styles.bannerRight}>
@@ -255,9 +314,9 @@ export default function HomeScreen({ navigation }: any) {
         <Animated.View entering={FadeInDown.delay(660).springify().damping(14)}>
           <PressCard onPress={() => navigation.navigate('Search')} style={styles.promoBanner}>
             <View>
-              <Text style={styles.promoEyebrow}>ЕРЕКШЕ ҰСЫНЫС</Text>
-              <Text style={styles.promoTitle}>Смарт Сауда</Text>
-              <Text style={styles.promoSub}>AI арқылы тиімді бағаларды тауып ал</Text>
+              <Text style={styles.promoEyebrow}>{t.specialOffer}</Text>
+              <Text style={styles.promoTitle}>{t.smartShopping}</Text>
+              <Text style={styles.promoSub}>{t.aiDeal}</Text>
             </View>
             <View style={styles.promoIconWrap}>
               <Feather name="trending-up" size={30} color={P.emerald} />
@@ -266,7 +325,7 @@ export default function HomeScreen({ navigation }: any) {
         </Animated.View>
 
         {/* ── AI Recommendations ──────────────────────────────────── */}
-        {(recommendations.length > 0 || recsLoading) && (
+        {(recommendations.length > 0 || recsLoading || recsError) && (
           <View style={styles.recsSection}>
             <Animated.View
               entering={FadeInDown.delay(700).springify()}
@@ -276,12 +335,21 @@ export default function HomeScreen({ navigation }: any) {
                 <View style={styles.recsIconWrap}>
                   <Feather name="cpu" size={14} color="#FFF" />
                 </View>
-                <Text style={styles.recsSectionTitle}>Сізге ұсынылады</Text>
+                <Text style={styles.recsSectionTitle}>{t.recommended}</Text>
               </View>
               <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-                <Text style={styles.recsViewAll}>Барлығы →</Text>
+                <Text style={styles.recsViewAll}>{t.viewAll}</Text>
               </TouchableOpacity>
             </Animated.View>
+
+            {recsError && !recsLoading && recommendations.length === 0 ? (
+              <View style={styles.recsErrorWrap}>
+                <Text style={styles.recsErrorText}>{recsError}</Text>
+                <TouchableOpacity style={styles.recsRetryBtn} onPress={loadRecommendations}>
+                  <Text style={styles.recsRetryText}>{t.retry}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             <ScrollView
               horizontal
@@ -638,6 +706,24 @@ const styles = StyleSheet.create({
   },
   recsSectionTitle: { fontSize: 16, fontWeight: '800', color: P.ink },
   recsViewAll: { fontSize: 13, fontWeight: '600', color: P.teal },
+  recsErrorWrap: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  recsErrorText: { color: '#991B1B', fontWeight: '600', marginBottom: 8 },
+  recsRetryBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#DC2626',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  recsRetryText: { color: '#FFFFFF', fontWeight: '700' },
   recsScroll: { paddingHorizontal: 18, paddingVertical: 10, gap: 12 },
   recCard: {
     width: 150,

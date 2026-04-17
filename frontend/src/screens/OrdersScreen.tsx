@@ -13,8 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { useIsFocused } from '@react-navigation/native';
 import { getMyOrders } from '../api/orders';
+import { useI18n } from '../i18n/useI18n';
+import { getApiErrorMessage } from '../utils/validation';
 
 export default function OrdersScreen({ navigation }: any) {
+  const { t, language } = useI18n();
   const isFocused = useIsFocused();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,13 +28,13 @@ export default function OrdersScreen({ navigation }: any) {
       setLoading(true);
       setError(null);
       const data = await getMyOrders();
-      setOrders(data || []);
-    } catch {
-      setError('Тапсырыстарды жүктеу мүмкін болмады');
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, language === 'kk' ? 'Тапсырыстарды жүктеу мүмкін болмады' : 'Не удалось загрузить заказы'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     if (isFocused) fetchOrders();
@@ -40,7 +43,7 @@ export default function OrdersScreen({ navigation }: any) {
   const formatDate = (iso: string) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return d.toLocaleDateString('kk-KZ', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString(language === 'kk' ? 'kk-KZ' : 'ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   const statusColor = (status: string) => {
@@ -57,12 +60,12 @@ export default function OrdersScreen({ navigation }: any) {
 
   const statusLabel = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'CREATED': return 'Қабылданды';
-      case 'CONFIRMED': return 'Расталды';
-      case 'SHIPPED': return 'Жолда';
-      case 'DELIVERED': return 'Жеткізілді';
-      case 'CANCELLED': return 'Болдырылмады';
-      case 'PAID': return 'Төленді';
+      case 'CREATED': return t('Қабылданды', 'Создан');
+      case 'CONFIRMED': return t('Расталды', 'Подтвержден');
+      case 'SHIPPED': return t('Жолда', 'В пути');
+      case 'DELIVERED': return t('Жеткізілді', 'Доставлен');
+      case 'CANCELLED': return t('Болдырылмады', 'Отменен');
+      case 'PAID': return t('Төленді', 'Оплачен');
       default: return status ?? '—';
     }
   };
@@ -75,7 +78,7 @@ export default function OrdersScreen({ navigation }: any) {
     >
       <View style={styles.cardTop}>
         <View>
-          <Text style={styles.orderId}>Тапсырыс #{item.id?.slice(0, 8).toUpperCase()}</Text>
+          <Text style={styles.orderId}>{t('Тапсырыс', 'Заказ')} #{item.id?.slice(0, 8).toUpperCase()}</Text>
           <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColor(item.status) + '20' }]}>
@@ -86,7 +89,7 @@ export default function OrdersScreen({ navigation }: any) {
       </View>
 
       <View style={styles.cardBottom}>
-        <Text style={styles.totalLabel}>Жалпы сома:</Text>
+        <Text style={styles.totalLabel}>{t('Жалпы сома:', 'Сумма:')}</Text>
         <Text style={styles.totalAmount}>{Number(item.totalAmount ?? 0).toFixed(0)} ₸</Text>
         <Feather name="chevron-right" size={20} color="#CBD5E1" style={{ marginLeft: 'auto' }} />
       </View>
@@ -99,7 +102,7 @@ export default function OrdersScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="chevron-left" size={30} color="#1E293B" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Тапсырыстарым</Text>
+        <Text style={styles.headerTitle}>{t('Тапсырыстарым', 'Мои заказы')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -110,18 +113,18 @@ export default function OrdersScreen({ navigation }: any) {
           <Feather name="wifi-off" size={64} color="#CBD5E1" />
           <Text style={styles.emptyText}>{error}</Text>
           <TouchableOpacity style={styles.browseBtn} onPress={fetchOrders}>
-            <Text style={styles.browseBtnText}>Қайта көру</Text>
+            <Text style={styles.browseBtnText}>{t('Қайта көру', 'Повторить')}</Text>
           </TouchableOpacity>
         </View>
       ) : orders.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Feather name="shopping-bag" size={80} color="#CBD5E1" />
-          <Text style={styles.emptyText}>Тапсырыстар жоқ</Text>
+          <Text style={styles.emptyText}>{t('Тапсырыстар жоқ', 'Заказов пока нет')}</Text>
           <TouchableOpacity
             style={styles.browseBtn}
             onPress={() => navigation.navigate('Categories')}
           >
-            <Text style={styles.browseBtnText}>Сатып алуға өту</Text>
+            <Text style={styles.browseBtnText}>{t('Сатып алуға өту', 'Перейти к покупкам')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

@@ -1,17 +1,26 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, StatusBar,
-  ScrollView, ActivityIndicator, Alert,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
 import { getApiErrorMessage, isStrongEnoughPassword } from '../utils/validation';
+import { useI18n } from '../i18n/useI18n';
 
 export default function ResetPasswordScreen({ route, navigation }: any) {
+  const { t } = useI18n();
   const routeToken = route.params?.token || '';
-  const [token, setToken] = useState(routeToken);
+  const [token] = useState(routeToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNew, setShowNew] = useState(false);
@@ -23,9 +32,9 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.placeholderWrap}>
-          <Text style={styles.placeholderText}>Электрондық поштаңыздан келген сілтемені басыңыз</Text>
+          <Text style={styles.placeholderText}>{t('Электрондық поштаңыздан келген сілтемені басыңыз', 'Перейдите по ссылке из письма')}</Text>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.placeholderBtn}>
-            <Text style={styles.placeholderBtnText}>Артқа</Text>
+            <Text style={styles.placeholderBtnText}>{t('Артқа', 'Назад')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -34,32 +43,38 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
 
   const onSubmit = async () => {
     if (!token) {
-      setError('Токенді енгізіңіз');
+      setError(t('Токенді енгізіңіз', 'Введите токен'));
       return;
     }
     if (!isStrongEnoughPassword(newPassword)) {
-      setError('Құпия сөз кемінде 6 таңбадан тұруы керек');
+      setError(t('Құпия сөз кемінде 6 таңбадан тұруы керек', 'Пароль должен быть не менее 6 символов'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Құпия сөздер сәйкес келмейді');
+      setError(t('Құпия сөздер сәйкес келмейді', 'Пароли не совпадают'));
       return;
     }
+
     setError(null);
     setLoading(true);
     try {
       await api.post('/api/auth/reset-password', { token, newPassword });
-      Alert.alert('Сәтті', 'Құпия сөз өзгертілді. Жаңа құпия сөзбен кіріңіз', [
-        {
-          text: 'OK',
-          onPress: () => navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          }),
-        },
-      ]);
+      Alert.alert(
+        t('Сәтті', 'Успешно'),
+        t('Құпия сөзіңіз сәтті өзгертілді', 'Ваш пароль успешно изменен'),
+        [
+          {
+            text: 'OK',
+            onPress: () =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              }),
+          },
+        ],
+      );
     } catch (e: any) {
-      setError(getApiErrorMessage(e, 'Қате орын алды'));
+      setError(getApiErrorMessage(e, t('Қате орын алды', 'Произошла ошибка')));
     } finally {
       setLoading(false);
     }
@@ -67,7 +82,6 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -78,16 +92,16 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
             <View style={styles.iconContainer}>
               <Feather name="lock" size={36} color="#27AE60" />
             </View>
-            <Text style={styles.title}>Жаңа құпия сөз</Text>
-            <Text style={styles.subtitle}>Жаңа құпия сөзді енгізіңіз</Text>
+            <Text style={styles.title}>{t('Жаңа құпия сөз', 'Новый пароль')}</Text>
+            <Text style={styles.subtitle}>{t('Жаңа құпия сөзді енгізіңіз', 'Введите новый пароль')}</Text>
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.inputLabel}>Жаңа құпия сөз</Text>
+            <Text style={styles.inputLabel}>{t('Жаңа құпия сөз', 'Новый пароль')}</Text>
             <View style={styles.inputContainer}>
               <Feather name="lock" size={20} color="#94A3B8" />
               <TextInput
-                placeholder="Кемінде 6 таңба"
+                placeholder={t('Кемінде 6 таңба', 'Минимум 6 символов')}
                 secureTextEntry={!showNew}
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -101,11 +115,11 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.inputLabel}>Құпия сөзді растаңыз</Text>
+            <Text style={styles.inputLabel}>{t('Құпия сөзді растаңыз', 'Подтвердите пароль')}</Text>
             <View style={styles.inputContainer}>
               <Feather name="lock" size={20} color="#94A3B8" />
               <TextInput
-                placeholder="Құпия сөзді қайталаңыз"
+                placeholder={t('Құпия сөзді қайталаңыз', 'Повторите пароль')}
                 secureTextEntry={!showConfirm}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -132,11 +146,7 @@ export default function ResetPasswordScreen({ route, navigation }: any) {
               onPress={onSubmit}
               disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.buttonText}>Сақтау</Text>
-              )}
+              {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buttonText}>{t('Сақтау', 'Сохранить')}</Text>}
             </TouchableOpacity>
           </View>
         </ScrollView>

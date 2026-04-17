@@ -16,10 +16,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
 import { getApiErrorMessage, isValidEmail } from '../utils/validation';
+import { useI18n } from '../i18n/useI18n';
 
 const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }: any) {
+  const { t } = useI18n();
   const login = useAuthStore((s) => s.login);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -29,12 +31,12 @@ export default function LoginScreen({ navigation }: any) {
 
   const onSubmit = async () => {
     if (!isValidEmail(email)) {
-      setError('Дұрыс email енгізіңіз');
+      setError(t('Дұрыс email енгізіңіз', 'Введите корректный email'));
       return;
     }
 
     if (!password.length) {
-      setError('Құпия сөзді енгізіңіз');
+      setError(t('Құпия сөзді енгізіңіз', 'Введите пароль'));
       return;
     }
 
@@ -43,7 +45,7 @@ export default function LoginScreen({ navigation }: any) {
     try {
       await login(email.trim(), password);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, 'Логин немесе құпия сөз қате'));
+      setError(getApiErrorMessage(e, t('Логин немесе құпия сөз қате', 'Неверный логин или пароль')));
     } finally {
       setLoading(false);
     }
@@ -121,7 +123,7 @@ export default function LoginScreen({ navigation }: any) {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
-                  <Text style={styles.buttonText}>Кіру</Text>
+                  <Text style={styles.buttonText}>{t('Кіру', 'Войти')}</Text>
                   <Feather name="arrow-right" size={20} color="#FFF" />
                 </>
               )}
@@ -132,7 +134,7 @@ export default function LoginScreen({ navigation }: any) {
               style={styles.forgotBtn}
               onPress={() => navigation.navigate('ForgotPassword')}
             >
-              <Text style={styles.forgotText}>Құпия сөзді ұмыттым?</Text>
+              <Text style={styles.forgotText}>{t('Құпия сөзді ұмыттым?', 'Забыли пароль?')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -142,7 +144,7 @@ export default function LoginScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Register')}
             >
               <Text style={styles.footerText}>
-                Тіркелмедіңіз бе? <Text style={styles.linkText}>Тіркелу</Text>
+                {t('Тіркелмедіңіз бе?', 'Нет аккаунта?')} <Text style={styles.linkText}>{t('Тіркелу', 'Регистрация')}</Text>
               </Text>
             </TouchableOpacity>
           </View>

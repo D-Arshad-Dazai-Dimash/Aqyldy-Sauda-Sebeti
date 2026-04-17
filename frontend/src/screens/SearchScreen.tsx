@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeInRight,
   FadeIn,
+  FadeInDown,
   ZoomIn,
   useSharedValue,
   useAnimatedStyle,
@@ -33,6 +34,7 @@ import * as ProductsApi from '../api/products';
 import * as StoresApi from '../api/stores';
 import type { Product, Store } from '../types/api';
 import { safeJsonParse } from '../utils/storage';
+import { useI18n } from '../i18n/useI18n';
 
 // @ts-ignore
 import VerifiedIcon from '../assets/icons/verified.svg';
@@ -62,16 +64,6 @@ const STORE_ACCENTS = [
   { bg: P.roseL, icon: P.rose, dark: '#E11D48' },
 ];
 
-const QUICK_CATEGORIES = [
-  { label: 'Жақын', icon: 'map-pin' as const },
-  { label: 'Ашық', icon: 'clock' as const },
-  { label: 'Жеңілдік', icon: 'tag' as const },
-  { label: 'Жаңа', icon: 'star' as const },
-  { label: 'Үйде', icon: 'home' as const },
-];
-
-const POPULAR_QUERIES = ['Сүт', 'Жұмыртқа', 'Нан', 'Ет', 'Су'];
-
 function PressCard({ children, onPress, style }: any) {
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -89,6 +81,7 @@ function PressCard({ children, onPress, style }: any) {
 const HISTORY_KEY = 'search:history';
 
 export default function SearchScreen({ navigation, route }: any) {
+  const { t, language } = useI18n();
   const filterDiscount = route?.params?.filterDiscount ?? false;
   const [searchQuery, setSearchQuery] = useState('');
   const [history, setHistory] = useState<string[]>([]);
@@ -103,6 +96,26 @@ export default function SearchScreen({ navigation, route }: any) {
   const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [discountOnly, setDiscountOnly] = useState(Boolean(filterDiscount));
 
+  const quickCategories = language === 'kk'
+    ? [
+        { label: 'Жақын', icon: 'map-pin' as const },
+        { label: 'Ашық', icon: 'clock' as const },
+        { label: 'Жеңілдік', icon: 'tag' as const },
+        { label: 'Жаңа', icon: 'star' as const },
+        { label: 'Үйде', icon: 'home' as const },
+      ]
+    : [
+        { label: 'Рядом', icon: 'map-pin' as const },
+        { label: 'Открыто', icon: 'clock' as const },
+        { label: 'Скидки', icon: 'tag' as const },
+        { label: 'Новое', icon: 'star' as const },
+        { label: 'Домой', icon: 'home' as const },
+      ];
+
+  const popularQueries = language === 'kk'
+    ? ['Сүт', 'Жұмыртқа', 'Нан', 'Ет', 'Су']
+    : ['Молоко', 'Яйца', 'Хлеб', 'Мясо', 'Вода'];
+
   // Load search history and stores on mount
   useEffect(() => {
     AsyncStorage.getItem(HISTORY_KEY).then((raw) => {
@@ -110,7 +123,8 @@ export default function SearchScreen({ navigation, route }: any) {
     });
     StoresApi.getStores().then(setStores).catch(() => {});
   }, []);
-useEffect(() => {
+
+  useEffect(() => {
     setDiscountOnly(Boolean(filterDiscount));
   }, [filterDiscount]);
 
@@ -131,14 +145,17 @@ useEffect(() => {
   const performSearch = async (q: string) => {
     setLoading(true);
     try {
-      if (discountOnly) {
-        filtered = filtered.filter((p: any) => Number(p.discount ?? 0) > 0);
-      }
       const result = await ProductsApi.searchProducts({ q, active: true, size: 40 });
       // Client-side price filter (backend doesn't have price filter yet)
       let filtered = result.content.filter(
         (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
       );
+      if (selectedStores.length > 0) {
+        filtered = filtered.filter((p: any) => selectedStores.includes(p.storeName));
+      }
+      if (discountOnly) {
+        filtered = filtered.filter((p: any) => Number(p.discount ?? 0) > 0);
+      }
       setProducts(filtered);
 
       // Save to history
@@ -189,15 +206,15 @@ useEffect(() => {
           <View style={styles.emptyIcon}>
             <Feather name="search" size={32} color={P.faint} />
           </View>
-          <Text style={styles.emptyTitle}>Табылмады</Text>
-          <Text style={styles.emptySubtitle}>Өзге сөз қолданып көріңіз</Text>
+          <Text style={styles.emptyTitle}>{t('Табылмады', 'Ничего не найдено')}</Text>
+          <Text style={styles.emptySubtitle}>{t('Өзге сөз қолданып көріңіз', 'Попробуйте другой запрос')}</Text>
         </View>
       );
     }
 
     return (
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.resultsContent}>
-        <Text style={styles.resultCount}>{products.length} тауар табылды</Text>
+        <Text style={styles.resultCount}>{products.length} {t('тауар табылды', 'товаров найдено')}</Text>
         <View style={styles.productGrid}>
           {products.map((product, idx) => {
             const isFav = isFavorite(product.id);
@@ -229,7 +246,7 @@ useEffect(() => {
         </View>
         {stores.length > 0 && (
           <View style={styles.storesSection}>
-            <Text style={styles.storesSectionTitle}>Дүкендер</Text>
+            <Text style={styles.storesSectionTitle}>{t('Дүкендер', 'Магазины')}</Text>
             {stores.map((store, idx) => {
               const accent = STORE_ACCENTS[idx % STORE_ACCENTS.length];
               return (
@@ -275,7 +292,7 @@ useEffect(() => {
           <Feather name="search" size={16} color={P.teal} style={{ marginRight: 8 }} />
           <TextInput
             autoFocus
-            placeholder="Тауар немесе дүкен іздеу…"
+            placeholder={t('Тауар немесе дүкен іздеу…', 'Поиск товара или магазина…')}
             style={styles.input}
             placeholderTextColor={P.faint}
             value={searchQuery}
@@ -313,10 +330,10 @@ useEffect(() => {
             <View style={styles.heroBannerLeft}>
               <View style={styles.heroBadge}>
                 <Feather name="zap" size={11} color="#FFF" />
-                <Text style={styles.heroBadgeText}>СМАРТ ІЗДЕУ</Text>
+                <Text style={styles.heroBadgeText}>{t('СМАРТ ІЗДЕУ', 'УМНЫЙ ПОИСК')}</Text>
               </View>
-              <Text style={styles.heroTitle}>Ең жақсы{'\n'}бағаны табыңыз</Text>
-              <Text style={styles.heroSub}>AI баға талдауымен</Text>
+              <Text style={styles.heroTitle}>{t('Ең жақсы', 'Найдите лучшую')}{'\n'}{t('бағаны табыңыз', 'цену')}</Text>
+              <Text style={styles.heroSub}>{t('AI баға талдауымен', 'С AI-анализом цен')}</Text>
             </View>
             <View style={styles.heroBannerRight}>
               <View style={styles.heroIconWrap}>
@@ -331,10 +348,10 @@ useEffect(() => {
               <View style={styles.sectionRow}>
                 <View style={styles.sectionTitleRow}>
                   <Feather name="clock" size={14} color={P.muted} style={{ marginRight: 6 }} />
-                  <Text style={styles.sectionTitle}>Соңғы іздеулер</Text>
+                  <Text style={styles.sectionTitle}>{t('Соңғы іздеулер', 'Недавние запросы')}</Text>
                 </View>
                 <TouchableOpacity onPress={clearHistory}>
-                  <Text style={styles.clearAll}>Тазалау</Text>
+                  <Text style={styles.clearAll}>{t('Тазалау', 'Очистить')}</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagsScroll}>
@@ -358,9 +375,9 @@ useEffect(() => {
               <View style={styles.sectionRow}>
                 <View style={styles.sectionTitleRow}>
                   <Feather name="shopping-bag" size={14} color={P.muted} style={{ marginRight: 6 }} />
-                  <Text style={styles.sectionTitle}>Дүкендер</Text>
+                  <Text style={styles.sectionTitle}>{t('Дүкендер', 'Магазины')}</Text>
                 </View>
-                <Text style={styles.storeCount}>{stores.length} дүкен</Text>
+                <Text style={styles.storeCount}>{stores.length} {t('дүкен', 'магазинов')}</Text>
               </View>
 
               {/* Horizontal store cards */}
@@ -388,7 +405,7 @@ useEffect(() => {
                           </View>
                           <View style={[styles.storeCardOpen, { backgroundColor: P.emeraldL }]}>
                             <View style={[styles.openDot, { backgroundColor: P.emerald }]} />
-                            <Text style={[styles.openText, { color: P.emerald }]}>Ашық</Text>
+                            <Text style={[styles.openText, { color: P.emerald }]}>{t('Ашық', 'Открыто')}</Text>
                           </View>
                         </View>
 
@@ -401,7 +418,7 @@ useEffect(() => {
                         <View style={styles.storeCardFooter}>
                           <View style={[styles.storeCardVerified, { backgroundColor: accent.bg }]}>
                             <VerifiedIcon width={13} height={13} />
-                            <Text style={[styles.storeCardVerifiedText, { color: accent.icon }]}>Верификация</Text>
+                            <Text style={[styles.storeCardVerifiedText, { color: accent.icon }]}>{t('Верификация', 'Проверено')}</Text>
                           </View>
                           <View style={[styles.storeArrow, { backgroundColor: accent.bg }]}>
                             <Feather name="arrow-right" size={14} color={accent.icon} />
@@ -416,10 +433,10 @@ useEffect(() => {
               <Animated.View entering={FadeInDown.delay(220).springify()} style={styles.discoverBlock}>
                 <View style={styles.sectionTitleRow}>
                   <Feather name="grid" size={14} color={P.muted} style={{ marginRight: 6 }} />
-                  <Text style={styles.sectionTitle}>Быстрые категории</Text>
+                  <Text style={styles.sectionTitle}>{t('Жылдам санаттар', 'Быстрые категории')}</Text>
                 </View>
                 <View style={styles.quickCatsWrap}>
-                  {QUICK_CATEGORIES.map((item, idx) => {
+                  {quickCategories.map((item, idx) => {
                     const accent = STORE_ACCENTS[idx % STORE_ACCENTS.length];
                     return (
                       <Animated.View key={item.label} entering={FadeInDown.delay(250 + idx * 35).springify()}>
@@ -440,14 +457,14 @@ useEffect(() => {
               <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.discoverBlock}>
                 <View style={styles.sectionTitleRow}>
                   <Feather name="trending-up" size={14} color={P.muted} style={{ marginRight: 6 }} />
-                  <Text style={styles.sectionTitle}>Популярные запросы</Text>
+                  <Text style={styles.sectionTitle}>{t('Танымал іздеулер', 'Популярные запросы')}</Text>
                 </View>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.popularScroll}
                 >
-                  {POPULAR_QUERIES.map((query, idx) => (
+                  {popularQueries.map((query, idx) => (
                     <Animated.View key={query} entering={FadeInRight.delay(330 + idx * 30).springify()}>
                       <TouchableOpacity
                         style={styles.popularChip}
@@ -467,7 +484,7 @@ useEffect(() => {
           {stores.length === 0 && (
             <Animated.View entering={FadeIn.delay(200)} style={styles.noStoresBox}>
               <Feather name="shopping-bag" size={36} color={P.faint} />
-              <Text style={styles.noStoresText}>Дүкендер жүктелуде…</Text>
+              <Text style={styles.noStoresText}>{t('Дүкендер жүктелуде…', 'Загрузка магазинов…')}</Text>
             </Animated.View>
           )}
         </ScrollView>

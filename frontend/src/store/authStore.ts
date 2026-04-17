@@ -24,6 +24,7 @@ type AuthState = {
   }) => Promise<void>;
   logout: () => Promise<void>;
   setAccessToken: (token: string) => void;
+  setUser: (user: any | null) => void;
   setPinVerified: (verified: boolean) => void;
   setupPin: (pin: string) => Promise<void>;
   changePin: (currentPin: string, nextPin: string) => Promise<boolean>;
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   requiresPinSetup: false,
 
   setAccessToken: (token: string) => set({ accessToken: token }),
+  setUser: (user: any | null) => set({ user }),
   setPinVerified: (verified: boolean) => set({ isPinVerified: verified }),
 
   setupPin: async (pin: string) => {

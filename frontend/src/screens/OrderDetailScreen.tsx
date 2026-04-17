@@ -14,22 +14,44 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { getOrderById, cancelOrder } from '../api/orders';
+import { useI18n } from '../i18n/useI18n';
+import { getApiErrorMessage } from '../utils/validation';
 
 export default function OrderDetailScreen({ route, navigation }: any) {
-  const { orderId } = route.params;
+  const { t, language } = useI18n();
+  const orderId = route?.params?.orderId;
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const fetchOrder = async () => {
+    if (!orderId || typeof orderId !== 'string') {
+      setFetchError(t('Тапсырыс идентификаторы табылмады', 'Идентификатор заказа не найден'));
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setFetchError(null);
       const data = await getOrderById(orderId);
-      setOrder(data);
-    } catch {
-      setFetchError('Тапсырысты жүктеу мүмкін болмады');
+      const normalizedOrder = data?.data ?? data?.content ?? data;
+      if (!normalizedOrder || typeof normalizedOrder !== 'object') {
+        setFetchError(t('Тапсырыс табылмады', 'Заказ не найден'));
+        setOrder(null);
+        return;
+      }
+      setOrder(normalizedOrder);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 404) {
+        setFetchError(t('Тапсырыс табылмады', 'Заказ не найден'));
+      } else if (status === 401) {
+        setFetchError(t('Қайта кіру қажет', 'Требуется повторный вход'));
+      } else {
+        setFetchError(getApiErrorMessage(e, t('Тапсырысты жүктеу мүмкін болмады', 'Не удалось загрузить заказ')));
+      }
     } finally {
       setLoading(false);
     }
@@ -42,7 +64,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
   const formatDate = (iso: string) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return d.toLocaleDateString('kk-KZ', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString(language === 'kk' ? 'kk-KZ' : 'ru-RU', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   const statusColor = (status: string) => {
@@ -59,21 +81,24 @@ export default function OrderDetailScreen({ route, navigation }: any) {
 
   const statusLabel = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'CREATED': return 'Қабылданды';
-      case 'CONFIRMED': return 'Расталды';
-      case 'SHIPPED': return 'Жолда';
-      case 'DELIVERED': return 'Жеткізілді';
-      case 'CANCELLED': return 'Болдырылмады';
-      case 'PAID': return 'Төленді';
+      case 'CREATED': return t('Қабылданды', 'Создан');
+      case 'CONFIRMED': return t('Расталды', 'Подтвержден');
+      case 'SHIPPED': return t('Жолда', 'В пути');
+      case 'DELIVERED': return t('Жеткізілді', 'Доставлен');
+      case 'CANCELLED': return t('Болдырылмады', 'Отменен');
+      case 'PAID': return t('Төленді', 'Оплачен');
       default: return status ?? '—';
     }
   };
 
   const paymentMethodLabel = (method?: string) => {
-    if (method?.toUpperCase() === 'CARD') return 'Картамен';
-    if (method?.toUpperCase() === 'CASH') return 'Қолма-қол';
+    if (method?.toUpperCase() === 'CARD') return t('Картамен', 'Картой');
+    if (method?.toUpperCase() === 'CASH') return t('Қолма-қол', 'Наличными');
     return '—';
   };
+
+  const orderShortId = order?.id ? String(order.id).slice(0, 8).toUpperCase() : '—';
+  const orderItems = Array.isArray(order?.items) ? order.items : [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -81,7 +106,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="chevron-left" size={30} color="#1E293B" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Тапсырыс мәліметі</Text>
+        <Text style={styles.headerTitle}>{t('Тапсырыс мәліметі', 'Детали заказа')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -92,20 +117,20 @@ export default function OrderDetailScreen({ route, navigation }: any) {
           <Feather name="wifi-off" size={64} color="#CBD5E1" />
           <Text style={styles.errorText}>{fetchError}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchOrder}>
-            <Text style={styles.retryBtnText}>Қайта көру</Text>
+            <Text style={styles.retryBtnText}>{t('Қайта көру', 'Повторить')}</Text>
           </TouchableOpacity>
         </View>
       ) : !order ? (
         <View style={styles.errorContainer}>
           <Feather name="alert-circle" size={60} color="#CBD5E1" />
-          <Text style={styles.errorText}>Тапсырыс табылмады</Text>
+          <Text style={styles.errorText}>{t('Тапсырыс табылмады', 'Заказ не найден')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Order summary card */}
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
-              <Text style={styles.orderIdText}>Тапсырыс #{order.id?.slice(0, 8).toUpperCase()}</Text>
+              <Text style={styles.orderIdText}>{t('Тапсырыс', 'Заказ')} #{orderShortId}</Text>
               <View style={[styles.statusBadge, { backgroundColor: statusColor(order.status) + '20' }]}>
                 <Text style={[styles.statusText, { color: statusColor(order.status) }]}>
                   {statusLabel(order.status)}
@@ -116,10 +141,10 @@ export default function OrderDetailScreen({ route, navigation }: any) {
           </View>
 
           {/* Items */}
-          {order.items && order.items.length > 0 && (
+          {orderItems.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Тауарлар</Text>
-              {order.items.map((item: any, index: number) => (
+              <Text style={styles.sectionTitle}>{t('Тауарлар', 'Товары')}</Text>
+              {orderItems.map((item: any, index: number) => (
                 <View key={item.id ?? index} style={styles.itemRow}>
                   <Image
                     source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
@@ -138,12 +163,12 @@ export default function OrderDetailScreen({ route, navigation }: any) {
 
           {/* Total */}
           <View style={styles.totalCard}>
-            <Text style={styles.totalLabel}>Жалпы сома</Text>
+            <Text style={styles.totalLabel}>{t('Жалпы сома', 'Итого')}</Text>
             <Text style={styles.totalAmount}>{Number(order.totalAmount ?? 0).toFixed(0)} ₸</Text>
           </View>
 
           <View style={styles.paymentCard}>
-            <Text style={styles.paymentLabel}>Төлем тәсілі</Text>
+            <Text style={styles.paymentLabel}>{t('Төлем тәсілі', 'Способ оплаты')}</Text>
             <Text style={styles.paymentValue}>{paymentMethodLabel(order.paymentMethod)}</Text>
           </View>
 
@@ -154,21 +179,21 @@ export default function OrderDetailScreen({ route, navigation }: any) {
               disabled={cancelling}
               onPress={() => {
                 Alert.alert(
-                  'Тапсырысты болдырмау',
-                  'Тапсырысты болдырмауға сенімдісіз бе?',
+                  t('Тапсырысты болдырмау', 'Отмена заказа'),
+                  t('Тапсырысты болдырмауға сенімдісіз бе?', 'Вы уверены, что хотите отменить заказ?'),
                   [
-                    { text: 'Жоқ', style: 'cancel' },
+                    { text: t('Жоқ', 'Нет'), style: 'cancel' },
                     {
-                      text: 'Иә, болдырмау',
+                      text: t('Иә, болдырмау', 'Да, отменить'),
                       style: 'destructive',
                       onPress: async () => {
                         try {
                           setCancelling(true);
                           await cancelOrder(orderId);
                           setOrder((prev: any) => ({ ...prev, status: 'CANCELLED' }));
-                          Alert.alert('Дайын', 'Тапсырыс болдырылмады');
+                          Alert.alert(t('Дайын', 'Готово'), t('Тапсырыс болдырылмады', 'Заказ отменен'));
                         } catch (e: any) {
-                          Alert.alert('Қате', e?.response?.data?.message || 'Болдырмау мүмкін болмады');
+                          Alert.alert(t('Қате', 'Ошибка'), e?.response?.data?.message || t('Болдырмау мүмкін болмады', 'Не удалось отменить заказ'));
                         } finally {
                           setCancelling(false);
                         }
@@ -181,7 +206,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
               {cancelling ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.cancelBtnText}>Тапсырысты болдырмау</Text>
+                <Text style={styles.cancelBtnText}>{t('Тапсырысты болдырмау', 'Отменить заказ')}</Text>
               )}
             </TouchableOpacity>
           )}

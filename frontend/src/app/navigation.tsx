@@ -35,6 +35,8 @@ import ChatbotScreen from '../screens/ChatbotScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import AppPinScreen from '../screens/AppPinScreen';
 import ChangePinScreen from '../screens/ChangePinScreen';
+import MapScreen from '../screens/MapScreen';
+import PersonalDataScreen from '../screens/PersonalDataScreen';
 import { authenticateWithBiometric, canUseBiometricUnlock, verifyAppPin } from '../utils/appPin';
 
 const Stack = createNativeStackNavigator();
@@ -179,6 +181,8 @@ function AppStack() {
       <Stack.Screen name="Chatbot" component={ChatbotScreen} />
       <Stack.Screen name="Analytics" component={AnalyticsScreen} />
       <Stack.Screen name="ChangePin" component={ChangePinScreen} />
+      <Stack.Screen name="Map" component={MapScreen} />
+      <Stack.Screen name="PersonalData" component={PersonalDataScreen} />
     </Stack.Navigator>
   );
 }

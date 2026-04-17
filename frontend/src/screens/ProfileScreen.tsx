@@ -147,7 +147,7 @@ export default function ProfileScreen({ navigation }: any) {
             icon="user"
             title="Жеке деректер"
             subtitle="Профиль деректерін басқару"
-            onPress={() => Alert.alert('Жақын арада', 'Бұл мүмкіндік жақын арада қосылады.')}
+            onPress={() => navigation.navigate('PersonalData')}
             delay={180}
           />
           <MenuEntry

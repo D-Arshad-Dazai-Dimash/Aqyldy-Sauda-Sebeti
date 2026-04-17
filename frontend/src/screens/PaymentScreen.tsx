@@ -14,14 +14,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { useCartStore } from '../store/cartStore';
-import { getApiErrorMessage, isValidCardNumber, isValidExpiry } from '../utils/validation';
+import { getApiErrorMessage, isValidExpiry } from '../utils/validation';
+import { checkout } from '../api/orders';
 import {
   loadCards as loadSecureCards,
   saveCards as saveSecureCards,
   type SavedCard,
 } from '../utils/secureStorage';
+import { useI18n } from '../i18n/useI18n';
 
 export default function PaymentScreen({ route, navigation }: any) {
+  const { t } = useI18n();
   const { storeId, total } = route.params;
   const reset = useCartStore((s) => s.reset);
 
@@ -32,11 +35,36 @@ export default function PaymentScreen({ route, navigation }: any) {
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
+  const [formErrors, setFormErrors] = useState<{ cardNumber?: string; expiry?: string; cvv?: string }>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadCards();
   }, []);
+
+  const normalizeCardDigits = (value: string) => value.replace(/\D/g, '');
+
+  const normalizeExpiryValue = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+
+    const parts = trimmed.split('/');
+    if (parts.length === 2) {
+      const monthDigits = parts[0].replace(/\D/g, '').slice(0, 2);
+      const yearDigits = parts[1].replace(/\D/g, '').slice(0, 4);
+      if (!monthDigits || !yearDigits) {
+        return `${monthDigits}${parts[1] ? '/' : ''}${yearDigits}`;
+      }
+      const normalizedMonth = monthDigits.length === 1 ? `0${monthDigits}` : monthDigits;
+      return `${normalizedMonth}/${yearDigits}`;
+    }
+
+    const digits = trimmed.replace(/\D/g, '').slice(0, 6);
+    if (digits.length <= 2) {
+      return digits;
+    }
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  };
 
   const loadCards = async () => {
     const parsed = await loadSecureCards();
@@ -52,33 +80,41 @@ export default function PaymentScreen({ route, navigation }: any) {
   const detectBrand = (num: string) => {
     if (num.startsWith('4')) return 'Visa';
     if (num.startsWith('5')) return 'MasterCard';
+    if (num.startsWith('2')) return 'Mir';
     if (num.startsWith('6')) return 'UnionPay';
     return 'Card';
   };
 
   const formatCardNumber = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 16);
+    const digits = normalizeCardDigits(text).slice(0, 19);
     return digits.replace(/(.{4})/g, '$1 ').trim();
   };
 
   const formatExpiry = (text: string) => {
-    const digits = text.replace(/\D/g, '').slice(0, 4);
-    if (digits.length > 2) return digits.slice(0, 2) + '/' + digits.slice(2);
-    return digits;
+    return normalizeExpiryValue(text);
   };
 
   const handleAddCard = async () => {
-    const digits = cardNumber.replace(/\s/g, '');
-    if (!isValidCardNumber(digits)) {
-      Alert.alert('Қате', 'Карта нөмірін толық жазыңыз');
-      return;
+    const digits = normalizeCardDigits(cardNumber);
+    const normalizedExpiry = normalizeExpiryValue(expiry);
+    const nextErrors: { cardNumber?: string; expiry?: string; cvv?: string } = {};
+
+    if (digits.length < 16 || digits.length > 19) {
+      nextErrors.cardNumber = t('Карта нөмірі 16-19 цифр болуы керек', 'Номер карты должен содержать 16-19 цифр');
     }
-    if (!isValidExpiry(expiry)) {
-      Alert.alert('Қате', 'Жарамдылық мерзімін жазыңыз (АА/ЖЖ)');
-      return;
+    if (!isValidExpiry(normalizedExpiry)) {
+      nextErrors.expiry = t(
+        'Жарамдылық мерзімін ММ/ЖЖ немесе ММ/ЖЖЖЖ түрінде жазыңыз',
+        'Укажите срок действия в формате ММ/ГГ или ММ/ГГГГ',
+      );
     }
-    if (cvv.length < 3) {
-      Alert.alert('Қате', 'CVV кодын жазыңыз');
+    if (!/^\d{3,4}$/.test(cvv)) {
+      nextErrors.cvv = t('CVV кодын жазыңыз', 'Введите CVV код');
+    }
+
+    setFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -86,28 +122,48 @@ export default function PaymentScreen({ route, navigation }: any) {
       id: Date.now().toString(),
       last4: digits.slice(-4),
       brand: detectBrand(digits),
-      expiry,
+      expiry: normalizedExpiry,
     };
-    const updated = [...cards, newCard];
-    await saveCards(updated);
-    setSelectedCardId(newCard.id);
-    setShowAddCard(false);
-    setCardNumber('');
-    setExpiry('');
-    setCvv('');
+
+    const updated = [
+      ...cards.filter((card) => !(card.last4 === newCard.last4 && card.expiry === newCard.expiry && card.brand === newCard.brand)),
+      newCard,
+    ];
+
+    try {
+      await saveCards(updated);
+      setSelectedCardId(newCard.id);
+      setShowAddCard(false);
+      setCardNumber('');
+      setExpiry('');
+      setCvv('');
+      setFormErrors({});
+    } catch (e: any) {
+      Alert.alert(
+        t('Қате', 'Ошибка'),
+        getApiErrorMessage(e, t('Картаны сақтау мүмкін болмады', 'Не удалось сохранить карту')),
+      );
+    }
   };
 
   const handleDeleteCard = (cardId: string) => {
-    Alert.alert('Картаны өшіру', 'Бұл картаны өшіресіз бе?', [
-      { text: 'Болдырмау', style: 'cancel' },
+    Alert.alert(t('Картаны өшіру', 'Удаление карты'), t('Бұл картаны өшіресіз бе?', 'Удалить эту карту?'), [
+      { text: t('Болдырмау', 'Отмена'), style: 'cancel' },
       {
-        text: 'Өшіру',
+        text: t('Өшіру', 'Удалить'),
         style: 'destructive',
         onPress: async () => {
-          const updated = cards.filter((c) => c.id !== cardId);
-          await saveCards(updated);
-          if (selectedCardId === cardId) {
-            setSelectedCardId(updated.length > 0 ? updated[0].id : null);
+          try {
+            const updated = cards.filter((c) => c.id !== cardId);
+            await saveCards(updated);
+            if (selectedCardId === cardId) {
+              setSelectedCardId(updated.length > 0 ? updated[0].id : null);
+            }
+          } catch (e: any) {
+            Alert.alert(
+              t('Қате', 'Ошибка'),
+              getApiErrorMessage(e, t('Картаны өшіру мүмкін болмады', 'Не удалось удалить карту')),
+            );
           }
         },
       },
@@ -115,8 +171,18 @@ export default function PaymentScreen({ route, navigation }: any) {
   };
 
   const handlePay = async () => {
+    if (!storeId) {
+      Alert.alert(t('Қате', 'Ошибка'), t('Төлем үшін дүкен табылмады', 'Не найден магазин для оплаты'));
+      return;
+    }
+
+    if (method === 'card' && showAddCard) {
+      Alert.alert(t('Қате', 'Ошибка'), t('Алдымен картаны сақтаңыз', 'Сначала сохраните карту'));
+      return;
+    }
+
     if (method === 'card' && !selectedCardId) {
-      Alert.alert('Қате', 'Алдымен карта қосыңыз немесе таңдаңыз');
+      Alert.alert(t('Қате', 'Ошибка'), t('Алдымен карта қосыңыз немесе таңдаңыз', 'Сначала добавьте или выберите карту'));
       return;
     }
 
@@ -130,18 +196,18 @@ export default function PaymentScreen({ route, navigation }: any) {
         cardBrand: method === 'card' ? selectedCard?.brand : undefined,
       });
       reset();
-      Alert.alert('Сәтті!', 'Тапсырыс рәсімделді', [
+      Alert.alert(t('Сәтті!', 'Успешно!'), t('Тапсырыс рәсімделді', 'Заказ оформлен'), [
         {
-          text: 'Тапсырысты көру',
+          text: t('Тапсырысты көру', 'Посмотреть заказ'),
           onPress: () => navigation.replace('OrderDetail', { orderId: order.id }),
         },
         {
-          text: 'Басты бет',
+          text: t('Басты бет', 'На главную'),
           onPress: () => navigation.popToTop(),
         },
       ]);
     } catch (e: any) {
-      Alert.alert('Қате', getApiErrorMessage(e, 'Төлем жасау мүмкін болмады'));
+      Alert.alert(t('Қате', 'Ошибка'), getApiErrorMessage(e, t('Төлем жасау мүмкін болмады', 'Не удалось выполнить оплату')));
     } finally {
       setLoading(false);
     }
@@ -154,19 +220,19 @@ export default function PaymentScreen({ route, navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={30} color="#1E293B" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Төлем</Text>
+        <Text style={styles.headerTitle}>{t('Төлем', 'Оплата')}</Text>
         <View style={{ width: 30 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Order summary */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Тапсырыс сомасы</Text>
+          <Text style={styles.summaryLabel}>{t('Тапсырыс сомасы', 'Сумма заказа')}</Text>
           <Text style={styles.summaryTotal}>{Number(total).toFixed(0)} ₸</Text>
         </View>
 
         {/* Payment method selection */}
-        <Text style={styles.sectionTitle}>Төлем тәсілі</Text>
+        <Text style={styles.sectionTitle}>{t('Төлем тәсілі', 'Способ оплаты')}</Text>
         <View style={styles.methodRow}>
           <TouchableOpacity
             style={[styles.methodBtn, method === 'card' && styles.methodBtnActive]}
@@ -174,7 +240,7 @@ export default function PaymentScreen({ route, navigation }: any) {
           >
             <Feather name="credit-card" size={22} color={method === 'card' ? '#FFF' : '#64748B'} />
             <Text style={[styles.methodText, method === 'card' && styles.methodTextActive]}>
-              Карта
+              {t('Карта', 'Карта')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -183,7 +249,7 @@ export default function PaymentScreen({ route, navigation }: any) {
           >
             <Feather name="dollar-sign" size={22} color={method === 'cash' ? '#FFF' : '#64748B'} />
             <Text style={[styles.methodText, method === 'cash' && styles.methodTextActive]}>
-              Қолма-қол
+              {t('Қолма-қол', 'Наличные')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -191,10 +257,10 @@ export default function PaymentScreen({ route, navigation }: any) {
         {/* Card section */}
         {method === 'card' && (
           <View style={styles.cardSection}>
-            <Text style={styles.sectionTitle}>Сақталған карталар</Text>
+            <Text style={styles.sectionTitle}>{t('Сақталған карталар', 'Сохраненные карты')}</Text>
 
             {cards.length === 0 && !showAddCard && (
-              <Text style={styles.noCards}>Сақталған карта жоқ</Text>
+              <Text style={styles.noCards}>{t('Сақталған карта жоқ', 'Сохраненных карт нет')}</Text>
             )}
 
             {cards.map((card) => (
@@ -226,46 +292,70 @@ export default function PaymentScreen({ route, navigation }: any) {
             {!showAddCard ? (
               <TouchableOpacity style={styles.addCardBtn} onPress={() => setShowAddCard(true)}>
                 <Feather name="plus-circle" size={20} color="#4AB7B6" />
-                <Text style={styles.addCardText}>Карта қосу</Text>
+                <Text style={styles.addCardText}>{t('Карта қосу', 'Добавить карту')}</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.addCardForm}>
-                <Text style={styles.formLabel}>Карта нөмірі</Text>
+                <Text style={styles.formLabel}>{t('Карта нөмірі', 'Номер карты')}</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, formErrors.cardNumber ? styles.inputErrorBorder : undefined]}
                   placeholder="0000 0000 0000 0000"
                   placeholderTextColor="#CBD5E1"
                   keyboardType="numeric"
-                  maxLength={19}
+                  maxLength={23}
                   value={cardNumber}
-                  onChangeText={(t) => setCardNumber(formatCardNumber(t))}
+                  onChangeText={(value) => {
+                    setCardNumber(formatCardNumber(value));
+                    if (formErrors.cardNumber) {
+                      setFormErrors((prev) => ({ ...prev, cardNumber: undefined }));
+                    }
+                  }}
                 />
+                {formErrors.cardNumber ? (
+                  <Text style={styles.inputErrorText}>{formErrors.cardNumber}</Text>
+                ) : null}
 
                 <View style={styles.formRow}>
                   <View style={styles.formHalf}>
-                    <Text style={styles.formLabel}>Мерзімі</Text>
+                    <Text style={styles.formLabel}>{t('Мерзімі', 'Срок')}</Text>
                     <TextInput
-                      style={styles.input}
-                      placeholder="АА/ЖЖ"
+                      style={[styles.input, formErrors.expiry ? styles.inputErrorBorder : undefined]}
+                      placeholder="MM/YY"
                       placeholderTextColor="#CBD5E1"
                       keyboardType="numeric"
-                      maxLength={5}
+                      maxLength={7}
                       value={expiry}
-                      onChangeText={(t) => setExpiry(formatExpiry(t))}
+                      onChangeText={(value) => {
+                        setExpiry(formatExpiry(value));
+                        if (formErrors.expiry) {
+                          setFormErrors((prev) => ({ ...prev, expiry: undefined }));
+                        }
+                      }}
                     />
+                    {formErrors.expiry ? (
+                      <Text style={styles.inputErrorText}>{formErrors.expiry}</Text>
+                    ) : null}
                   </View>
                   <View style={styles.formHalf}>
                     <Text style={styles.formLabel}>CVV</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, formErrors.cvv ? styles.inputErrorBorder : undefined]}
                       placeholder="•••"
                       placeholderTextColor="#CBD5E1"
                       keyboardType="numeric"
-                      maxLength={3}
+                      maxLength={4}
                       secureTextEntry
                       value={cvv}
-                      onChangeText={(t) => setCvv(t.replace(/\D/g, ''))}
+                      onChangeText={(value) => {
+                        setCvv(value.replace(/\D/g, ''));
+                        if (formErrors.cvv) {
+                          setFormErrors((prev) => ({ ...prev, cvv: undefined }));
+                        }
+                      }}
                     />
+                    {formErrors.cvv ? (
+                      <Text style={styles.inputErrorText}>{formErrors.cvv}</Text>
+                    ) : null}
                   </View>
                 </View>
 
@@ -277,12 +367,13 @@ export default function PaymentScreen({ route, navigation }: any) {
                       setCardNumber('');
                       setExpiry('');
                       setCvv('');
+                      setFormErrors({});
                     }}
                   >
-                    <Text style={styles.formCancelText}>Болдырмау</Text>
+                    <Text style={styles.formCancelText}>{t('Болдырмау', 'Отмена')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.formSaveBtn} onPress={handleAddCard}>
-                    <Text style={styles.formSaveText}>Сақтау</Text>
+                    <Text style={styles.formSaveText}>{t('Сақтау', 'Сохранить')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -294,7 +385,7 @@ export default function PaymentScreen({ route, navigation }: any) {
           <View style={styles.cashInfo}>
             <Feather name="info" size={20} color="#64748B" />
             <Text style={styles.cashText}>
-              Тапсырысты алған кезде қолма-қол ақшамен төлейсіз
+              {t('Тапсырысты алған кезде қолма-қол ақшамен төлейсіз', 'Оплата наличными при получении заказа')}
             </Text>
           </View>
         )}
@@ -312,7 +403,7 @@ export default function PaymentScreen({ route, navigation }: any) {
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
             <Text style={styles.payBtnText}>
-              Төлеу · {Number(total).toFixed(0)} ₸
+              {t('Төлеу', 'Оплатить')} · {Number(total).toFixed(0)} ₸
             </Text>
           )}
         </TouchableOpacity>
@@ -496,6 +587,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginBottom: 12,
+  },
+  inputErrorBorder: {
+    borderColor: '#EF4444',
+  },
+  inputErrorText: {
+    color: '#B91C1C',
+    fontSize: 12,
+    marginTop: -6,
+    marginBottom: 10,
   },
   formRow: {
     flexDirection: 'row',

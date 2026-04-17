@@ -8,8 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
 import { getApiErrorMessage, isValidEmail } from '../utils/validation';
+import { useI18n } from '../i18n/useI18n';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +27,12 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 
   const onSubmit = async () => {
     if (!email) {
-      setError('Email енгізіңіз');
+      setError(t('Email енгізіңіз', 'Введите email'));
       return;
     }
 
     if (!isValidEmail(email)) {
-      setError('Дұрыс email енгізіңіз');
+      setError(t('Дұрыс email енгізіңіз', 'Введите корректный email'));
       return;
     }
 
@@ -44,13 +46,13 @@ export default function ForgotPasswordScreen({ navigation }: any) {
       }
 
       Alert.alert(
-        'Сәтті',
-        'Құпия сөзді қалпына келтіру сілтемесі email-ға жіберілді. Хатты тексеріңіз.',
+        t('Сәтті', 'Успешно'),
+        t('Құпия сөзді қалпына келтіру сілтемесі email-ға жіберілді. Хатты тексеріңіз.', 'Ссылка для сброса пароля отправлена на email. Проверьте почту.'),
         [{ text: 'OK' }],
       );
       setCooldown(60);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, 'Қате орын алды'));
+      setError(getApiErrorMessage(e, t('Қате орын алды', 'Произошла ошибка')));
     } finally {
       setLoading(false);
     }
@@ -69,8 +71,8 @@ export default function ForgotPasswordScreen({ navigation }: any) {
             <View style={styles.iconContainer}>
               <Feather name="mail" size={36} color="#27AE60" />
             </View>
-            <Text style={styles.title}>Құпия сөзді қалпына келтіру</Text>
-            <Text style={styles.subtitle}>Email адресіңізді енгізіңіз</Text>
+            <Text style={styles.title}>{t('Құпия сөзді қалпына келтіру', 'Сброс пароля')}</Text>
+            <Text style={styles.subtitle}>{t('Email адресіңізді енгізіңіз', 'Введите ваш email')}</Text>
           </View>
 
           <View style={styles.formCard}>
@@ -104,7 +106,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.buttonText}>{cooldown > 0 ? `Қайталау ${cooldown}с` : 'Жіберу'}</Text>
+                <Text style={styles.buttonText}>{cooldown > 0 ? t(`Қайталау ${cooldown}с`, `Повтор через ${cooldown}с`) : t('Жіберу', 'Отправить')}</Text>
               )}
             </TouchableOpacity>
           </View>

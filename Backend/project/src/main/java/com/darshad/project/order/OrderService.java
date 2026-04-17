@@ -153,7 +153,8 @@ public class OrderService {
         );
     }
 
-    public List<OrderResponse> myOrders(String email) {
+        @Transactional(readOnly = true)
+        public List<OrderResponse> myOrders(String email) {
 
         log.debug("▶ myOrders: email={}", email);
 
@@ -176,7 +177,8 @@ public class OrderService {
         return orders;
     }
 
-    public OrderDetailResponse getOrderById(String email, java.util.UUID orderId) {
+        @Transactional(readOnly = true)
+        public OrderDetailResponse getOrderById(String email, java.util.UUID orderId) {
 
         log.debug("▶ getOrderById: email={}, orderId={}", email, orderId);
 
@@ -198,12 +200,16 @@ public class OrderService {
                 ))
                 .toList();
 
+        String storeName = storeRepo.findById(order.getStore().getId())
+                .map(Store::getName)
+                .orElse(null);
+
         log.debug("  found order {} with {} items", orderId, items.size());
 
         return new OrderDetailResponse(
                 order.getId(),
                 order.getStore().getId(),
-                order.getStore().getName(),
+                storeName,
                 order.getStatus().name(),
                 (order.getPaymentMethod() == null ? PaymentMethod.CASH : order.getPaymentMethod()).name(),
                 order.getTotalAmount(),

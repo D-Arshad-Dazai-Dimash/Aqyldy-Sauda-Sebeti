@@ -22,6 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { PRODUCT_CATEGORIES, Category } from '../constants/categories';
+import { useLanguageStore } from '../store/languageStore';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_INSET = 20;
@@ -52,6 +53,27 @@ function PressCard({ children, onPress, style }: any) {
 }
 
 export default function CategoriesScreen({ navigation }: any) {
+  const language = useLanguageStore((s) => s.language);
+  const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
+
+  const t = language === 'kk'
+    ? {
+        langName: 'Қазақша',
+        languageTitle: 'Тіл',
+        languageChanged: 'Тіл қазақшаға ауыстырылды',
+        notifications: 'Хабарландырулар',
+        noNotifications: 'Жаңа хабарландырулар жоқ.',
+        searchPlaceholder: 'Қалаған затыңызды іздеңіз',
+      }
+    : {
+        langName: 'Русский',
+        languageTitle: 'Язык',
+        languageChanged: 'Язык переключен на русский',
+        notifications: 'Уведомления',
+        noNotifications: 'Новых уведомлений нет.',
+        searchPlaceholder: 'Найдите нужный товар',
+      };
+
   return (
     <SafeAreaView style={styles.container}>
       <Animated.View entering={FadeIn.duration(220)} style={styles.bgOrnamentTop} pointerEvents="none" />
@@ -68,16 +90,19 @@ export default function CategoriesScreen({ navigation }: any) {
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={styles.langSelector}
-            onPress={() => Alert.alert('Тіл', 'Қазіргі уақытта тек қазақ тілі қолданылады.')}
+            onPress={async () => {
+              await toggleLanguage();
+              Alert.alert(t.languageTitle, t.languageChanged);
+            }}
             activeOpacity={0.85}
           >
-            <Text style={styles.langText}>Қазақша</Text>
+            <Text style={styles.langText}>{t.langName}</Text>
             <Feather name="chevron-down" size={14} color={P.muted} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.notificationBtn}
-            onPress={() => Alert.alert('Хабарландырулар', 'Жаңа хабарландырулар жоқ.')}
+            onPress={() => Alert.alert(t.notifications, t.noNotifications)}
             activeOpacity={0.85}
           >
             <Feather name="bell" size={18} color="#EF4444" />
@@ -93,7 +118,7 @@ export default function CategoriesScreen({ navigation }: any) {
         activeOpacity={0.9}
       >
         <Feather name="search" size={18} color={P.faint} style={{ marginLeft: 14 }} />
-        <Text style={styles.searchPlaceholder}>Қалаған затыңызды іздеңіз</Text>
+        <Text style={styles.searchPlaceholder}>{t.searchPlaceholder}</Text>
         <View style={styles.searchHintPill}>
           <Feather name="sliders" size={12} color={P.muted} />
         </View>

@@ -6,12 +6,32 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
+import { useLanguageStore } from '../store/languageStore';
 
 export default function BusinessDashboard({ navigation }: any) {
+  const language = useLanguageStore((s) => s.language);
+  const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, outOfStock: 0 });
   const [userName, setUserName] = useState('');
+
+  const t = language === 'kk'
+    ? {
+        langName: 'Қазақша',
+        languageTitle: 'Тіл',
+        languageChanged: 'Тіл қазақшаға ауыстырылды',
+        loadError: 'Деректерді жүктеу мүмкін болмады',
+        retry: 'Қайта көру',
+      }
+    : {
+        langName: 'Русский',
+        languageTitle: 'Язык',
+        languageChanged: 'Язык переключен на русский',
+        loadError: 'Не удалось загрузить данные',
+        retry: 'Повторить',
+      };
 
   // Базадан нақты мәліметтерді алу
   const fetchBusinessData = async () => {
@@ -19,10 +39,11 @@ export default function BusinessDashboard({ navigation }: any) {
       const res = await api.get('/api/products', { params: { size: 20 } });
       const content = res.data?.content || [];
       setProducts(content);
+      setError(null);
       const outOfStockCount = content.filter((p: any) => p.stock === 0).length;
       setStats({ total: content.length, outOfStock: outOfStockCount });
     } catch {
-      // silent — dashboard shows empty state
+      setError(t.loadError);
     } finally {
       setLoading(false);
     }
@@ -70,8 +91,14 @@ export default function BusinessDashboard({ navigation }: any) {
             <Text style={styles.userName}>{userName || 'Бизнес'}</Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.langSelector} onPress={() => Alert.alert('Тіл', 'Қазіргі уақытта тек қазақ тілі қолданылады.')}>
-              <Text style={styles.langText}>Қазақша </Text>
+            <TouchableOpacity
+              style={styles.langSelector}
+              onPress={async () => {
+                await toggleLanguage();
+                Alert.alert(t.languageTitle, t.languageChanged);
+              }}
+            >
+              <Text style={styles.langText}>{t.langName} </Text>
               <Feather name="chevron-down" size={16} color="#64748B" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Profile' })}>
@@ -110,6 +137,13 @@ export default function BusinessDashboard({ navigation }: any) {
           <Text style={styles.sectionTitle}>Өнімдер тізімі</Text>
           {loading ? (
             <ActivityIndicator color="#4AB7B6" />
+          ) : error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={fetchBusinessData}>
+                <Text style={styles.retryText}>{t.retry}</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             products.map((item: any) => <ProductItem key={item.id} item={item} />)
           )}
@@ -215,5 +249,21 @@ const styles = StyleSheet.create({
   counterDivider: { width: 1, height: 14, backgroundColor: '#CBD5E1' },
 
   seeAllBtn: { alignSelf: 'flex-end', marginTop: 15, paddingVertical: 5 },
-  seeAllText: { fontSize: 12, color: '#CBD5E1', fontWeight: '700' }
+  seeAllText: { fontSize: 12, color: '#CBD5E1', fontWeight: '700' },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  errorText: { color: '#991B1B', fontWeight: '600', marginBottom: 8 },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#DC2626',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  retryText: { color: '#FFFFFF', fontWeight: '700' }
 });

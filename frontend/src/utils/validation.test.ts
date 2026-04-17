@@ -26,6 +26,14 @@ describe('validation helpers', () => {
     expect(isValidExpiry('01/20')).toBe(false);
   });
 
+  it('accepts future expiry in MM/YY format', () => {
+    expect(isValidExpiry('12/30')).toBe(true);
+  });
+
+  it('accepts future expiry in MM/YYYY format', () => {
+    expect(isValidExpiry('12/2030')).toBe(true);
+  });
+
   it('extracts api error messages safely', () => {
     expect(getApiErrorMessage({ response: { data: { message: 'boom' } } }, 'fallback')).toBe('boom');
     expect(getApiErrorMessage({}, 'fallback')).toBe('fallback');

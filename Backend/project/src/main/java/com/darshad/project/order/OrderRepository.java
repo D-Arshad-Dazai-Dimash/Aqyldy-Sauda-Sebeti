@@ -19,10 +19,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByUserIdAndStoreIdOrderByCreatedAtDesc(UUID userId, UUID storeId);
 
-    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.id = :orderId AND o.user.id = :userId")
+        @Query("SELECT o FROM Order o LEFT JOIN FETCH o.store LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.id = :orderId AND o.user.id = :userId")
     Optional<Order> findByIdAndUserIdWithItems(UUID orderId, UUID userId);
 
-    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.id = :orderId")
+        @Query("SELECT o FROM Order o LEFT JOIN FETCH o.store LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product WHERE o.id = :orderId")
     Optional<Order> findByIdWithItems(UUID orderId);
 
     /**

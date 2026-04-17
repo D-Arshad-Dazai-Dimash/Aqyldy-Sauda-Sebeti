@@ -21,17 +21,19 @@ export default function BusinessOrdersScreen({ navigation }: any) {
   const isFocused = useIsFocused();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('ALL');
 
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const params: any = { size: 50 };
       if (filter !== 'ALL') params.status = filter;
       const res = await api.get('/api/admin/orders', { params });
       setOrders(res.data?.content || []);
     } catch {
-      // silent — orders list shows empty state
+      setError('Тапсырыстарды жүктеу мүмкін болмады');
     } finally {
       setLoading(false);
     }
@@ -126,6 +128,14 @@ export default function BusinessOrdersScreen({ navigation }: any) {
 
       {loading ? (
         <ActivityIndicator size="large" color="#4AB7B6" style={{ flex: 1 }} />
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Feather name="wifi-off" size={60} color="#CBD5E1" />
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={fetchOrders}>
+            <Text style={styles.retryBtnText}>Қайта көру</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={orders}
@@ -197,4 +207,12 @@ const styles = StyleSheet.create({
   totalAmount: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
   emptyContainer: { flex: 1, alignItems: 'center', marginTop: 80 },
   emptyText: { marginTop: 16, fontSize: 16, color: '#94A3B8', fontWeight: '500' },
+  retryBtn: {
+    marginTop: 14,
+    backgroundColor: '#0EA5E9',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  retryBtnText: { color: '#FFFFFF', fontWeight: '700' },
 });

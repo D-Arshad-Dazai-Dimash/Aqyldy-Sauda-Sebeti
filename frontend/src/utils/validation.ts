@@ -40,13 +40,13 @@ export function isValidCardNumber(cardNumber: string) {
 }
 
 export function isValidExpiry(expiry: string) {
-  if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+  if (!/^\d{2}\/(\d{2}|\d{4})$/.test(expiry)) {
     return false;
   }
 
   const [monthRaw, yearRaw] = expiry.split('/');
   const month = Number(monthRaw);
-  const year = Number(yearRaw);
+  const year = yearRaw.length === 4 ? Number(yearRaw.slice(-2)) : Number(yearRaw);
 
   if (month < 1 || month > 12) {
     return false;
