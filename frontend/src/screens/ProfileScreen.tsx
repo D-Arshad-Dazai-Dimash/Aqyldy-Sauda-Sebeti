@@ -177,7 +177,7 @@ export default function ProfileScreen({ navigation }: any) {
             icon="bell"
             title="Хабарландырулар"
             subtitle="Жүйе және акция жаңалықтары"
-            onPress={() => Alert.alert('Хабарландырулар', 'Жаңа хабарландырулар жоқ.')}
+            onPress={() => navigation.navigate('NotificationsTab')}
             delay={280}
           />
           <MenuEntry

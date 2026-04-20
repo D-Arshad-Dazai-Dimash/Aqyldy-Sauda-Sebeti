@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = await AuthApi.me();
         const pinExists = await hasAppPin();
         set({ user });
-        set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
+        set({ isPinVerified: pinExists, requiresPinSetup: !pinExists });
         await useFavoritesStore.getState().load();
       } catch {
         await get().logout();
@@ -96,7 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = await AuthApi.me();
     const pinExists = await hasAppPin();
     set({ user });
-    set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
+    set({ isPinVerified: pinExists, requiresPinSetup: !pinExists });
     await useFavoritesStore.getState().load();
   },
 
@@ -115,7 +115,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = await AuthApi.me();
     const pinExists = await hasAppPin();
     set({ user });
-    set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
+    set({ isPinVerified: pinExists, requiresPinSetup: !pinExists });
     await useFavoritesStore.getState().load();
   },
 
@@ -134,7 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = await AuthApi.me();
     const pinExists = await hasAppPin();
     set({ user });
-    set({ isPinVerified: !pinExists, requiresPinSetup: !pinExists });
+    set({ isPinVerified: pinExists, requiresPinSetup: !pinExists });
     await useFavoritesStore.getState().load();
   },
 

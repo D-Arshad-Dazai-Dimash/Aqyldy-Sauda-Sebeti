@@ -102,7 +102,7 @@ export default function CategoriesScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={styles.notificationBtn}
-            onPress={() => Alert.alert(t.notifications, t.noNotifications)}
+            onPress={() => navigation.navigate('NotificationsTab')}
             activeOpacity={0.85}
           >
             <Feather name="bell" size={18} color="#EF4444" />

@@ -223,7 +223,7 @@ export default function HomeScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={() => Alert.alert(t.notifications, t.noNotifications)}
+            onPress={() => navigation.navigate('NotificationsTab')}
           >
             <Feather name="bell" size={19} color={P.ink} />
             <View style={styles.notifDot} />

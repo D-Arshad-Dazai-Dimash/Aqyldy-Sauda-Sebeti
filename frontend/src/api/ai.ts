@@ -1,14 +1,9 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
+import { config } from '../config/env';
 
-// AI service runs on port 8000 (separate from Spring Boot on 8080)
-const AI_BASE_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:8000'
-    : 'http://localhost:8000';
-
+// AI service URL (конфигурируется в зависимости от платформы)
 const aiClient = axios.create({
-  baseURL: AI_BASE_URL,
+  baseURL: config.AI_URL,
   timeout: 30000, // AI responses may take longer
 });
 

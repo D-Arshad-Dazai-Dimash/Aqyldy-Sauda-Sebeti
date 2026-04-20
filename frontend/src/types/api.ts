@@ -70,10 +70,13 @@ export interface ScanResult {
 export interface OrderResponse {
   id: string;
   storeId: string;
+  storeName?: string;
   status: string;
   paymentMethod?: 'CARD' | 'CASH';
   totalAmount: number;
+  items: CartItem[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 // ===== PAGINATED =====
@@ -146,4 +149,27 @@ export interface PriceInsight {
   trend: 'UP' | 'DOWN' | 'STABLE';
   goodDeal: boolean;
   history: PricePoint[];
+}
+
+// ===== NOTIFICATIONS =====
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'ORDER' | 'PROMOTION' | 'SYSTEM' | 'PRICE_DROP' | 'FAVORITE_BACK_IN_STOCK';
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  read: boolean;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface NotificationResponse {
+  id: string;
+  type: 'ORDER' | 'PROMOTION' | 'SYSTEM' | 'PRICE_DROP' | 'FAVORITE_BACK_IN_STOCK';
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  read: boolean;
+  createdAt: string;
 }

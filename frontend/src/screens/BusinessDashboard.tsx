@@ -36,12 +36,16 @@ export default function BusinessDashboard({ navigation }: any) {
   // Базадан нақты мәліметтерді алу
   const fetchBusinessData = async () => {
     try {
-      const res = await api.get('/api/products', { params: { size: 20 } });
-      const content = res.data?.content || [];
-      setProducts(content);
+      const res = await api.get('/api/admin/products', { params: { size: 20 } });
+      const content = res.data?.content || res.data || [];
+      setProducts(Array.isArray(content) ? content : []);
       setError(null);
-      const outOfStockCount = content.filter((p: any) => p.stock === 0).length;
-      setStats({ total: content.length, outOfStock: outOfStockCount });
+      const outOfStockCount = (Array.isArray(content) ? content : [])
+        .filter((p: any) => (p.stock || p.quantity || 0) === 0).length;
+      setStats({ 
+        total: Array.isArray(content) ? content.length : 0, 
+        outOfStock: outOfStockCount 
+      });
     } catch {
       setError(t.loadError);
     } finally {

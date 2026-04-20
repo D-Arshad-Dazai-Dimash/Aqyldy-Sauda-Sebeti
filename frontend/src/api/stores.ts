@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { Store, InventoryItem, Page } from '../types/api';
+import { normalizeInventoryList as _normalizeInventoryItems, normalizePage } from './normalizers';
 
 export type StoreProductsSort = 'titleAsc' | 'priceAsc' | 'priceDesc';
 
@@ -11,28 +12,16 @@ export interface StoreProductsPagedParams {
   sort?: StoreProductsSort;
 }
 
-type UnknownRecord = Record<string, any>;
-
-function toInventoryItem(item: UnknownRecord, index: number): InventoryItem {
-  const fallbackId = `idx-${index}`;
-  return {
-    productId: String(item.productId ?? item.id ?? fallbackId),
-    productTitle: String(item.productTitle ?? item.title ?? item.name ?? 'Тауар'),
-    price: Number(item.price ?? 0),
-    imageUrl: item.imageUrl ?? null,
-    quantity: Number(item.quantity ?? item.stock ?? 0),
-  };
-}
-
+// Обертка для совместимости с типом InventoryItem
 function normalizeInventoryList(payload: unknown): InventoryItem[] {
-  if (Array.isArray(payload)) {
-    return payload.map((entry, idx) => toInventoryItem((entry ?? {}) as UnknownRecord, idx));
-  }
-  if (payload && typeof payload === 'object' && Array.isArray((payload as UnknownRecord).content)) {
-    const content = (payload as UnknownRecord).content as unknown[];
-    return content.map((entry, idx) => toInventoryItem((entry ?? {}) as UnknownRecord, idx));
-  }
-  return [];
+  const items = _normalizeInventoryItems(Array.isArray(payload) ? payload : []);
+  return items.map((item) => ({
+    productId: item.productId,
+    productTitle: item.productTitle,
+    price: item.price,
+    imageUrl: item.imageUrl,
+    quantity: item.quantity,
+  }));
 }
 
 function applyLocalSort(items: InventoryItem[], sort: StoreProductsSort): InventoryItem[] {

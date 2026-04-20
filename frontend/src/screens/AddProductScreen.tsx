@@ -134,11 +134,43 @@ export default function AddProductScreen({ route, navigation }: any) {
             type: 'image/jpeg',
             name: 'photo.jpg',
           } as any);
-          await api.post(`/api/admin/products/${productId}/image`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
-        } catch {
-          // image upload failed — product saved without image
+          
+          let photoUploadSuccess = false;
+          let photoError: string | null = null;
+          
+          // Retry logic: try 3 times
+          for (let i = 0; i < 3; i++) {
+            try {
+              await api.post(`/api/admin/products/${productId}/image`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+              });
+              photoUploadSuccess = true;
+              break;
+            } catch (error: any) {
+              photoError = error.response?.data?.message || error.message;
+              if (i < 2) {
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+          }
+          
+          if (!photoUploadSuccess) {
+            console.warn('Photo upload failed after retries:', photoError);
+            // Show warning but don't block product creation
+            Alert.alert(
+              'Внимание',
+              'Товар создан, но не удалось загрузить фото. Вы можете добавить его позже.',
+              [{ text: 'OK' }]
+            );
+          }
+        } catch (error: any) {
+          console.warn('Unexpected error during photo upload:', error);
+          Alert.alert(
+            'Внимание',
+            'Фото не загружено, но товар сохранен.',
+            [{ text: 'OK' }]
+          );
         }
       }
 
