@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -22,7 +22,6 @@ import { getPersonalRecommendations, getPopularProducts } from '../api/recommend
 import type { RecommendedProduct } from '../types/api';
 import { useI18n } from '../i18n/useI18n';
 import SkeletonBlock from '../components/SkeletonBlock';
-import { useHeaderLayout } from '../utils/useHeaderLayout';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -60,7 +59,8 @@ function ProductCard({
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const disc = Number(item.discount ?? 0);
   const price = Number(item.price ?? 0);
-  const finalPrice = disc > 0 ? price - price * disc / 100 : price;
+  const safePrice = Number.isFinite(price) ? price : 0;
+  const finalPrice = disc > 0 ? safePrice - safePrice * disc / 100 : safePrice;
 
   return (
     <AnimatedTouchableOpacity
@@ -85,7 +85,7 @@ function ProductCard({
       </View>
       <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
       {disc > 0 && (
-        <Text style={styles.oldPrice}>{price.toFixed(0)} ₸</Text>
+        <Text style={styles.oldPrice}>{safePrice.toFixed(0)} ₸</Text>
       )}
       <Text style={styles.productPrice}>{finalPrice.toFixed(0)} ₸</Text>
     </AnimatedTouchableOpacity>
@@ -93,31 +93,71 @@ function ProductCard({
 }
 
 export default function SmartShoppingScreen({ navigation }: any) {
-  const { topPadding, contentTopOffset } = useHeaderLayout();
   const { t } = useI18n();
   const [personal, setPersonal] = useState<RecommendedProduct[]>([]);
   const [popular, setPopular] = useState<RecommendedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const mountedRef = useRef(true);
+  const loadingRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const load = async (isRefresh = false) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError('');
+
       const [personalData, popularData] = await Promise.allSettled([
         getPersonalRecommendations(12),
         getPopularProducts(16),
       ]);
-      setPersonal(personalData.status === 'fulfilled' ? personalData.value : []);
-      setPopular(popularData.status === 'fulfilled' ? popularData.value : []);
-    } catch {
-      setError(t('Жүктелмеді', 'Не удалось загрузить'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
 
-  useEffect(() => { load(); }, [load]);
+      const nextPersonal = personalData.status === 'fulfilled'
+        ? personalData.value.filter((item) => item?.active !== false)
+        : [];
+      const nextPopular = popularData.status === 'fulfilled'
+        ? popularData.value.filter((item) => item?.active !== false)
+        : [];
+
+      if (!mountedRef.current) return;
+
+      setPersonal(nextPersonal);
+      setPopular(nextPopular);
+
+      const personalFailed = personalData.status === 'rejected';
+      const popularFailed = popularData.status === 'rejected';
+      if (personalFailed && popularFailed) {
+        setError(t('Жүктелмеді', 'Не удалось загрузить'));
+      }
+    } finally {
+      if (mountedRef.current) {
+        if (isRefresh) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
+      }
+      loadingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    mountedRef.current = true;
+    void load(false);
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const isEmpty = !loading && !error && personal.length === 0 && popular.length === 0;
 
   const renderSection = (
     items: RecommendedProduct[],
@@ -145,7 +185,7 @@ export default function SmartShoppingScreen({ navigation }: any) {
       >
         {items.map((item, i) => (
           <ProductCard
-            key={item.id}
+            key={`${item.id}-${i}`}
             item={item}
             delay={baseDelay + i * 30}
             onPress={() => navigation.navigate('ProductScreen', { productId: item.id })}
@@ -156,11 +196,10 @@ export default function SmartShoppingScreen({ navigation }: any) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={P.bg} />
 
-      {/* Hero header — dark */}
-      <View style={[styles.hero, { paddingTop: topPadding }]}>
+      <View style={styles.hero}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="chevron-left" size={22} color={P.text} />
         </TouchableOpacity>
@@ -174,13 +213,20 @@ export default function SmartShoppingScreen({ navigation }: any) {
           <Text style={styles.heroSub}>{t('Сіз үшін таңдалған', 'Подобрано специально для вас')}</Text>
         </View>
 
-        <TouchableOpacity onPress={load} style={styles.refreshBtn}>
-          <Feather name="refresh-cw" size={17} color={P.text} />
+        <TouchableOpacity
+          onPress={() => load(true)}
+          style={[styles.refreshBtn, (loading || refreshing) && styles.disabledBtn]}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? (
+            <ActivityIndicator size="small" color={P.tealDark} />
+          ) : (
+            <Feather name="refresh-cw" size={17} color={P.text} />
+          )}
         </TouchableOpacity>
       </View>
 
-      {/* Stat chips */}
-      <Animated.View entering={FadeInDown.delay(80).duration(300)} style={[styles.chips, { paddingTop: contentTopOffset }]}>
+      <Animated.View entering={FadeInDown.delay(80).duration(300)} style={styles.chips}>
         <View style={styles.chip}>
           <Feather name="star" size={13} color={P.amber} />
           <Text style={styles.chipText}>{t('Дербес', 'Персональные')}</Text>
@@ -220,8 +266,16 @@ export default function SmartShoppingScreen({ navigation }: any) {
         <View style={styles.center}>
           <Feather name="alert-circle" size={52} color="#CBD5E1" />
           <Text style={styles.emptyText}>{error}</Text>
-          <TouchableOpacity onPress={load} style={styles.retryBtn}>
+          <TouchableOpacity onPress={() => load(true)} style={styles.retryBtn}>
             <Text style={styles.retryBtnText}>{t('Қайталау', 'Повторить')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : isEmpty ? (
+        <View style={styles.center}>
+          <Feather name="inbox" size={52} color="#CBD5E1" />
+          <Text style={styles.emptyText}>{t('Ұсыныстар әзірге жоқ', 'Пока нет рекомендаций')}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Categories')} style={styles.retryBtn}>
+            <Text style={styles.retryBtnText}>{t('Санаттарға өту', 'Перейти в категории')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -255,20 +309,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: P.bg },
 
   hero: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
-    backgroundColor: 'transparent',
+    backgroundColor: P.bg,
     paddingHorizontal: 16,
+    paddingTop: 6,
     paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 12,
     backgroundColor: 'rgba(10,22,40,0.08)',
     borderWidth: 1,
     borderColor: P.border,
@@ -286,18 +336,19 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 22, fontWeight: '800', color: P.text, letterSpacing: -0.5 },
   heroSub: { fontSize: 12, color: P.muted, marginTop: 3 },
   refreshBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 12,
     backgroundColor: 'rgba(10,22,40,0.08)',
     borderWidth: 1,
     borderColor: P.border,
     justifyContent: 'center', alignItems: 'center',
   },
+  disabledBtn: { opacity: 0.65 },
 
   chips: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 16,
-    paddingTop: 72,
+    paddingTop: 2,
     paddingBottom: 12,
   },
   chip: {
@@ -308,11 +359,11 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 12, fontWeight: '700', color: P.amber },
 
-  scroll: { paddingBottom: 80 },
-  loadingContainer: { paddingTop: 72, paddingBottom: 60 },
+  scroll: { paddingTop: 4, paddingBottom: 80 },
+  loadingContainer: { paddingTop: 8, paddingBottom: 60 },
 
   section: {
-    marginBottom: 8,
+    marginBottom: 14,
     paddingTop: 4,
   },
   sectionHeader: {

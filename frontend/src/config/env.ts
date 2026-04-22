@@ -7,12 +7,12 @@ const ENV = {
     // На Android эмуляторе используем 10.0.2.2 (алиас для хоста)
     // На реальном устройстве нужно использовать IP машины разработки
     AI_URL: Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000',
-    API_URL: Platform.OS === 'android' ? 'http://10.0.2.2:8080/api' : 'http://localhost:8080/api',
+    API_URL: Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080',
   },
   prod: {
     // Для production используй реальные адреса
-    AI_URL: 'https://api.aqyldysebet.com/ai',
-    API_URL: 'https://api.aqyldysebet.com/api',
+    AI_URL: 'https://api.aqyldysebet.com',
+    API_URL: 'https://api.aqyldysebet.com',
   },
 };
 

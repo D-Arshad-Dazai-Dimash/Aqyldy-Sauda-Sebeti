@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -94,24 +94,41 @@ export default function PromotionsScreen({ navigation }: any) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const mountedRef = useRef(true);
+  const loadingRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const load = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     try {
       setLoading(true);
       setError('');
       const res = await searchProducts({ active: true, size: 80 });
       const discounted = (res.content ?? []).filter(p => Number(p.discount ?? 0) > 0);
-      // Sort by biggest discount first
       discounted.sort((a, b) => Number(b.discount ?? 0) - Number(a.discount ?? 0));
+
+      if (!mountedRef.current) return;
       setProducts(discounted);
     } catch {
+      if (!mountedRef.current) return;
       setError(t('Жүктелмеді', 'Не удалось загрузить'));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+      loadingRef.current = false;
     }
-  }, [t]);
+  };
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    mountedRef.current = true;
+    void load();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>

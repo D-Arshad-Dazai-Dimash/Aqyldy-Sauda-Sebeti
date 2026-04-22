@@ -14,7 +14,7 @@ export async function saveCards(cards: SavedCard[]): Promise<void> {
   try {
     await Keychain.setGenericPassword('cards', JSON.stringify(cards), {
       service: CARDS_SERVICE,
-      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED,
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
   } catch (e) {
     console.warn('Failed to save cards to Keychain:', e);

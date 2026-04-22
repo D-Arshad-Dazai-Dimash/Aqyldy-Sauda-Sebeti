@@ -26,6 +26,16 @@ export interface Store {
   address: string;
 }
 
+// ===== USER =====
+export interface User {
+  id: string;
+  email: string;
+  username?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+}
+
 // ===== INVENTORY =====
 export interface InventoryItem {
   productId: string;

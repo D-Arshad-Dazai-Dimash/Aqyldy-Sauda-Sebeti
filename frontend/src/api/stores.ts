@@ -62,7 +62,7 @@ export async function getStoreProductsPaged(
   const sort = params.sort ?? 'titleAsc';
 
   try {
-    const res = await api.get(`/api/stores/${storeId}/products`, {
+    const res = await api.get(`/api/stores/${storeId}/products/page`, {
       params: {
         page,
         size,
@@ -72,44 +72,27 @@ export async function getStoreProductsPaged(
       },
     });
     const data = res.data as any;
-    const content = normalizeInventoryList(data);
 
-    const hasPageMeta = data && typeof data === 'object' && Array.isArray(data.content);
-    if (hasPageMeta) {
+    if (data && typeof data === 'object' && Array.isArray(data.content)) {
       return {
-        content,
-        totalElements: Number(data.totalElements ?? content.length),
-        totalPages: Number(data.totalPages ?? Math.max(1, Math.ceil(content.length / size))),
+        content: normalizeInventoryList(data.content),
+        totalElements: Number(data.totalElements ?? 0),
+        totalPages: Number(data.totalPages ?? 1),
         number: Number(data.number ?? page),
         size: Number(data.size ?? size),
         first: Boolean(data.first ?? page === 0),
-        last: Boolean(data.last ?? page + 1 >= Number(data.totalPages ?? 1)),
+        last: Boolean(data.last ?? false),
       };
     }
 
-    // Some backends ignore pagination params and still return plain array.
-    const totalElements = content.length;
-    const totalPages = Math.max(1, Math.ceil(totalElements / size));
-    const safePage = Math.min(Math.max(page, 0), totalPages - 1);
-    const start = safePage * size;
-    const paged = applyLocalSort(content, sort).slice(start, start + size);
-
-    return {
-      content: paged,
-      totalElements,
-      totalPages,
-      number: safePage,
-      size,
-      first: safePage === 0,
-      last: safePage >= totalPages - 1,
-    };
+    throw new Error('Unexpected pagination response format');
   } catch (err: any) {
     const status = err?.response?.status;
     if (status !== 404 && status !== undefined) {
       throw err;
     }
 
-    // Fallback for backends that still return full list without pagination params.
+    // Backward compatibility for older backend versions.
     const raw = await getStoreProducts(storeId);
     if (!Array.isArray(raw)) {
       throw new Error('Unexpected response format');

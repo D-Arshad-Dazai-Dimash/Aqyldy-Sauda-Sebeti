@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { AuthResponse, BusinessRegisterRequest, LoginRequest, RegisterRequest } from '../types/auth';
+import type { User } from '../types/api';
 
 type UpdateProfileRequest = {
   name?: string | null;
@@ -22,12 +23,12 @@ export async function registerBusiness(data: BusinessRegisterRequest) {
   return res.data;
 }
 
-export async function me() {
-  const res = await api.get('/api/me');
+export async function me(): Promise<User> {
+  const res = await api.get<User>('/api/me');
   return res.data;
 }
 
-export async function updateProfile(data: UpdateProfileRequest) {
-  const res = await api.put('/api/me', data);
+export async function updateProfile(data: UpdateProfileRequest): Promise<User> {
+  const res = await api.put<User>('/api/me', data);
   return res.data;
 }

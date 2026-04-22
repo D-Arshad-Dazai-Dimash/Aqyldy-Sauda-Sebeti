@@ -155,7 +155,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
                     <Text style={styles.itemTitle} numberOfLines={2}>{item.title ?? item.productTitle ?? '—'}</Text>
                     <Text style={styles.itemQty}>{item.quantity} × {Number(item.price ?? 0).toFixed(0)} ₸</Text>
                   </View>
-                  <Text style={styles.itemTotal}>{Number(item.lineTotal ?? (item.price * item.quantity) ?? 0).toFixed(0)} ₸</Text>
+                  <Text style={styles.itemTotal}>{Number(item.lineTotal ?? ((item.price ?? 0) * (item.quantity ?? 0))).toFixed(0)} ₸</Text>
                 </View>
               ))}
             </View>

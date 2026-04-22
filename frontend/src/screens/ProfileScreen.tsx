@@ -19,26 +19,14 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
 import { getMyOrders } from '../api/orders';
 import { useHeaderLayout } from '../utils/useHeaderLayout';
+import type { RootStackParamList } from '../types/navigation';
+import { palette } from '../config/palette';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-const palette = {
-  background: '#F3F8F7',
-  surface: '#FFFFFF',
-  cardSoft: '#E8F5F3',
-  text: '#0A1E1D',
-  textMuted: '#527673',
-  border: '#CAE5E1',
-  mint: '#1A9A88',
-  mintDark: '#0D6B5C',
-  mintSoft: '#D4F0EB',
-  dark: '#0A2422',
-  rose: '#E63946',
-  gold: '#D97706',
-};
 
 function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }: any) {
   const scale = useSharedValue(1);
@@ -62,7 +50,9 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
   );
 }
 
-export default function ProfileScreen({ navigation }: any) {
+type Props = { navigation: NativeStackNavigationProp<RootStackParamList> };
+
+export default function ProfileScreen({ navigation }: Props) {
   const { contentTopOffset } = useHeaderLayout();
   const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
@@ -111,7 +101,13 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
             <View style={styles.rolePill}>
               <Feather name="shield" size={14} color={palette.mint} />
-              <Text style={styles.rolePillText}>{role === 'ADMIN' || role === 'ROLE_ADMIN' ? 'Admin' : 'Клиент'}</Text>
+              <Text style={styles.rolePillText}>
+                {role === 'ADMIN' || role === 'ROLE_ADMIN'
+                  ? 'Admin'
+                  : role === 'MERCHANT' || role === 'ROLE_MERCHANT'
+                    ? 'Сатушы'
+                    : 'Клиент'}
+              </Text>
             </View>
           </View>
 
@@ -132,7 +128,7 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         </Animated.View>
 
-        {(role === 'ADMIN' || role === 'ROLE_ADMIN') && (
+        {(role === 'ADMIN' || role === 'ROLE_ADMIN' || role === 'MERCHANT' || role === 'ROLE_MERCHANT') && (
           <Animated.View entering={FadeInDown.delay(100).duration(360)} style={styles.section}>
             <Text style={styles.sectionTitle}>Режим</Text>
             <MenuEntry

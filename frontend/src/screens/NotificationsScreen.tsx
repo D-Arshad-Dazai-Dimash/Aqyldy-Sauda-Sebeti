@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   View,
   Text,
@@ -15,10 +16,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationsStore } from '../store/notificationsStore';
 import type { NotificationResponse } from '../types/api';
 import { palette as P } from '../config/palette';
+import type { RootStackParamList } from '../types/navigation';
 
 const palette = P;
 
-const NotificationsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+type Props = NativeStackScreenProps<RootStackParamList, 'NotificationsTab'>;
+
+const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const {
     notifications,

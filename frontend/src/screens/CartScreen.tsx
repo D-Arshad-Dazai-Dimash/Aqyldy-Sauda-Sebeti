@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,7 +26,6 @@ import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
 import { useI18n } from '../i18n/useI18n';
-import { useHeaderLayout } from '../utils/useHeaderLayout';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -70,7 +69,6 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
 }
 
 export default function CartScreen({ navigation }: any) {
-  const { topPadding, contentTopOffset } = useHeaderLayout();
   const { t } = useI18n();
   const isFocused = useIsFocused();
   const { cart, storeId, loading, error, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
@@ -78,6 +76,8 @@ export default function CartScreen({ navigation }: any) {
   const cartItems = useMemo(() => cart?.items ?? [], [cart]);
   const [cartRecs, setCartRecs] = useState<RecommendedProduct[]>([]);
   const skeletonRows = useMemo(() => Array.from({ length: 3 }, (_, index) => index), []);
+  const lastRecProductRef = useRef<string | null>(null);
+  const recRequestRef = useRef(0);
 
   const load = useCallback(() => {
     if (storeId) {
@@ -92,14 +92,32 @@ export default function CartScreen({ navigation }: any) {
   }, [isFocused, load]);
 
   useEffect(() => {
-    if (cartItems.length > 0) {
-      const firstProductId = cartItems[0].productId;
-      getFrequentlyBoughtTogether(firstProductId, 6)
-        .then(setCartRecs)
-        .catch(() => {});
-    } else {
+    const firstProductId = cartItems[0]?.productId;
+    if (!firstProductId) {
+      lastRecProductRef.current = null;
       setCartRecs([]);
+      return;
     }
+
+    if (lastRecProductRef.current === firstProductId) {
+      return;
+    }
+
+    lastRecProductRef.current = firstProductId;
+    const requestId = recRequestRef.current + 1;
+    recRequestRef.current = requestId;
+
+    getFrequentlyBoughtTogether(firstProductId, 6)
+      .then((data) => {
+        if (recRequestRef.current === requestId) {
+          setCartRecs(data);
+        }
+      })
+      .catch(() => {
+        if (recRequestRef.current === requestId) {
+          setCartRecs([]);
+        }
+      });
   }, [cartItems]);
 
   const handleUpdateQty = async (itemId: string, newQty: number) => {
@@ -158,7 +176,13 @@ export default function CartScreen({ navigation }: any) {
 
   const totalPrice = cart?.total ?? 0;
 
-  const renderItem = (item: any, index: number) => (
+  const renderItem = (item: any, index: number) => {
+    const unitPrice = Number.isFinite(Number(item.price)) ? Number(item.price) : 0;
+    const lineTotal = Number.isFinite(Number(item.lineTotal))
+      ? Number(item.lineTotal)
+      : unitPrice * Number(item.quantity ?? 0);
+
+    return (
     <Animated.View key={item.id} entering={FadeInDown.delay(70 + index * 35).duration(300)}>
       <View style={styles.card}>
         <View style={styles.imageContainer}>
@@ -173,7 +197,7 @@ export default function CartScreen({ navigation }: any) {
           <Text style={styles.productName} numberOfLines={2}>
             {item.productTitle || item.title}
           </Text>
-          <Text style={styles.unitPrice}>{item.price} ₸</Text>
+          <Text style={styles.unitPrice}>{unitPrice.toFixed(0)} ₸</Text>
 
           <View style={styles.controls}>
             <TouchableOpacity onPress={() => handleUpdateQty(item.id, item.quantity - 1)} style={styles.qtyBtn}>
@@ -190,15 +214,16 @@ export default function CartScreen({ navigation }: any) {
           <TouchableOpacity onPress={() => handleRemove(item.id)} style={styles.removeBtn}>
             <Feather name="trash-2" size={17} color={palette.rose} />
           </TouchableOpacity>
-          <Text style={styles.lineTotal}>{Number(item.lineTotal).toFixed(0)} ₸</Text>
+          <Text style={styles.lineTotal}>{lineTotal.toFixed(0)} ₸</Text>
         </View>
       </View>
     </Animated.View>
   );
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-      <View style={[styles.header, { paddingTop: topPadding }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Feather name="chevron-left" size={22} color={palette.text} />
         </TouchableOpacity>
@@ -225,7 +250,7 @@ export default function CartScreen({ navigation }: any) {
       ) : null}
 
       {loading && cartItems.length === 0 ? (
-        <ScrollView contentContainerStyle={[styles.scrollList, { paddingTop: contentTopOffset }]}>
+        <ScrollView contentContainerStyle={styles.scrollList}>
           {skeletonRows.map((item) => (
             <View key={item} style={styles.card}>
               <SkeletonBlock width={78} height={78} borderRadius={14} />
@@ -266,7 +291,7 @@ export default function CartScreen({ navigation }: any) {
       ) : (
         <Animated.ScrollView
           entering={FadeIn.duration(260)}
-          contentContainerStyle={[styles.scrollList, { paddingTop: contentTopOffset }]}
+          contentContainerStyle={styles.scrollList}
           showsVerticalScrollIndicator={false}
         >
           {cartItems.map((item, index) => renderItem(item, index))}
@@ -296,7 +321,7 @@ export default function CartScreen({ navigation }: any) {
                     <Text style={styles.cartRecName} numberOfLines={2}>
                       {item.title}
                     </Text>
-                    <Text style={styles.cartRecPrice}>{item.price} ₸</Text>
+                    <Text style={styles.cartRecPrice}>{Number(item.price ?? 0).toFixed(0)} ₸</Text>
                   </PressCard>
                 ))}
               </ScrollView>
@@ -332,21 +357,17 @@ const styles = StyleSheet.create({
     backgroundColor: palette.background,
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    paddingTop: 6,
     paddingBottom: 12,
-    backgroundColor: 'transparent',
+    backgroundColor: palette.background,
   },
   headerBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: 'rgba(10,30,29,0.08)',
     borderWidth: 1,
@@ -393,7 +414,7 @@ const styles = StyleSheet.create({
   },
   scrollList: {
     paddingHorizontal: 14,
-    paddingTop: 0,
+    paddingTop: 4,
     paddingBottom: 190,
   },
   card: {

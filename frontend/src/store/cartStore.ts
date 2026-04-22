@@ -50,7 +50,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   addItem: async (storeId, productId, quantity = 1, optimisticItem) => {
     const previousCart = get().cart;
     set({ loading: true, error: null, storeId });
-    const currentItems = previousCart?.items ?? [];
+    const currentItems: CartItem[] = previousCart?.items ?? [];
     const existingItem = currentItems.find((item) => item.productId === productId);
 
     if (existingItem || optimisticItem) {
@@ -67,7 +67,7 @@ export const useCartStore = create<CartState>((set, get) => ({
             {
               id: `temp-${productId}`,
               productId,
-              productTitle: existingItem?.productTitle ?? optimisticItem?.productTitle ?? 'Тауар',
+              productTitle: optimisticItem?.productTitle ?? 'Тауар',
               price: Number(optimisticItem?.price ?? 0),
               imageUrl: optimisticItem?.imageUrl ?? null,
               quantity,

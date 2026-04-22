@@ -1,4 +1,4 @@
-export type Role = 'ROLE_USER' | 'ROLE_ADMIN' | 'USER' | 'ADMIN';
+export type Role = 'ROLE_USER' | 'ROLE_MERCHANT' | 'ROLE_ADMIN' | 'USER' | 'MERCHANT' | 'ADMIN';
 
 export type LoginRequest = {
   email: string;

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { config } from '../config/env';
 
@@ -5,6 +6,16 @@ import { config } from '../config/env';
 const aiClient = axios.create({
   baseURL: config.AI_URL,
   timeout: 30000, // AI responses may take longer
+});
+
+// Attach the same JWT token that is used for the Spring Boot API so that
+// the AI service can verify the caller's identity.
+aiClient.interceptors.request.use(async (reqConfig) => {
+  const token = await AsyncStorage.getItem('auth:accessToken');
+  if (token) {
+    reqConfig.headers.Authorization = `Bearer ${token}`;
+  }
+  return reqConfig;
 });
 
 // ── Recommendation Types ──

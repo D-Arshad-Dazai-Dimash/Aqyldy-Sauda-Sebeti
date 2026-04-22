@@ -78,10 +78,10 @@ describe('cartStore optimistic updates', () => {
   });
 
   it('sets loading=true immediately while addItem request is in flight', async () => {
-    let resolveFn: ((value: any) => void) | null = null;
+    let resolveFn!: (value: any) => void;
     (CartApi.addToCart as jest.Mock).mockImplementation(
       () => new Promise((resolve) => {
-        resolveFn = resolve;
+        resolveFn = resolve as (value: any) => void;
       }),
     );
 
@@ -92,7 +92,7 @@ describe('cartStore optimistic updates', () => {
 
     expect(useCartStore.getState().loading).toBe(true);
 
-    resolveFn?.({
+    resolveFn({
       id: 'cart-1',
       items: [
         {

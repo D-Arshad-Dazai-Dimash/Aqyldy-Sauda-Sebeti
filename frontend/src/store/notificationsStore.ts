@@ -1,6 +1,11 @@
 import { create } from 'zustand';
+import axios from 'axios';
 import * as NotificationsApi from '../api/notifications';
 import type { NotificationResponse } from '../types/api';
+
+function isNotFound(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404;
+}
 
 type NotificationsState = {
   notifications: NotificationResponse[];
@@ -29,6 +34,11 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       const data = await NotificationsApi.getNotifications(limit, offset);
       set({ notifications: data.content, isLoading: false });
     } catch (error) {
+      if (isNotFound(error)) {
+        // Backend does not implement notifications endpoints yet.
+        set({ notifications: [], unreadCount: 0, isLoading: false, error: null });
+        return;
+      }
       console.warn('Failed to fetch notifications:', error);
       set({ error: 'Не удалось загрузить уведомления', isLoading: false });
     }
@@ -39,6 +49,10 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       const count = await NotificationsApi.getUnreadCount();
       set({ unreadCount: count });
     } catch (error) {
+      if (isNotFound(error)) {
+        set({ unreadCount: 0, error: null });
+        return;
+      }
       console.warn('Failed to fetch unread count:', error);
     }
   },
@@ -53,6 +67,9 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
         unreadCount: Math.max(0, state.unreadCount - 1),
       }));
     } catch (error) {
+      if (isNotFound(error)) {
+        return;
+      }
       console.warn('Failed to mark notification as read:', error);
       set({ error: 'Не удалось обновить уведомление' });
     }
@@ -66,6 +83,9 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
         unreadCount: 0,
       }));
     } catch (error) {
+      if (isNotFound(error)) {
+        return;
+      }
       console.warn('Failed to mark all as read:', error);
       set({ error: 'Не удалось обновить уведомления' });
     }
@@ -81,6 +101,9 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
           : state.unreadCount,
       }));
     } catch (error) {
+      if (isNotFound(error)) {
+        return;
+      }
       console.warn('Failed to delete notification:', error);
       set({ error: 'Не удалось удалить уведомление' });
     }
@@ -91,6 +114,9 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       await NotificationsApi.deleteAllNotifications();
       set({ notifications: [], unreadCount: 0 });
     } catch (error) {
+      if (isNotFound(error)) {
+        return;
+      }
       console.warn('Failed to delete all notifications:', error);
       set({ error: 'Не удалось удалить уведомления' });
     }

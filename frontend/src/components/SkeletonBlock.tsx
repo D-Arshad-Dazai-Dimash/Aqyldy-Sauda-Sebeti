@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, type ViewStyle } from 'react-native';
+import { View, StyleSheet, type DimensionValue, type ViewStyle } from 'react-native';
 
 type Props = {
-  width?: number | string;
+  width?: DimensionValue;
   height: number;
   borderRadius?: number;
   style?: ViewStyle;

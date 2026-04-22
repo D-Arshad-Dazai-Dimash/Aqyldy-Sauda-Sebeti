@@ -1,10 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
+import { config } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: config.API_URL,
   timeout: 15000,
 });
 
@@ -27,7 +27,7 @@ api.interceptors.response.use(
       const refreshToken = await AsyncStorage.getItem('auth:refreshToken');
       if (refreshToken) {
         try {
-          const res = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { refreshToken });
+          const res = await axios.post(`${config.API_URL}/api/auth/refresh`, { refreshToken });
           const newToken = res.data.accessToken;
           await AsyncStorage.setItem('auth:accessToken', newToken);
           useAuthStore.getState().setAccessToken(newToken);

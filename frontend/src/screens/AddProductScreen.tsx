@@ -150,7 +150,7 @@ export default function AddProductScreen({ route, navigation }: any) {
               photoError = error.response?.data?.message || error.message;
               if (i < 2) {
                 // Wait before retry
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
               }
             }
           }

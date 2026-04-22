@@ -2,9 +2,11 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { View, ActivityIndicator, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useAuthStore } from '../store/authStore';
+import type { AuthStackParamList, BusinessTabParamList, MainTabParamList, RootStackParamList } from '../types/navigation';
 
 // Экрандарды импорттау
 import LoginScreen from '../screens/LoginScreen';
@@ -42,8 +44,10 @@ import SmartShoppingScreen from '../screens/SmartShoppingScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import { authenticateWithBiometric, canUseBiometricUnlock, verifyAppPin } from '../utils/appPin';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const BusinessTab = createBottomTabNavigator<BusinessTabParamList>();
 
 const linking = {
   prefixes: ['aqyldysebet://'],
@@ -55,7 +59,7 @@ const linking = {
 };
 
 // Сканер батырмасының дизайны (ортадағы дөңгелек)
-const ScanButton = ({ children, onPress }: any) => (
+const ScanButton = ({ children, onPress }: BottomTabBarButtonProps) => (
   <TouchableOpacity style={styles.scanButtonContainer} onPress={onPress} activeOpacity={0.8}>
     <View style={styles.scanButtonInner}>{children}</View>
   </TouchableOpacity>
@@ -64,14 +68,14 @@ const ScanButton = ({ children, onPress }: any) => (
 // --- БИЗНЕС МӘЗІРІ ---
 function BusinessTabs() {
   return (
-    <Tab.Navigator
+    <BusinessTab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: styles.businessTabBar,
       }}
     >
-      <Tab.Screen 
+      <BusinessTab.Screen 
         name="BusinessHome" 
         component={BusinessDashboard} 
         options={{
@@ -80,7 +84,7 @@ function BusinessTabs() {
           ),
         }}
       />
-      <Tab.Screen 
+      <BusinessTab.Screen 
         name="BusinessInventory" 
         component={BusinessInventoryScreen}
         initialParams={{ initialTab: 'inStock' }}
@@ -90,7 +94,7 @@ function BusinessTabs() {
           ),
         }}
       />
-      <Tab.Screen 
+      <BusinessTab.Screen 
         name="BusinessScan" 
         component={ScanScreen} 
         initialParams={{ mode: 'business' }}
@@ -99,7 +103,7 @@ function BusinessTabs() {
           tabBarButton: (props) => <ScanButton {...props} />
         }} 
       />
-      <Tab.Screen 
+      <BusinessTab.Screen 
         name="BusinessSearch" 
         component={SearchScreen} 
         options={{
@@ -108,7 +112,7 @@ function BusinessTabs() {
           ),
         }} 
       />
-      <Tab.Screen
+      <BusinessTab.Screen
         name="BusinessOrders"
         component={BusinessOrdersScreen}
         options={{
@@ -117,7 +121,16 @@ function BusinessTabs() {
           ),
         }}
       />
-    </Tab.Navigator>
+      <BusinessTab.Screen
+        name="BusinessProfile"
+        component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <Feather name="user" size={25} color={focused ? '#0EA5E9' : '#CBD5E1'} />
+          ),
+        }}
+      />
+    </BusinessTab.Navigator>
   );
 }
 
@@ -156,8 +169,8 @@ function MainTabs() {
 // --- НЕГІЗГІ СТЕК ---
 function AppStack() {
   const role = useAuthStore((s) => s.role);
-  const isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
-  const initialRoute = isAdmin ? 'BusinessMain' : 'Main';
+  const isBusiness = role === 'ADMIN' || role === 'ROLE_ADMIN' || role === 'MERCHANT' || role === 'ROLE_MERCHANT';
+  const initialRoute = isBusiness ? 'BusinessMain' : 'Main';
 
   return (
     <Stack.Navigator
@@ -243,13 +256,13 @@ export default function RootNavigation() {
   return (
     <NavigationContainer linking={linking}>
       {token ? <AppStack /> : (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="BusinessRegister" component={BusinessRegisterScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        </Stack.Navigator>
+        <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+          <AuthStack.Screen name="Login" component={LoginScreen} />
+          <AuthStack.Screen name="Register" component={RegisterScreen} />
+          <AuthStack.Screen name="BusinessRegister" component={BusinessRegisterScreen} />
+          <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        </AuthStack.Navigator>
       )}
     </NavigationContainer>
   );

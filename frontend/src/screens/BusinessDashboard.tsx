@@ -6,15 +6,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { api } from '../api/client';
+import { getBusinessAnalytics } from '../api/businessAnalytics';
 import { useLanguageStore } from '../store/languageStore';
 
 export default function BusinessDashboard({ navigation }: any) {
   const language = useLanguageStore((s) => s.language);
   const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, outOfStock: 0 });
+  const [analytics, setAnalytics] = useState<{ totalRevenue: number; totalOrders: number } | null>(null);
   const [userName, setUserName] = useState('');
 
   const t = language === 'kk'
@@ -36,9 +38,29 @@ export default function BusinessDashboard({ navigation }: any) {
   // Базадан нақты мәліметтерді алу
   const fetchBusinessData = async () => {
     try {
-      const res = await api.get('/api/admin/products', { params: { size: 20 } });
-      const content = res.data?.content || res.data || [];
+      const storesRes = await api.get('/api/stores/my');
+      const stores = Array.isArray(storesRes.data) ? storesRes.data : [];
+      const primaryStore = stores[0];
+
+      if (!primaryStore?.id) {
+        setProducts([]);
+        setStats({ total: 0, outOfStock: 0 });
+        setAnalytics(null);
+        setError(null);
+        return;
+      }
+
+      const [inventoryRes, analyticsRes] = await Promise.all([
+        api.get('/api/admin/inventory', { params: { storeId: primaryStore.id } }),
+        getBusinessAnalytics('MONTH'),
+      ]);
+
+      const content = Array.isArray(inventoryRes.data) ? inventoryRes.data : [];
       setProducts(Array.isArray(content) ? content : []);
+      setAnalytics({
+        totalRevenue: analyticsRes.totalRevenue,
+        totalOrders: analyticsRes.totalOrders,
+      });
       setError(null);
       const outOfStockCount = (Array.isArray(content) ? content : [])
         .filter((p: any) => (p.stock || p.quantity || 0) === 0).length;
@@ -69,15 +91,15 @@ export default function BusinessDashboard({ navigation }: any) {
         resizeMode="contain"
       />
       <View style={styles.productInfo}>
-        <Text style={styles.productName}>{item.title}</Text>
-        <Text style={styles.productCode}>ID: {item.id}</Text>
-        <Text style={styles.productBarcode}>Barcode: {item.barcode}</Text>
+        <Text style={styles.productName}>{item.productTitle || item.title}</Text>
+        <Text style={styles.productCode}>ID: {item.productId || item.id}</Text>
+        <Text style={styles.productBarcode}>Barcode: {item.barcode || '-'}</Text>
       </View>
       <View style={styles.priceContainer}>
         <Text style={styles.priceText}>{item.price} ₸</Text>
       </View>
       <View style={styles.stockContainer}>
-        <Text style={styles.stockLabel}>Қоймада: {item.stock}</Text>
+        <Text style={styles.stockLabel}>Қоймада: {item.quantity ?? item.stock ?? 0}</Text>
       </View>
     </View>
   );
@@ -126,6 +148,14 @@ export default function BusinessDashboard({ navigation }: any) {
           </View>
         </View>
 
+        {analytics && (
+          <View style={styles.analyticsCard}>
+            <Text style={styles.analyticsTitle}>Айлық аналитика</Text>
+            <Text style={styles.analyticsText}>Тапсырыстар: {analytics.totalOrders}</Text>
+            <Text style={styles.analyticsText}>Түсім: {analytics.totalRevenue.toFixed(0)} ₸</Text>
+          </View>
+        )}
+
         {/* 3. ADD BUTTON - Камераны ашады */}
         <TouchableOpacity 
           style={styles.addButton}
@@ -149,7 +179,7 @@ export default function BusinessDashboard({ navigation }: any) {
               </TouchableOpacity>
             </View>
           ) : (
-            products.map((item: any) => <ProductItem key={item.id} item={item} />)
+            products.map((item: any) => <ProductItem key={item.productId || item.id} item={item} />)
           )}
           <TouchableOpacity onPress={() => navigation.navigate('BusinessInventory')}>
             <Text style={styles.seeAllText}>барлық өнімдер →</Text>
@@ -269,5 +299,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  retryText: { color: '#FFFFFF', fontWeight: '700' }
+  retryText: { color: '#FFFFFF', fontWeight: '700' },
+  analyticsCard: {
+    backgroundColor: '#E2F8F5',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 20,
+  },
+  analyticsTitle: { color: '#0F766E', fontWeight: '800', marginBottom: 6, fontSize: 14 },
+  analyticsText: { color: '#115E59', fontWeight: '700', fontSize: 13 },
 });

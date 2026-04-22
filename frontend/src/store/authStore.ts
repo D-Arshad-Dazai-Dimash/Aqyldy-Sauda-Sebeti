@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import type { Role } from '../types/auth';
+import type { User } from '../types/api';
 import * as AuthApi from '../api/auth';
 import { useFavoritesStore } from './favoritesStore';
 import { changeAppPin, clearAppPin, hasAppPin, setupAppPin } from '../utils/appPin';
@@ -9,7 +10,7 @@ type AuthState = {
   accessToken: string | null;
   refreshToken: string | null;
   role: Role | null;
-  user: any | null;
+  user: User | null;
   isBootstrapping: boolean;
   isPinVerified: boolean;
   requiresPinSetup: boolean;
@@ -24,7 +25,7 @@ type AuthState = {
   }) => Promise<void>;
   logout: () => Promise<void>;
   setAccessToken: (token: string) => void;
-  setUser: (user: any | null) => void;
+  setUser: (user: User | null) => void;
   setPinVerified: (verified: boolean) => void;
   setupPin: (pin: string) => Promise<void>;
   changePin: (currentPin: string, nextPin: string) => Promise<boolean>;
@@ -44,7 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   requiresPinSetup: false,
 
   setAccessToken: (token: string) => set({ accessToken: token }),
-  setUser: (user: any | null) => set({ user }),
+  setUser: (user: User | null) => set({ user }),
   setPinVerified: (verified: boolean) => set({ isPinVerified: verified }),
 
   setupPin: async (pin: string) => {
