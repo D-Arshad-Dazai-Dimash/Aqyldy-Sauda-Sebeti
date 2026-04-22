@@ -1,5 +1,8 @@
 package com.darshad.project.order;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -15,20 +18,22 @@ import java.util.UUID;
 /**
  * B5: Admin endpoints for moving an order through its lifecycle.
  *
- * Mounted under {@code /api/admin/orders} so the existing
- * {@code /api/admin/**} security rule (hasRole('ADMIN')) applies. The
+ * Mounted under {@code /api/admin/orders} for business operations.
  * @PreAuthorize is repeated as a defence-in-depth.
  */
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','MERCHANT')")
 @RestController
 @RequestMapping("/api/admin/orders")
 @RequiredArgsConstructor
+@Tag(name = "Admin Orders", description = "Merchant/admin order operations")
+@SecurityRequirement(name = "bearerAuth")
 public class OrderAdminController {
 
     private final OrderService orderService;
 
     /** ТЗ-11: paginated list of orders in the merchant's stores. */
     @GetMapping
+    @Operation(summary = "List merchant orders", description = "Returns paginated list of orders for admin/merchant stores.")
     public Page<OrderResponse> listOrders(
             Authentication auth,
             @RequestParam(required = false) OrderStatus status,
@@ -39,16 +44,19 @@ public class OrderAdminController {
 
     /** ТЗ-11: full detail for any order (admin/merchant). */
     @GetMapping("/{id}")
-    public OrderDetailResponse getOrderDetail(@PathVariable UUID id) {
-        return orderService.getOrderDetailAdmin(id);
+    @Operation(summary = "Get order detail (admin)", description = "Returns full order details for admin/merchant view.")
+    public OrderDetailResponse getOrderDetail(Authentication auth, @PathVariable UUID id) {
+        return orderService.getOrderDetailForActor(auth.getName(), id);
     }
 
     @PatchMapping("/{id}/status")
+    @Operation(summary = "Update order status", description = "Moves order through allowed lifecycle transitions.")
     public OrderResponse updateStatus(
+            Authentication auth,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateOrderStatusRequest req
     ) {
-        return orderService.updateStatus(id, req.status());
+        return orderService.updateStatusForActor(auth.getName(), id, req.status());
     }
 
     public record UpdateOrderStatusRequest(@NotNull OrderStatus status) {}

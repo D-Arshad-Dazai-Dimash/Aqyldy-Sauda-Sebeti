@@ -8,6 +8,7 @@ Strategies (cascading fallback):
 """
 
 import logging
+import time
 from collections import defaultdict
 
 import numpy as np
@@ -18,9 +19,20 @@ from models.schemas import ProductRecommendation
 
 logger = logging.getLogger(__name__)
 
+_CO_OCCURRENCE_CACHE_TTL_SECONDS = 120
+_co_occurrence_cache: tuple[float, dict[str, dict[str, int]]] | None = None
+
 
 def _build_co_occurrence_matrix(db: Session) -> dict[str, dict[str, int]]:
     """Build product co-occurrence matrix from order history."""
+    global _co_occurrence_cache
+
+    now = time.monotonic()
+    if _co_occurrence_cache is not None:
+                ts, cached_matrix = _co_occurrence_cache
+                if now - ts < _CO_OCCURRENCE_CACHE_TTL_SECONDS:
+                        return cached_matrix
+
     rows = db.execute(
         text("""
             SELECT oi1.product_id AS p1, oi2.product_id AS p2, COUNT(*) AS cnt
@@ -34,6 +46,8 @@ def _build_co_occurrence_matrix(db: Session) -> dict[str, dict[str, int]]:
     matrix: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for p1, p2, cnt in rows:
         matrix[str(p1)][str(p2)] = cnt
+
+    _co_occurrence_cache = (now, matrix)
     return matrix
 
 

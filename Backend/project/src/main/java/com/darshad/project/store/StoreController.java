@@ -3,6 +3,8 @@ package com.darshad.project.store;
 import com.darshad.project.store.dto.InventoryResponse;
 import com.darshad.project.store.dto.StoreResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +36,17 @@ public class StoreController {
     @GetMapping("/{id}/products")
     public List<InventoryResponse> getProducts(@PathVariable UUID id) {
         return storeService.getStoreProducts(id);
+    }
+
+    @GetMapping("/{id}/products/page")
+    public Page<InventoryResponse> getProductsPaged(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "false") boolean inStock,
+            @RequestParam(defaultValue = "titleAsc") String sort,
+            Pageable pageable
+    ) {
+        return storeService.getStoreProductsPaged(id, q, inStock, sort, pageable);
     }
 
     /** ТЗ-14: returns stores owned by the current authenticated merchant. */

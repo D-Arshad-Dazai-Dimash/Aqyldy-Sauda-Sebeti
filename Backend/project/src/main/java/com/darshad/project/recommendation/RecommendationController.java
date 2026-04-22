@@ -26,6 +26,7 @@ public class RecommendationController {
     }
 
     /** Personalized recommendations based on the user's purchase history. */
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/personal")
     public List<RecommendedProductDto> personalizedForUser(
             Authentication auth,

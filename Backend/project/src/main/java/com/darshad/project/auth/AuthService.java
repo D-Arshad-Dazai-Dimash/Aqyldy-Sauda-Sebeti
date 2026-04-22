@@ -134,39 +134,12 @@ public class AuthService {
             throw new IllegalArgumentException("Password too short");
         }
 
-        // SECURITY TODO (tracked, do not silently change without coordinating
-        // with the frontend team):
-        //
-        // Today /api/auth/register/business unconditionally grants Role.ADMIN
-        // to whoever submits the form. That role currently gates the global
-        // /api/admin/** endpoints, which means a self-registered "merchant"
-        // can edit/delete ANY product in the catalog, not just products in
-        // their own store.
-        //
-        // Proper fix (out of scope for this PR — requires frontend changes):
-        //   1. Add Role.MERCHANT.
-        //   2. registerBusiness assigns MERCHANT, not ADMIN.
-        //   3. SecurityConfig:
-        //        /api/admin/products/**  -> hasAnyRole('ADMIN','MERCHANT')
-        //        /api/admin/**           -> hasRole('ADMIN')   (true admins only)
-        //   4. CatalogAdminController.update/delete: if caller is MERCHANT,
-        //      verify the product belongs to a store the caller owns.
-        //   5. navigation.tsx: route MERCHANT (in addition to ADMIN) to the
-        //      business tabs.
-        //
-        // Until that lands, business registration should ideally require an
-        // out-of-band approval step (BIN verification, manual admin approval,
-        // or invite codes). Logging the assignment loudly so it shows up in
-        // any post-incident review.
-        log.warn("⚠ SECURITY: granting Role.ADMIN to self-registered business user — email={}, store={}",
-                email, req.storeName());
-
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(req.password()))
                 .name(req.name() != null ? req.name().trim() : null)
                 .phone(req.phone())
-                .role(Role.ADMIN)
+            .role(Role.MERCHANT)
                 .enabled(true)
                 .build();
 

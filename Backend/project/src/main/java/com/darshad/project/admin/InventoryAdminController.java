@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +18,7 @@ import java.util.UUID;
  * POST /api/admin/inventory            — set absolute quantity for a product in a store
  *                                        (creates row if missing, updates if exists)
  */
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','MERCHANT')")
 @RestController
 @RequestMapping("/api/admin/inventory")
 @RequiredArgsConstructor
@@ -26,13 +27,13 @@ public class InventoryAdminController {
     private final InventoryAdminService inventoryAdminService;
 
     @GetMapping
-    public List<InventoryItemResponse> getInventory(@RequestParam UUID storeId) {
-        return inventoryAdminService.getInventory(storeId);
+    public List<InventoryItemResponse> getInventory(Authentication auth, @RequestParam UUID storeId) {
+        return inventoryAdminService.getInventory(auth.getName(), storeId);
     }
 
     @PostMapping
-    public InventoryItemResponse upsert(@Valid @RequestBody UpsertInventoryRequest req) {
-        return inventoryAdminService.upsertInventory(req.storeId(), req.productId(), req.quantity());
+    public InventoryItemResponse upsert(Authentication auth, @Valid @RequestBody UpsertInventoryRequest req) {
+        return inventoryAdminService.upsertInventory(auth.getName(), req.storeId(), req.productId(), req.quantity());
     }
 
     public record UpsertInventoryRequest(

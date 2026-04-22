@@ -30,6 +30,8 @@ services:
       DB_USER: aqsa
       DB_PASS: aqyldysebet123
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Must match Spring Boot's app.jwt.secret / JWT_SECRET env var
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-at-least-32-chars-long!!}
     depends_on:
       db:
         condition: service_healthy

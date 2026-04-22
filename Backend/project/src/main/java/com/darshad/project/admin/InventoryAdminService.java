@@ -5,9 +5,12 @@ import com.darshad.project.store.InventoryId;
 import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.StoreRepository;
 import com.darshad.project.store.dto.Inventory;
+import com.darshad.project.user.Role;
+import com.darshad.project.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +26,13 @@ public class InventoryAdminService {
     private final InventoryRepository inventoryRepo;
     private final StoreRepository storeRepo;
     private final ProductRepository productRepo;
+        private final UserRepository userRepo;
 
     /** ТЗ-12: list all inventory rows for a store. */
     @Transactional(readOnly = true)
-    public List<InventoryItemResponse> getInventory(UUID storeId) {
+        public List<InventoryItemResponse> getInventory(String email, UUID storeId) {
         log.debug("▶ admin getInventory: storeId={}", storeId);
+                assertCanManageStore(email, storeId);
         storeRepo.findById(storeId)
                 .orElseThrow(() -> new IllegalStateException("Store not found"));
 
@@ -46,8 +51,9 @@ public class InventoryAdminService {
      * Creates the row if it doesn't exist yet, updates quantity otherwise.
      */
     @Transactional
-    public InventoryItemResponse upsertInventory(UUID storeId, UUID productId, int quantity) {
+        public InventoryItemResponse upsertInventory(String email, UUID storeId, UUID productId, int quantity) {
         log.info("▶ admin upsertInventory: storeId={}, productId={}, qty={}", storeId, productId, quantity);
+                assertCanManageStore(email, storeId);
 
         if (quantity < 0) {
             throw new IllegalArgumentException("quantity must be >= 0");
@@ -77,4 +83,20 @@ public class InventoryAdminService {
                 product.getPrice(), product.getImageUrl(), quantity
         );
     }
+
+        private void assertCanManageStore(String email, UUID storeId) {
+                var user = userRepo.findByEmail(email)
+                                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+                if (user.getRole() == Role.ADMIN) {
+                        return;
+                }
+
+                var store = storeRepo.findById(storeId)
+                                .orElseThrow(() -> new IllegalStateException("Store not found"));
+
+                if (store.getOwnerId() == null || !store.getOwnerId().equals(user.getId())) {
+                        throw new AccessDeniedException("You do not have access to this store");
+                }
+        }
 }

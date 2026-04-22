@@ -25,6 +25,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     @EntityGraph(attributePaths = {"product"})
     List<Inventory> findWithProductByStore_Id(UUID storeId);
 
+    boolean existsByStore_OwnerIdAndProduct_Id(UUID ownerId, UUID productId);
+
     /**
      * Acquires a row-level write lock on the inventory row before reading it.
      * Prevents two concurrent checkouts from selling the same last unit

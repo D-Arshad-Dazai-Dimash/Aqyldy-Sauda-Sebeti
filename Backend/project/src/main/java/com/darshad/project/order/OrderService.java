@@ -2,10 +2,14 @@ package com.darshad.project.order;
 
 import com.darshad.project.cart.CartRepository;
 import com.darshad.project.catalog.product.ProductRepository;
+import com.darshad.project.notification.NotificationService;
+import com.darshad.project.notification.NotificationType;
 import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.Store;
 import com.darshad.project.store.StoreRepository;
+import com.darshad.project.user.Role;
 import com.darshad.project.user.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import jakarta.persistence.EntityManager;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +36,7 @@ public class OrderService {
     private final UserRepository userRepo;
     private final InventoryRepository inventoryRepo;
     private final StoreRepository storeRepo;
+        private final NotificationService notificationService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -143,6 +149,23 @@ public class OrderService {
 
         cart.getItems().clear();
 
+        // Notification failures must not break successful checkout.
+        try {
+            notificationService.createForUserId(
+                    user.getId(),
+                    NotificationType.ORDER,
+                    "Заказ принят",
+                    "Ваш заказ создан и ожидает подтверждения магазина.",
+                    Map.of(
+                            "orderId", order.getId().toString(),
+                            "status", order.getStatus().name(),
+                            "totalAmount", order.getTotalAmount()
+                    )
+            );
+        } catch (Exception ex) {
+            log.warn("Notification create failed after checkout: orderId={}", order.getId(), ex);
+        }
+
         return new OrderResponse(
                 order.getId(),
                 storeId,
@@ -253,6 +276,22 @@ public class OrderService {
         order.setStatus(next);
         log.info("✓ order status updated: orderId={}, {} → {}", orderId, current, next);
 
+                try {
+                        notificationService.createForUserId(
+                                        order.getUser().getId(),
+                                        NotificationType.ORDER,
+                                        "Статус заказа обновлен",
+                                        "Заказ " + orderId.toString().substring(0, 8).toUpperCase() + " теперь в статусе: " + next.name(),
+                                        Map.of(
+                                                        "orderId", orderId.toString(),
+                                                        "previousStatus", current.name(),
+                                                        "status", next.name()
+                                        )
+                        );
+                } catch (Exception ex) {
+                        log.warn("Notification create failed after status update: orderId={}", orderId, ex);
+                }
+
         return toOrderResponse(order);
     }
 
@@ -283,6 +322,21 @@ public class OrderService {
         returnStockForCancellation(order);
         order.setStatus(OrderStatus.CANCELLED);
         log.info("✓ user cancelled order: orderId={}, email={}", orderId, email);
+
+                try {
+                        notificationService.createForUserId(
+                                        user.getId(),
+                                        NotificationType.ORDER,
+                                        "Заказ отменен",
+                                        "Вы отменили заказ " + orderId.toString().substring(0, 8).toUpperCase() + ".",
+                                        Map.of(
+                                                        "orderId", orderId.toString(),
+                                                        "status", OrderStatus.CANCELLED.name()
+                                        )
+                        );
+                } catch (Exception ex) {
+                        log.warn("Notification create failed after user cancel: orderId={}", orderId, ex);
+                }
 
         return toOrderResponse(order);
     }
@@ -343,28 +397,39 @@ public class OrderService {
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
 
-        var storeIds = storeRepo.findByOwnerId(user.getId())
-                .stream().map(Store::getId).toList();
+                if (user.getRole() == Role.ADMIN) {
+                        if (status == null) {
+                                return orderRepo.findAll(pageable).map(this::toOrderResponse);
+                        }
+                        return orderRepo.findByStatus(status, pageable).map(this::toOrderResponse);
+                }
 
-        if (storeIds.isEmpty()) {
-            log.debug("  merchant has no stores — returning empty page");
-            return Page.empty(pageable);
-        }
+                var storeIds = storeRepo.findByOwnerId(user.getId())
+                                .stream().map(Store::getId).toList();
 
-        return orderRepo.findByStoreIdInAndStatusOptional(storeIds, status, pageable)
-                .map(this::toOrderResponse);
+                if (storeIds.isEmpty()) {
+                        log.debug("  merchant has no stores — returning empty page");
+                        return Page.empty(pageable);
+                }
+
+                return orderRepo.findByStoreIdInAndStatusOptional(storeIds, status, pageable)
+                                .map(this::toOrderResponse);
     }
 
     /**
-     * Returns full order detail for any order (admin/merchant view — no ownership check
-     * on the caller; the controller is behind hasRole('ADMIN')).
+     * Returns full order detail for admin/merchant with ownership checks for merchants.
      */
     @Transactional(readOnly = true)
-    public OrderDetailResponse getOrderDetailAdmin(java.util.UUID orderId) {
-        log.debug("▶ getOrderDetailAdmin: orderId={}", orderId);
+    public OrderDetailResponse getOrderDetailForActor(String email, java.util.UUID orderId) {
+        log.debug("▶ getOrderDetailForActor: email={}, orderId={}", email, orderId);
+
+        var actor = userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
 
         var order = orderRepo.findByIdWithItems(orderId)
                 .orElseThrow(() -> new IllegalStateException("Order not found"));
+
+        assertCanManageOrder(actor.getRole(), actor.getId(), order);
 
         var items = order.getItems().stream().map(item -> {
             var p = item.getProduct();
@@ -386,4 +451,27 @@ public class OrderService {
                 items
         );
     }
+
+        @Transactional
+        public OrderResponse updateStatusForActor(String email, java.util.UUID orderId, OrderStatus next) {
+                var actor = userRepo.findByEmail(email)
+                                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+                var order = orderRepo.findByIdWithItems(orderId)
+                                .orElseThrow(() -> new IllegalStateException("Order not found"));
+
+                assertCanManageOrder(actor.getRole(), actor.getId(), order);
+                return updateStatus(orderId, next);
+        }
+
+        private void assertCanManageOrder(Role role, java.util.UUID actorUserId, Order order) {
+                if (role == Role.ADMIN) {
+                        return;
+                }
+
+                if (order.getStore() == null || order.getStore().getOwnerId() == null
+                                || !order.getStore().getOwnerId().equals(actorUserId)) {
+                        throw new AccessDeniedException("You do not have access to this order");
+                }
+        }
 }

@@ -6,9 +6,14 @@ import com.darshad.project.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Comparator;
 import java.util.UUID;
 
 @Service
@@ -121,4 +126,52 @@ public class StoreService {
         log.debug("  store={}, available products={}", store.getName(), items.size());
         return items;
     }
+
+        public Page<InventoryResponse> getStoreProductsPaged(
+                        UUID storeId,
+                        String query,
+                        boolean inStock,
+                        String sort,
+                        Pageable pageable
+        ) {
+                var store = storeRepository.findById(storeId)
+                                .orElseThrow(() -> new IllegalStateException("Store not found"));
+
+                if (!store.isActive()) {
+                        throw new IllegalStateException("Store inactive");
+                }
+
+                String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+
+                List<InventoryResponse> filtered = inventoryRepository.findWithProductByStore_Id(storeId)
+                                .stream()
+                                .filter(inv -> !inStock || inv.getQuantity() > 0)
+                                .filter(inv -> normalizedQuery.isEmpty() || inv.getProduct().getTitle().toLowerCase(Locale.ROOT).contains(normalizedQuery))
+                                .map(inv -> new InventoryResponse(
+                                                inv.getProduct().getId(),
+                                                inv.getProduct().getTitle(),
+                                                inv.getProduct().getPrice(),
+                                                inv.getProduct().getImageUrl(),
+                                                inv.getQuantity()
+                                ))
+                                .sorted(resolveSort(sort))
+                                .toList();
+
+                int total = filtered.size();
+                int start = (int) pageable.getOffset();
+                int end = Math.min(start + pageable.getPageSize(), total);
+                List<InventoryResponse> content = start >= total ? List.of() : filtered.subList(start, end);
+
+                return new PageImpl<>(content, pageable, total);
+        }
+
+        private Comparator<InventoryResponse> resolveSort(String sort) {
+                if ("priceAsc".equalsIgnoreCase(sort)) {
+                        return Comparator.comparing(InventoryResponse::price);
+                }
+                if ("priceDesc".equalsIgnoreCase(sort)) {
+                        return Comparator.comparing(InventoryResponse::price).reversed();
+                }
+                return Comparator.comparing(item -> item.productTitle() == null ? "" : item.productTitle(), String.CASE_INSENSITIVE_ORDER);
+        }
 }

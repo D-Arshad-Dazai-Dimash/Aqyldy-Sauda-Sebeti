@@ -2,8 +2,11 @@ package com.darshad.project.admin;
 
 import com.darshad.project.order.OrderRepository;
 import com.darshad.project.store.StoreRepository;
+import com.darshad.project.user.Role;
+import com.darshad.project.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,7 @@ public class StatsService {
 
     private final OrderRepository orderRepo;
     private final StoreRepository storeRepo;
+    private final UserRepository userRepo;
 
     /** ТЗ-13: revenue + order count + top products + daily breakdown. */
     @Transactional(readOnly = true)
@@ -40,5 +44,21 @@ public class StatsService {
         List<RevenueByDayRow> revenueByDay = orderRepo.findRevenueByDay(storeId, from, to);
 
         return new StatsResponse(totalRevenue, ordersCount, topProducts, revenueByDay);
+    }
+
+    @Transactional(readOnly = true)
+    public StatsResponse getStatsForActor(String email, UUID storeId, LocalDate from, LocalDate to) {
+        var user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+
+        if (user.getRole() != Role.ADMIN) {
+            var store = storeRepo.findById(storeId)
+                    .orElseThrow(() -> new IllegalStateException("Store not found"));
+            if (store.getOwnerId() == null || !store.getOwnerId().equals(user.getId())) {
+                throw new AccessDeniedException("You do not have access to this store");
+            }
+        }
+
+        return getStats(storeId, from, to);
     }
 }

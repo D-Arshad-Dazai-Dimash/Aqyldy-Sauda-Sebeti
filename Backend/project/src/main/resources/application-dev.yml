@@ -50,5 +50,12 @@ logging:
 springdoc:
   swagger-ui:
     path: /swagger
+    display-request-duration: true
+    doc-expansion: none
+    operations-sorter: alpha
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+    persist-authorization: true
   api-docs:
     path: /api-docs

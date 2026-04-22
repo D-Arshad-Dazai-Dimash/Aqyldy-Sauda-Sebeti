@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
 
+    # JWT — must match Spring Boot's app.jwt.secret
+    jwt_secret: str = "dev-secret-at-least-32-chars-long!!"
+    jwt_algorithm: str = "HS256"
+
     # Service
     host: str = "0.0.0.0"
     port: int = 8000
