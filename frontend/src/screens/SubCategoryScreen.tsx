@@ -109,7 +109,10 @@ export default function SubCategoryScreen({ route, navigation }: any) {
           <Animated.View entering={FadeInDown.delay(160 + index * 40).springify().damping(14)}>
             <PressCard
               style={styles.gridCard}
-              onPress={() => navigation.navigate('ProductList', { subCategoryName: item, categoryId })}
+              onPress={() => navigation.navigate('ProductList', {
+                subCategoryName: item,
+                categorySlug: category.slug,
+              })}
             >
               <View style={[styles.imagePlaceholder, { backgroundColor: CARD_ACCENTS[index % CARD_ACCENTS.length] }]}>
                 <Feather name="package" size={34} color={P.teal} />

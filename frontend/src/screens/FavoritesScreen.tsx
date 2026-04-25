@@ -132,7 +132,7 @@ export default function FavoritesScreen({ navigation }: any) {
           <Text style={styles.emptyText}>Таңдаулылар тізімі бос</Text>
           <TouchableOpacity
             style={styles.browseButton}
-            onPress={() => navigation.navigate('Categories')}
+            onPress={() => navigation.navigate('Main', { screen: 'Categories' })}
           >
             <Text style={styles.browseButtonText}>Сатып алуға көшу</Text>
           </TouchableOpacity>

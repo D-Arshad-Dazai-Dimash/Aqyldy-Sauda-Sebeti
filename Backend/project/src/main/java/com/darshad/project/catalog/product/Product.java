@@ -1,6 +1,7 @@
 package com.darshad.project.catalog.product;
 
 import com.darshad.project.catalog.category.Category;
+import com.darshad.project.catalog.category.Subcategory;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -69,6 +70,10 @@ public class Product {
     )
     @Builder.Default
     private Set<Category> categories = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subcategory_id")
+    private Subcategory subcategory;
 
     @PrePersist
     void prePersist() {

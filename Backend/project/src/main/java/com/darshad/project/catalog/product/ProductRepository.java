@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
 
     @Override
-    @EntityGraph(attributePaths = {"categories"})
+    @EntityGraph(attributePaths = {"categories", "subcategory"})
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
     Optional<Product> findByBarcode(String barcode);

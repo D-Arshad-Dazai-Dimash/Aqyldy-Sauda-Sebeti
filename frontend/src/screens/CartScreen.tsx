@@ -51,20 +51,21 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <AnimatedTouchableOpacity
-      entering={FadeInDown.delay(delay).duration(340)}
-      activeOpacity={activeOpacity}
-      onPressIn={() => {
-        scale.value = withSpring(0.98, { damping: 14, stiffness: 220 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 14, stiffness: 220 });
-      }}
-      onPress={onPress}
-      style={[animatedStyle, style]}
-    >
-      {children}
-    </AnimatedTouchableOpacity>
+    <Animated.View entering={FadeInDown.delay(delay).duration(340)}>
+      <AnimatedTouchableOpacity
+        activeOpacity={activeOpacity}
+        onPressIn={() => {
+          scale.value = withSpring(0.98, { damping: 14, stiffness: 220 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 220 });
+        }}
+        onPress={onPress}
+        style={[animatedStyle, style]}
+      >
+        {children}
+      </AnimatedTouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -281,7 +282,7 @@ export default function CartScreen({ navigation }: any) {
           </View>
           <Text style={styles.emptyTitle}>{t('Алдымен дүкен таңдаңыз', 'Сначала выберите магазин')}</Text>
           <Text style={styles.emptyDesc}>{t('Категориялардан тауар ашып, себетке қосыңыз.', 'Откройте товары в категориях и добавьте в корзину.')}</Text>
-          <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Categories')}>
+          <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Main', { screen: 'Categories' })}>
             <Text style={styles.browseBtnText}>{t('Дүкенге өту', 'Перейти к магазину')}</Text>
           </TouchableOpacity>
         </View>
@@ -292,7 +293,7 @@ export default function CartScreen({ navigation }: any) {
           </View>
           <Text style={styles.emptyTitle}>{t('Себет бос', 'Корзина пуста')}</Text>
           <Text style={styles.emptyDesc}>{t('Қалаған тауарды таңдап, осы жерге қосыңыз.', 'Выберите товары и добавьте их сюда.')}</Text>
-          <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Categories')}>
+          <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate('Main', { screen: 'Categories' })}>
             <Text style={styles.browseBtnText}>{t('Тауар таңдау', 'Выбрать товары')}</Text>
           </TouchableOpacity>
         </View>

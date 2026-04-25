@@ -29,6 +29,31 @@ public class ProductSpecs {
         };
     }
 
+    public static Specification<Product> inCategorySlug(String slug) {
+
+        if (slug == null || slug.isBlank()) {
+            return null;
+        }
+
+        return (root, query, cb) -> {
+            query.distinct(true);
+            var join = root.join("categories");
+            return cb.equal(join.get("slug"), slug);
+        };
+    }
+
+    public static Specification<Product> inSubcategoryName(String name) {
+
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+
+        return (root, query, cb) -> {
+            var join = root.join("subcategory", jakarta.persistence.criteria.JoinType.LEFT);
+            return cb.equal(join.get("name"), name);
+        };
+    }
+
     public static Specification<Product> isActive(Boolean active) {
 
         if (active == null) {

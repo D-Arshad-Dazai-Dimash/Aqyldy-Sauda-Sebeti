@@ -33,20 +33,21 @@ function PressCard({ children, style, onPress, activeOpacity = 0.92, delay = 0 }
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <AnimatedTouchableOpacity
-      entering={FadeInDown.delay(delay).duration(360)}
-      activeOpacity={activeOpacity}
-      onPressIn={() => {
-        scale.value = withSpring(0.98, { damping: 14, stiffness: 220 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 14, stiffness: 220 });
-      }}
-      onPress={onPress}
-      style={[animatedStyle, style]}
-    >
-      {children}
-    </AnimatedTouchableOpacity>
+    <Animated.View entering={FadeInDown.delay(delay).duration(360)}>
+      <AnimatedTouchableOpacity
+        activeOpacity={activeOpacity}
+        onPressIn={() => {
+          scale.value = withSpring(0.98, { damping: 14, stiffness: 220 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 220 });
+        }}
+        onPress={onPress}
+        style={[animatedStyle, style]}
+      >
+        {children}
+      </AnimatedTouchableOpacity>
+    </Animated.View>
   );
 }
 

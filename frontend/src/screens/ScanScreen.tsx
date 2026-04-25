@@ -25,6 +25,7 @@ export default function ScanScreen({ route, navigation }: any) {
   const [isActive, setIsActive] = useState(true);
   const [torch, setTorch] = useState<'off' | 'on'>('off');
   const [listModalVisible, setListModalVisible] = useState(false);
+  const [cameraMessage, setCameraMessage] = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState<{ text: string; type: ToastType } | null>(null);
@@ -154,8 +155,14 @@ export default function ScanScreen({ route, navigation }: any) {
     codeTypes: ['ean-13', 'ean-8', 'qr'],
     onCodeScanned: async (codes: Code[]) => {
       if (codes.length > 0 && isActive) {
+        setCameraMessage(null);
         setIsActive(false);
         const barcode = codes[0].value;
+
+        if (!barcode) {
+          setIsActive(true);
+          return;
+        }
 
         if (mode === 'business') {
           navigation.navigate('AddProduct', { barcode });
@@ -207,6 +214,14 @@ export default function ScanScreen({ route, navigation }: any) {
         isActive={isActive && !listModalVisible}
         codeScanner={codeScanner}
         torch={torch}
+        onError={(error) => {
+          const message = String(error?.message ?? '');
+          if (message.toLowerCase().includes('barcode module')) {
+            setCameraMessage('Сканер штрих-кода загружается, подождите...');
+            return;
+          }
+          setCameraMessage('Камера қатесі. Қайта ашып көріңіз.');
+        }}
       />
 
       {/* ── Header ── */}
@@ -257,6 +272,7 @@ export default function ScanScreen({ route, navigation }: any) {
           <View style={styles.unfocusedContainer} />
         </View>
         <Text style={styles.hintText}>Штрих-кодты жақтаудың ортасына келтіріңіз</Text>
+        {!!cameraMessage && <Text style={styles.cameraMessage}>{cameraMessage}</Text>}
       </View>
 
       {/* ── Footer ── */}
@@ -477,6 +493,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  cameraMessage: {
+    marginTop: 10,
+    textAlign: 'center',
+    color: '#FDE68A',
+    fontSize: 13,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   // ── Footer
   footer: {
     height: 120,

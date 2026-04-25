@@ -49,42 +49,43 @@ function ProductCard({ item, onPress, delay }: { item: Product; onPress: () => v
   const finalPrice = price - price * disc / 100;
 
   return (
-    <AnimatedTouchableOpacity
-      entering={FadeInDown.delay(delay).duration(320)}
-      style={[styles.card, anim]}
-      activeOpacity={0.9}
-      onPressIn={() => { scale.value = withSpring(0.96, { damping: 14, stiffness: 240 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 240 }); }}
-      onPress={onPress}
-    >
-      {/* Discount badge */}
-      <View style={styles.discBadge}>
-        <Feather name="tag" size={9} color="#FFF" />
-        <Text style={styles.discText}>-{disc}%</Text>
-      </View>
-
-      {/* Image */}
-      <View style={styles.imgWrapper}>
-        <Image
-          source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
-          style={styles.img}
-          resizeMode="contain"
-        />
-      </View>
-
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={2}>{item.title}</Text>
-        <View style={styles.priceRow}>
-          <Text style={styles.oldPrice}>{price.toFixed(0)} ₸</Text>
-          <View style={styles.saveBadge}>
-            <Text style={styles.saveText}>
-              -{(price * disc / 100).toFixed(0)} ₸
-            </Text>
-          </View>
+    <Animated.View entering={FadeInDown.delay(delay).duration(320)}>
+      <AnimatedTouchableOpacity
+        style={[styles.card, anim]}
+        activeOpacity={0.9}
+        onPressIn={() => { scale.value = withSpring(0.96, { damping: 14, stiffness: 240 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 240 }); }}
+        onPress={onPress}
+      >
+        {/* Discount badge */}
+        <View style={styles.discBadge}>
+          <Feather name="tag" size={9} color="#FFF" />
+          <Text style={styles.discText}>-{disc}%</Text>
         </View>
-        <Text style={styles.newPrice}>{finalPrice.toFixed(0)} ₸</Text>
-      </View>
-    </AnimatedTouchableOpacity>
+
+        {/* Image */}
+        <View style={styles.imgWrapper}>
+          <Image
+            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            style={styles.img}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={2}>{item.title}</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.oldPrice}>{price.toFixed(0)} ₸</Text>
+            <View style={styles.saveBadge}>
+              <Text style={styles.saveText}>
+                -{(price * disc / 100).toFixed(0)} ₸
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.newPrice}>{finalPrice.toFixed(0)} ₸</Text>
+        </View>
+      </AnimatedTouchableOpacity>
+    </Animated.View>
   );
 }
 

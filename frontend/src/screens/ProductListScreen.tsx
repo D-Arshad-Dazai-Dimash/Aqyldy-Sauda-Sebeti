@@ -55,7 +55,7 @@ function PressCard({ children, onPress, style }: any) {
 }
 
 export default function ProductListScreen({ route, navigation }: any) {
-  const { subCategoryName, categoryId } = route?.params || { subCategoryName: 'Тауарлар' };
+  const { subCategoryName, categorySlug } = route?.params || { subCategoryName: 'Тауарлар' };
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,8 +70,8 @@ export default function ProductListScreen({ route, navigation }: any) {
         setLoading(true);
         setError(null);
         const params: any = { active: true };
-        if (categoryId) params.categoryId = categoryId;
-        if (subCategoryName) params.subCategory = subCategoryName;
+        if (categorySlug) params.categorySlug = categorySlug;
+        if (subCategoryName) params.subcategoryName = subCategoryName;
         const res = await api.get('/api/products', { params });
         setProducts(res.data?.content || []);
       } catch {
@@ -81,7 +81,7 @@ export default function ProductListScreen({ route, navigation }: any) {
       }
     };
     fetchProducts();
-  }, [categoryId, subCategoryName]);
+  }, [categorySlug, subCategoryName]);
 
   const visibleProducts = products.filter((p) =>
     (p?.title ?? '').toLowerCase().includes(query.trim().toLowerCase())

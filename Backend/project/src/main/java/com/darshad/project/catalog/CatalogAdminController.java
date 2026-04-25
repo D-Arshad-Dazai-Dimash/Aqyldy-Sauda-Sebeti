@@ -34,7 +34,7 @@ public class CatalogAdminController {
             @RequestParam(required = false) Boolean active,
             Pageable pageable
     ) {
-        return productService.search(q, null, active, pageable);
+        return productService.search(q, null, null, null, active, pageable);
     }
 
     @PostMapping

@@ -63,32 +63,33 @@ function ProductCard({
   const finalPrice = disc > 0 ? safePrice - safePrice * disc / 100 : safePrice;
 
   return (
-    <AnimatedTouchableOpacity
-      entering={FadeInDown.delay(delay).duration(300)}
-      style={[styles.productCard, anim]}
-      activeOpacity={0.9}
-      onPressIn={() => { scale.value = withSpring(0.96, { damping: 14, stiffness: 240 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 240 }); }}
-      onPress={onPress}
-    >
-      {disc > 0 && (
-        <View style={styles.discPill}>
-          <Text style={styles.discPillText}>-{disc}%</Text>
+    <Animated.View entering={FadeInDown.delay(delay).duration(300)}>
+      <AnimatedTouchableOpacity
+        style={[styles.productCard, anim]}
+        activeOpacity={0.9}
+        onPressIn={() => { scale.value = withSpring(0.96, { damping: 14, stiffness: 240 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 240 }); }}
+        onPress={onPress}
+      >
+        {disc > 0 && (
+          <View style={styles.discPill}>
+            <Text style={styles.discPillText}>-{disc}%</Text>
+          </View>
+        )}
+        <View style={styles.productImgWrap}>
+          <Image
+            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            style={styles.productImg}
+            resizeMode="contain"
+          />
         </View>
-      )}
-      <View style={styles.productImgWrap}>
-        <Image
-          source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
-          style={styles.productImg}
-          resizeMode="contain"
-        />
-      </View>
-      <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
-      {disc > 0 && (
-        <Text style={styles.oldPrice}>{safePrice.toFixed(0)} ₸</Text>
-      )}
-      <Text style={styles.productPrice}>{finalPrice.toFixed(0)} ₸</Text>
-    </AnimatedTouchableOpacity>
+        <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
+        {disc > 0 && (
+          <Text style={styles.oldPrice}>{safePrice.toFixed(0)} ₸</Text>
+        )}
+        <Text style={styles.productPrice}>{finalPrice.toFixed(0)} ₸</Text>
+      </AnimatedTouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -274,7 +275,7 @@ export default function SmartShoppingScreen({ navigation }: any) {
         <View style={styles.center}>
           <Feather name="inbox" size={52} color="#CBD5E1" />
           <Text style={styles.emptyText}>{t('Ұсыныстар әзірге жоқ', 'Пока нет рекомендаций')}</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Categories')} style={styles.retryBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Categories' })} style={styles.retryBtn}>
             <Text style={styles.retryBtnText}>{t('Санаттарға өту', 'Перейти в категории')}</Text>
           </TouchableOpacity>
         </View>

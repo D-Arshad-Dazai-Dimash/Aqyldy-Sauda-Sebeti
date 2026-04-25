@@ -16,5 +16,8 @@ public record ProductDto(
         String unit,
         String weight,
         boolean active,
-        List<UUID> categoryIds
+        List<UUID> categoryIds,
+        UUID subcategoryId,
+        String subcategorySlug,
+        String subcategoryName
 ) {}

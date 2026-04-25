@@ -75,49 +75,50 @@ function OrderCard({ item, language, t, onPress, delay }: any) {
   };
 
   return (
-    <AnimatedTouchableOpacity
-      entering={FadeInDown.delay(delay).duration(320)}
-      style={[styles.card, anim]}
-      activeOpacity={0.9}
-      onPressIn={() => { scale.value = withSpring(0.98, { damping: 14, stiffness: 240 }); }}
-      onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 240 }); }}
-      onPress={onPress}
-    >
-      {/* Left accent bar */}
-      <View style={[styles.cardAccent, { backgroundColor: cfg.color }]} />
+    <Animated.View entering={FadeInDown.delay(delay).duration(320)}>
+      <AnimatedTouchableOpacity
+        style={[styles.card, anim]}
+        activeOpacity={0.9}
+        onPressIn={() => { scale.value = withSpring(0.98, { damping: 14, stiffness: 240 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 240 }); }}
+        onPress={onPress}
+      >
+        {/* Left accent bar */}
+        <View style={[styles.cardAccent, { backgroundColor: cfg.color }]} />
 
-      <View style={styles.cardBody}>
-        {/* Top row */}
-        <View style={styles.cardTop}>
-          <View>
-            <Text style={styles.orderId}>
-              #{item.id?.slice(0, 8).toUpperCase()}
-            </Text>
-            <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
+        <View style={styles.cardBody}>
+          {/* Top row */}
+          <View style={styles.cardTop}>
+            <View>
+              <Text style={styles.orderId}>
+                #{item.id?.slice(0, 8).toUpperCase()}
+              </Text>
+              <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+              <Feather name={cfg.icon} size={12} color={cfg.color} />
+              <Text style={[styles.statusText, { color: cfg.color }]}>
+                {statusLabel(item.status)}
+              </Text>
+            </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-            <Feather name={cfg.icon} size={12} color={cfg.color} />
-            <Text style={[styles.statusText, { color: cfg.color }]}>
-              {statusLabel(item.status)}
-            </Text>
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Bottom row */}
+          <View style={styles.cardBottom}>
+            <View>
+              <Text style={styles.totalLabel}>{t('Жалпы сома', 'Итого')}</Text>
+              <Text style={styles.totalAmount}>{Number(item.totalAmount ?? 0).toFixed(0)} ₸</Text>
+            </View>
+            <View style={styles.arrowWrap}>
+              <Feather name="arrow-right" size={16} color={P.teal} />
+            </View>
           </View>
         </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Bottom row */}
-        <View style={styles.cardBottom}>
-          <View>
-            <Text style={styles.totalLabel}>{t('Жалпы сома', 'Итого')}</Text>
-            <Text style={styles.totalAmount}>{Number(item.totalAmount ?? 0).toFixed(0)} ₸</Text>
-          </View>
-          <View style={styles.arrowWrap}>
-            <Feather name="arrow-right" size={16} color={P.teal} />
-          </View>
-        </View>
-      </View>
-    </AnimatedTouchableOpacity>
+      </AnimatedTouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -190,7 +191,7 @@ export default function OrdersScreen({ navigation }: any) {
           </View>
           <Text style={styles.emptyTitle}>{t('Тапсырыстар жоқ', 'Заказов пока нет')}</Text>
           <Text style={styles.emptyText}>{t('Бірінші тапсырысыңызды беріңіз', 'Сделайте свой первый заказ')}</Text>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Categories')}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Main', { screen: 'Categories' })}>
             <Feather name="grid" size={15} color="#FFF" />
             <Text style={styles.actionBtnText}>{t('Тауар таңдау', 'Выбрать товары')}</Text>
           </TouchableOpacity>

@@ -58,9 +58,11 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductDto> search(String q, UUID categoryId, Boolean active, Pageable pageable) {
+    public Page<ProductDto> search(String q, UUID categoryId, String categorySlug,
+                                    String subcategoryName, Boolean active, Pageable pageable) {
 
-        log.debug("▶ product search: q={}, categoryId={}, active={}, page={}", q, categoryId, active, pageable);
+        log.debug("▶ product search: q={}, categoryId={}, categorySlug={}, subcategoryName={}, active={}",
+                q, categoryId, categorySlug, subcategoryName, active);
 
         Specification<Product> spec = (root, query, cb) -> cb.conjunction();
 
@@ -70,6 +72,14 @@ public class ProductService {
 
         if (categoryId != null) {
             spec = spec.and(ProductSpecs.inCategory(categoryId));
+        }
+
+        if (categorySlug != null && !categorySlug.isBlank()) {
+            spec = spec.and(ProductSpecs.inCategorySlug(categorySlug));
+        }
+
+        if (subcategoryName != null && !subcategoryName.isBlank()) {
+            spec = spec.and(ProductSpecs.inSubcategoryName(subcategoryName));
         }
 
         if (active != null) {
@@ -167,6 +177,7 @@ public class ProductService {
     }
 
     private ProductDto toDto(Product p) {
+        var sub = p.getSubcategory();
         return new ProductDto(
                 p.getId(),
                 p.getTitle(),
@@ -179,7 +190,10 @@ public class ProductService {
                 p.getUnit(),
                 p.getWeight(),
                 p.isActive(),
-                p.getCategories().stream().map(Category::getId).toList()
+                p.getCategories().stream().map(Category::getId).toList(),
+                sub != null ? sub.getId() : null,
+                sub != null ? sub.getSlug() : null,
+                sub != null ? sub.getName() : null
         );
     }
 

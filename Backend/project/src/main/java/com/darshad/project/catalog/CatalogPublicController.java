@@ -35,11 +35,13 @@ public class CatalogPublicController {
     public Page<ProductDto> products(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) String categorySlug,
+            @RequestParam(required = false) String subcategoryName,
             @RequestParam(required = false) Boolean active,
             @PageableDefault(size = 20, sort = "title", direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
-        return productService.search(q, categoryId, active, pageable);
+        return productService.search(q, categoryId, categorySlug, subcategoryName, active, pageable);
     }
 
     @GetMapping("/products/{id}")

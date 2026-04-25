@@ -1,5 +1,6 @@
 import { ImageStyle, ViewStyle, TextStyle } from 'react-native';export interface Category {
   id: string;
+  slug: string;
   name: string;
   image: any;
   bg: any;
@@ -12,6 +13,7 @@ import { ImageStyle, ViewStyle, TextStyle } from 'react-native';export interface
 export const PRODUCT_CATEGORIES: Category[] = [
   {
     id: 'c1',
+    slug: 'azyk-tulik',
     name: 'Азық-түлік',
     image: require('../assets/azyk.png'),
     bg: require('../assets/rec-azyk.png'), // Жаңа фон
@@ -31,6 +33,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
   },
   {
     id: 'c2',
+    slug: 'sut-onimderi',
     name: 'Сүт өнімдері',
     image: require('../assets/sut.png'),
     bg: require('../assets/rec-sut.png'), // Жаңа фон
@@ -50,6 +53,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
   },
   {
     id: 'c3',
+    slug: 'susyndtar',
     name: 'Сусындар',
     image: require('../assets/susyn.png'),
     bg: require('../assets/rec-sus.png'), // Жаңа фон
@@ -71,6 +75,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
   },
   {
     id: 'c4',
+    slug: 'tattiler',
     name: 'Тәттілер',
     image: require('../assets/tatt.png'),
     bg: require('../assets/rec-tat.png'), // Жаңа фон
@@ -90,6 +95,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
   },
  {
   id: 'c5',
+  slug: 'nan-onimderi',
   name: 'Нан өнімдері',
   image: require('../assets/nan.png'),
   bg: require('../assets/rec-nan.png'),
@@ -110,6 +116,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
 },
   {
     id: 'c6',
+    slug: 'turmystyk-himia',
     name: 'Тұрмыстық химия',
     image: require('../assets/turmistik-himia.png'),
     bg: require('../assets/rec-himia.png'), // Жаңа фон
@@ -129,6 +136,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
   },
   {
     id: 'c7',
+    slug: 'gigena',
     name: 'Гигиена',
     image: require('../assets/gigena.png'),
     bg: require('../assets/rec-gig.png'), // Жаңа фон
@@ -148,6 +156,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
   },
   {
     id: 'c8',
+    slug: 'ui-zhanuar',
     name: 'Үй\nжануарларына',
     image: require('../assets/ui-zhanuarlarina.png'),
     bg: require('../assets/rec-zhanuar.png'), // Жаңа фон
