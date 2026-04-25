@@ -7,10 +7,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../types/navigation';
 
 const { width } = Dimensions.get('window');
 
 export default function BusinessRegisterScreen({ navigation }: any) {
+  const typedNavigation = navigation as NativeStackNavigationProp<RootStackParamList>;
   const registerBusiness = useAuthStore((s) => s.registerBusiness);
 
   const [name, setName] = React.useState('');
@@ -18,6 +21,8 @@ export default function BusinessRegisterScreen({ navigation }: any) {
   const [password, setPassword] = React.useState('');
   const [storeName, setStoreName] = React.useState('');
   const [storeAddress, setStoreAddress] = React.useState('');
+  const [latitude, setLatitude] = React.useState<number | null>(null);
+  const [longitude, setLongitude] = React.useState<number | null>(null);
   const [phone, setPhone] = React.useState('');
   const [bin, setBin] = React.useState('');
   const [workingHours, setWorkingHours] = React.useState('');
@@ -38,6 +43,8 @@ export default function BusinessRegisterScreen({ navigation }: any) {
         name: name.trim() || undefined,
         storeName: storeName.trim(),
         storeAddress: storeAddress.trim() || undefined,
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
         phone: phone.trim() || undefined,
         bin: bin.trim() || undefined,
         workingHours: workingHours.trim() || undefined,
@@ -54,7 +61,6 @@ export default function BusinessRegisterScreen({ navigation }: any) {
     { label: 'Email *', icon: 'mail', value: email, setter: setEmail, placeholder: 'email@example.com', required: true, keyboard: 'email-address' },
     { label: 'Құпия сөз *', icon: 'lock', value: password, setter: setPassword, placeholder: 'Кемінде 6 таңба', required: true, secure: true },
     { label: 'Дүкен атауы *', icon: 'shopping-bag', value: storeName, setter: setStoreName, placeholder: 'Мысалы: Magnum', required: true },
-    { label: 'Дүкен мекенжайы', icon: 'map-pin', value: storeAddress, setter: setStoreAddress, placeholder: 'Қала, көше, үй' },
     { label: 'Телефон', icon: 'phone', value: phone, setter: setPhone, placeholder: '+7 777 123 4567', keyboard: 'phone-pad' },
     { label: 'БИН / ИИН', icon: 'hash', value: bin, setter: setBin, placeholder: '12 санды код', keyboard: 'numeric' },
     { label: 'Жұмыс уақыты', icon: 'clock', value: workingHours, setter: setWorkingHours, placeholder: '08:00-22:00' },
@@ -89,6 +95,28 @@ export default function BusinessRegisterScreen({ navigation }: any) {
           </View>
 
           <View style={styles.formCard}>
+            <View>
+              <Text style={styles.inputLabel}>Дүкен мекенжайы</Text>
+              <TouchableOpacity
+                style={styles.inputContainer}
+                onPress={() =>
+                  typedNavigation.navigate('AddressPicker', {
+                    onConfirm: (address, lat, lng) => {
+                      setStoreAddress(address);
+                      setLatitude(lat);
+                      setLongitude(lng);
+                    },
+                  })
+                }
+              >
+                <Feather name="map-pin" size={20} color="#94A3B8" />
+                <Text style={[styles.input, !storeAddress && { color: '#CBD5E1' }]} numberOfLines={1}>
+                  {storeAddress || 'Картадан таңдаңыз'}
+                </Text>
+                {storeAddress ? <Feather name="check-circle" size={18} color="#22C55E" /> : null}
+              </TouchableOpacity>
+            </View>
+
             {fields.map((f) => (
               <View key={f.label}>
                 <Text style={styles.inputLabel}>{f.label}</Text>

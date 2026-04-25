@@ -247,6 +247,22 @@ export default function SearchScreen({ navigation, route }: any) {
         {stores.length > 0 && (
           <View style={styles.storesSection}>
             <Text style={styles.storesSectionTitle}>{t('Дүкендер', 'Магазины')}</Text>
+             <TouchableOpacity
+               onPress={() => navigation.navigate('Map')}
+               style={{
+                 marginBottom: 10,
+                 paddingVertical: 10,
+                 paddingHorizontal: 12,
+                 borderRadius: 12,
+                 backgroundColor: '#ECFEFF',
+                 flexDirection: 'row',
+                 alignItems: 'center',
+                 gap: 8,
+               }}
+             >
+               <Feather name="map-pin" size={14} color="#4AB7B6" />
+               <Text style={{ color: '#4AB7B6', fontWeight: '700', fontSize: 14 }}>Картадан қарау</Text>
+             </TouchableOpacity>
             {stores.map((store, idx) => {
               const accent = STORE_ACCENTS[idx % STORE_ACCENTS.length];
               return (

@@ -11,3 +11,6 @@ export const API_BASE_URL = Platform.OS === 'android' ? EMULATOR_URL : 'http://l
 
 // Нақты телефонда тексергенде DEVICE_URL-ді қолданыңыз:
 // export const API_BASE_URL = DEVICE_URL;
+
+// Google Maps API key — Google Cloud Console-дан алып, осы жерге қойыңыз
+export const GOOGLE_MAPS_API_KEY = ''; // Replace with your key

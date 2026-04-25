@@ -6,7 +6,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
@@ -53,5 +57,15 @@ public class StoreController {
     @GetMapping("/my")
     public List<StoreResponse> getMyStores(Authentication auth) {
         return storeService.getMyStores(auth.getName());
+    }
+
+    /** Nearby stores filtered by Haversine distance. */
+    @GetMapping("/nearby")
+    public List<StoreResponse> getNearby(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "5000") double radiusMeters
+    ) {
+        return storeService.getNearby(lat, lng, radiusMeters);
     }
 }

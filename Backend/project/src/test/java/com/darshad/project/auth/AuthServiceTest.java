@@ -1,9 +1,11 @@
 package com.darshad.project.auth;
 
 import com.darshad.project.auth.dto.AuthResponse;
+import com.darshad.project.auth.dto.BusinessRegisterRequest;
 import com.darshad.project.auth.dto.LoginRequest;
 import com.darshad.project.auth.dto.RegisterRequest;
 import com.darshad.project.security.jwt.JwtService;
+import com.darshad.project.store.Store;
 import com.darshad.project.store.StoreRepository;
 import com.darshad.project.user.Role;
 import com.darshad.project.user.User;
@@ -45,6 +47,42 @@ class AuthServiceTest {
                 refreshTokenRepository, passwordResetTokenRepository,
                 30L, 60L
         );
+    }
+
+    @Test
+    @DisplayName("registerBusiness сохраняет координаты магазина")
+    void registerBusiness_savesStoreCoordinates() {
+        when(userRepository.existsByEmail("merchant@mail.com")).thenReturn(false);
+        when(passwordEncoder.encode("secret123")).thenReturn("hashed");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(UUID.randomUUID());
+            return u;
+        });
+        when(storeRepository.save(any(Store.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(jwtService.generateToken(anyString(), anyString())).thenReturn("jwt-token");
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new BusinessRegisterRequest(
+                "merchant@mail.com",
+                "secret123",
+                "Merchant",
+                "Test Store",
+                "Astana",
+                "+77010000000",
+                "123456789012",
+                "08:00-22:00",
+                51.1694,
+                71.4491
+        );
+
+        AuthResponse response = authService.registerBusiness(req);
+
+        assertThat(response.accessToken()).isEqualTo("jwt-token");
+        ArgumentCaptor<Store> storeCaptor = ArgumentCaptor.forClass(Store.class);
+        verify(storeRepository).save(storeCaptor.capture());
+        assertThat(storeCaptor.getValue().getLatitude()).isEqualTo(51.1694);
+        assertThat(storeCaptor.getValue().getLongitude()).isEqualTo(71.4491);
     }
 
     // ===================== REGISTER =====================

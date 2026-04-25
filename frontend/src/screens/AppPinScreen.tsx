@@ -1,18 +1,37 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
+  Vibration,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { canUseBiometricUnlock } from '../utils/appPin';
+
+const P = {
+  dark: '#071210',
+  teal: '#1A9A88',
+  tealDark: '#0D6B5C',
+  tealSoft: 'rgba(26,154,136,0.15)',
+  tealBorder: 'rgba(26,154,136,0.3)',
+  text: '#FFFFFF',
+  muted: 'rgba(255,255,255,0.45)',
+  key: 'rgba(255,255,255,0.08)',
+  keyBorder: 'rgba(255,255,255,0.12)',
+  error: '#F87171',
+  errorBg: 'rgba(248,113,113,0.12)',
+};
 
 type AppPinScreenProps = {
   mode: 'setup' | 'unlock';
@@ -29,236 +48,322 @@ export default function AppPinScreen({
   onBiometricUnlock,
   onLogout,
 }: AppPinScreenProps) {
+  // setup mode has 2 steps: 0 = enter new PIN, 1 = confirm
+  // unlock mode has 1 step: 0 = enter PIN
+  const [step, setStep] = useState(0);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
 
+  const shakeX = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
+
   useEffect(() => {
     if (mode !== 'unlock') return;
-
     canUseBiometricUnlock()
       .then(setBiometricAvailable)
       .catch(() => setBiometricAvailable(false));
   }, [mode]);
 
-  const title = useMemo(() => {
-    return mode === 'setup' ? 'Жылдам кіру PIN-кодын орнатыңыз' : 'PIN-кодпен кіру';
-  }, [mode]);
+  const activePin = step === 0 ? pin : confirmPin;
 
-  const subtitle = useMemo(() => {
-    return mode === 'setup'
-      ? 'Қолданбаға тез кіру үшін 4 таңбалы PIN енгізіңіз'
-      : 'Қолданбаны ашу үшін 4 таңбалы PIN енгізіңіз';
-  }, [mode]);
-
-  const validatePin = (value: string): boolean => {
-    if (!/^\d{4}$/.test(value)) {
-      setError('PIN 4 саннан тұруы керек');
-      return false;
-    }
-    return true;
+  const shake = () => {
+    Vibration.vibrate(80);
+    shakeX.value = withSequence(
+      withTiming(-10, { duration: 60 }),
+      withTiming(10, { duration: 60 }),
+      withTiming(-8, { duration: 50 }),
+      withTiming(8, { duration: 50 }),
+      withTiming(0, { duration: 40 }),
+    );
   };
 
-  const submit = async () => {
+  const handleKey = (digit: string) => {
+    if (activePin.length >= 4) return;
+    const next = activePin + digit;
+    if (step === 0) setPin(next); else setConfirmPin(next);
     setError(null);
+    if (next.length === 4) {
+      setTimeout(() => advance(next), 160);
+    }
+  };
 
-    if (!validatePin(pin)) return;
+  const handleDel = () => {
+    if (activePin.length === 0) return;
+    const trimmed = activePin.slice(0, -1);
+    if (step === 0) setPin(trimmed); else setConfirmPin(trimmed);
+    setError(null);
+  };
 
-    if (mode === 'setup') {
-      if (!validatePin(confirmPin)) return;
-      if (pin !== confirmPin) {
-        setError('PIN-кодтар сәйкес келмейді');
+  const advance = async (entered: string) => {
+    if (mode === 'unlock') {
+      await doUnlock(entered);
+      return;
+    }
+    // setup mode
+    if (step === 0) {
+      setStep(1);
+    } else {
+      if (entered !== pin) {
+        shake();
+        setConfirmPin('');
+        setError('PIN-кодтар сәйкес емес — қайта енгізіңіз');
         return;
       }
+      await doSetup(pin);
     }
+  };
 
+  const doUnlock = async (entered: string) => {
     setLoading(true);
     try {
-      if (mode === 'setup') {
-        await onSetupSuccess(pin);
-      } else {
-        await onUnlockSuccess(pin);
-      }
+      await onUnlockSuccess(entered);
     } catch (e: any) {
-      const fallback = mode === 'setup' ? 'PIN орнату қатесі' : 'PIN қате немесе жүйелік қате';
-      setError(e?.message || fallback);
+      shake();
+      setPin('');
+      setError(e?.message || 'PIN қате — қайта көріңіз');
     } finally {
       setLoading(false);
     }
   };
 
-  const submitBiometric = async () => {
-    if (!onBiometricUnlock) return;
+  const doSetup = async (newPin: string) => {
+    setLoading(true);
+    try {
+      await onSetupSuccess(newPin);
+    } catch (e: any) {
+      shake();
+      setStep(0);
+      setPin('');
+      setConfirmPin('');
+      setError(e?.message || 'PIN орнату қатесі');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleBiometric = async () => {
+    if (!onBiometricUnlock) return;
     setError(null);
     setLoading(true);
     try {
       await onBiometricUnlock();
     } catch (e: any) {
+      shake();
       setError(e?.message || 'Биометрия қатесі');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderDots = (value: string) => (
-    <View style={styles.dotsRow}>
-      {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={[styles.dot, i < value.length && styles.dotFilled]} />
-      ))}
-    </View>
-  );
+  const titleText =
+    mode === 'setup'
+      ? step === 0
+        ? 'PIN-код орнату'
+        : 'PIN-кодты растаңыз'
+      : 'PIN-кодпен кіру';
+
+  const subText =
+    mode === 'setup'
+      ? step === 0
+        ? 'Жаңа 4 таңбалы PIN енгізіңіз'
+        : 'PIN-кодды қайта енгізіңіз'
+      : 'Қолданбаны ашу үшін PIN енгізіңіз';
+
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'bio', '0', 'del'];
+  const showBio = mode === 'unlock' && biometricAvailable && !!onBiometricUnlock;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-        <View style={styles.card}>
-          <View style={styles.iconWrap}>
-            <Feather name="lock" size={26} color="#0EA5E9" />
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <View style={styles.body}>
+
+        {/* ── Logo / Lock icon ── */}
+        <Animated.View entering={FadeInDown.duration(300)} style={styles.iconWrap}>
+          <Feather name="lock" size={28} color={P.teal} />
+        </Animated.View>
+
+        {/* ── Title ── */}
+        <Animated.View key={`${mode}-${step}`} entering={FadeInDown.duration(260)} style={styles.titleWrap}>
+          <Text style={styles.title}>{titleText}</Text>
+          <Text style={styles.subtitle}>{subText}</Text>
+        </Animated.View>
+
+        {/* ── PIN Dots ── */}
+        <Animated.View style={[styles.dotsRow, shakeStyle]}>
+          {[0, 1, 2, 3].map(i => (
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                i < activePin.length && styles.dotFilled,
+                i === activePin.length && styles.dotActive,
+              ]}
+            />
+          ))}
+        </Animated.View>
+
+        {/* ── Error ── */}
+        {error ? (
+          <Animated.View entering={FadeInDown.duration(200)} style={styles.errorWrap}>
+            <Feather name="alert-circle" size={14} color={P.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </Animated.View>
+        ) : (
+          <View style={styles.errorPlaceholder} />
+        )}
+
+        {/* ── Numpad ── */}
+        {loading ? (
+          <ActivityIndicator size="large" color={P.teal} style={{ marginTop: 48 }} />
+        ) : (
+          <View style={styles.numpad}>
+            {keys.map((k, idx) => {
+              if (k === 'bio') {
+                if (showBio) {
+                  return (
+                    <TouchableOpacity key={idx} style={styles.key} onPress={handleBiometric} activeOpacity={0.7}>
+                      <Feather name="aperture" size={26} color={P.muted} />
+                    </TouchableOpacity>
+                  );
+                }
+                return <View key={idx} style={styles.keyEmpty} />;
+              }
+              if (k === 'del') {
+                return (
+                  <TouchableOpacity key={idx} style={styles.key} onPress={handleDel} activeOpacity={0.7}>
+                    <Feather name="delete" size={22} color={P.muted} />
+                  </TouchableOpacity>
+                );
+              }
+              return (
+                <TouchableOpacity key={idx} style={styles.key} onPress={() => handleKey(k)} activeOpacity={0.65}>
+                  <Text style={styles.keyText}>{k}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+        )}
 
-          <Text style={styles.label}>PIN</Text>
-          {renderDots(pin)}
-          <TextInput
-            value={pin}
-            onChangeText={(v) => setPin(v.replace(/[^0-9]/g, '').slice(0, 4))}
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={4}
-            style={styles.hiddenInput}
-            autoFocus
-          />
-
-          {mode === 'setup' && (
-            <>
-              <Text style={[styles.label, { marginTop: 16 }]}>PIN растау</Text>
-              {renderDots(confirmPin)}
-              <TextInput
-                value={confirmPin}
-                onChangeText={(v) => setConfirmPin(v.replace(/[^0-9]/g, '').slice(0, 4))}
-                keyboardType="number-pad"
-                secureTextEntry
-                maxLength={4}
-                style={styles.hiddenInput}
-              />
-            </>
-          )}
-
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          <TouchableOpacity style={styles.primaryBtn} onPress={submit} disabled={loading} activeOpacity={0.85}>
-            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryBtnText}>{mode === 'setup' ? 'PIN орнату' : 'Кіру'}</Text>}
+        {/* ── Back / Logout ── */}
+        {mode === 'setup' && step === 1 ? (
+          <TouchableOpacity style={styles.textBtn} onPress={() => { setStep(0); setConfirmPin(''); setError(null); }}>
+            <Feather name="arrow-left" size={14} color={P.muted} />
+            <Text style={styles.textBtnLabel}>Артқа</Text>
           </TouchableOpacity>
-
-          {mode === 'unlock' && biometricAvailable && onBiometricUnlock ? (
-            <TouchableOpacity style={styles.bioBtn} onPress={submitBiometric} disabled={loading} activeOpacity={0.85}>
-              <Feather name="fingerprint" size={18} color="#0EA5E9" />
-              <Text style={styles.bioBtnText}>Биометриямен кіру</Text>
-            </TouchableOpacity>
-          ) : null}
-
+        ) : (
           <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => {
+            style={styles.textBtn}
+            onPress={() =>
               Alert.alert('Шығу', 'Аккаунттан шығуды қалайсыз ба?', [
                 { text: 'Жоқ', style: 'cancel' },
                 { text: 'Иә', style: 'destructive', onPress: () => onLogout() },
-              ]);
-            }}
+              ])
+            }
           >
-            <Text style={styles.secondaryBtnText}>Басқа аккаунтпен кіру</Text>
+            <Text style={styles.textBtnLabel}>Басқа аккаунтпен кіру</Text>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#EFF6FF' },
-  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 22,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 6,
+  safeArea: { flex: 1, backgroundColor: P.dark },
+
+  body: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
+
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E0F2FE',
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: P.tealSoft,
+    borderWidth: 1.5,
+    borderColor: P.tealBorder,
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 14,
+    marginBottom: 24,
   },
-  title: { fontSize: 22, fontWeight: '800', color: '#0F172A', textAlign: 'center' },
-  subtitle: { marginTop: 6, fontSize: 14, color: '#64748B', textAlign: 'center' },
-  label: { marginTop: 18, fontSize: 13, fontWeight: '700', color: '#334155' },
-  dotsRow: { marginTop: 10, flexDirection: 'row', gap: 10 },
+
+  titleWrap: { alignItems: 'center', marginBottom: 32 },
+  title: { fontSize: 22, fontWeight: '800', color: P.text, letterSpacing: -0.4 },
+  subtitle: { fontSize: 13, color: P.muted, marginTop: 6 },
+
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 22,
+    marginBottom: 12,
+  },
   dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#93C5FD',
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: '#0EA5E9',
-    borderColor: '#0EA5E9',
+    backgroundColor: P.teal,
+    borderColor: P.teal,
+    shadowColor: P.teal,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  hiddenInput: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: '#0F172A',
-    fontSize: 18,
-    letterSpacing: 8,
-  },
-  error: { marginTop: 12, color: '#EF4444', fontWeight: '600' },
-  primaryBtn: {
-    marginTop: 18,
-    backgroundColor: '#0EA5E9',
-    borderRadius: 14,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  secondaryBtn: {
-    marginTop: 12,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtnText: { color: '#334155', fontSize: 14, fontWeight: '600' },
-  bioBtn: {
-    marginTop: 12,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#7DD3FC',
-    backgroundColor: '#F0F9FF',
+  dotActive: { borderColor: P.teal },
+
+  errorWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 6,
+    backgroundColor: P.errorBg,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
   },
-  bioBtnText: { color: '#0369A1', fontSize: 14, fontWeight: '700' },
+  errorText: { color: P.error, fontSize: 13, fontWeight: '600' },
+  errorPlaceholder: { height: 36, marginBottom: 8 },
+
+  numpad: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 300,
+    marginTop: 8,
+    gap: 14,
+  },
+  key: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: P.key,
+    borderWidth: 1,
+    borderColor: P.keyBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  keyEmpty: { width: 80, height: 80 },
+  keyText: { fontSize: 28, fontWeight: '600', color: P.text, letterSpacing: -0.5 },
+
+  textBtn: {
+    marginTop: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  textBtnLabel: { color: P.muted, fontSize: 14, fontWeight: '600' },
 });

@@ -56,9 +56,40 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface IngredientChecklistItem {
+  key: string;
+  name: string;
+  product_id?: string | null;
+  product_title?: string | null;
+  estimated_price?: number | null;
+  available: boolean;
+  checked: boolean;
+}
+
+export interface StoreSuggestion {
+  store_id: string;
+  store_name: string;
+  store_address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  coverage_count: number;
+  coverage_ratio: number;
+  distance_meters?: number | null;
+  estimated_total?: number | null;
+  matched_products: ProductRecommendation[];
+}
+
 export interface ChatResponse {
   reply: string;
   suggested_products: ProductRecommendation[];
+  ingredient_checklist: IngredientChecklistItem[];
+  store_suggestions: StoreSuggestion[];
+}
+
+export interface ChatLocation {
+  latitude: number;
+  longitude: number;
+  radiusMeters?: number;
 }
 
 // ── API Calls ──
@@ -99,11 +130,15 @@ export async function sendChatMessage(
   message: string,
   conversationHistory: ChatMessage[] = [],
   userId?: string,
+  location?: ChatLocation,
 ): Promise<ChatResponse> {
   const res = await aiClient.post<ChatResponse>('/api/ai/chat', {
     message,
     conversation_history: conversationHistory,
     user_id: userId,
+    user_latitude: location?.latitude,
+    user_longitude: location?.longitude,
+    radius_meters: location?.radiusMeters ?? 5000,
   });
   return res.data;
 }

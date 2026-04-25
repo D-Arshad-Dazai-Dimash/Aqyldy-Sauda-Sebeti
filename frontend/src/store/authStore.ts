@@ -22,6 +22,7 @@ type AuthState = {
     email: string; password: string; name?: string;
     storeName: string; storeAddress?: string; phone?: string;
     bin?: string; workingHours?: string;
+    latitude?: number; longitude?: number;
   }) => Promise<void>;
   logout: () => Promise<void>;
   setAccessToken: (token: string) => void;

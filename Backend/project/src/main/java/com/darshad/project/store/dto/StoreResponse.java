@@ -9,5 +9,7 @@ public record StoreResponse(
         String description,
         String phone,
         String logoUrl,
-        String workingHours
+        String workingHours,
+        Double latitude,
+        Double longitude
 ) {}

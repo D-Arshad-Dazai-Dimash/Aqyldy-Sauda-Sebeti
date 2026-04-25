@@ -72,8 +72,33 @@ public class StoreService {
                 s.getDescription(),
                 s.getPhone(),
                 s.getLogoUrl(),
-                s.getWorkingHours()
+                s.getWorkingHours(),
+                s.getLatitude(),
+                s.getLongitude()
         );
+    }
+
+    public List<StoreResponse> getNearby(double lat, double lng, double radiusMeters) {
+        log.debug("▶ getNearby: lat={}, lng={}, radius={}m", lat, lng, radiusMeters);
+        var stores = storeRepository.findAllByActiveTrue()
+                .stream()
+                .filter(s -> s.getLatitude() != null && s.getLongitude() != null)
+                .filter(s -> haversineMeters(lat, lng, s.getLatitude(), s.getLongitude()) <= radiusMeters)
+                .sorted(Comparator.comparingDouble(s -> haversineMeters(lat, lng, s.getLatitude(), s.getLongitude())))
+                .map(this::toDto)
+                .toList();
+        log.debug("  found {} nearby stores", stores.size());
+        return stores;
+    }
+
+    private static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6_371_000.0; // Earth radius in metres
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     public List<InventoryResponse> getStoreInventory(UUID storeId) {

@@ -233,13 +233,21 @@ export default function CartScreen({ navigation }: any) {
           <Text style={styles.headerSubtitle}>{cartItems.length} {t('тауар', 'товаров')}</Text>
         </View>
 
-        <TouchableOpacity
-          onPress={handleClear}
-          style={[styles.headerBtn, cartItems.length === 0 && styles.headerBtnDisabled]}
-          disabled={cartItems.length === 0}
-        >
-          <Feather name="trash-2" size={18} color={cartItems.length > 0 ? palette.rose : '#A7B5C7'} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ShoppingList', { storeId })}
+            style={styles.headerBtn}
+          >
+            <Feather name="list" size={18} color={palette.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleClear}
+            style={[styles.headerBtn, cartItems.length === 0 && styles.headerBtnDisabled]}
+            disabled={cartItems.length === 0}
+          >
+            <Feather name="trash-2" size={18} color={cartItems.length > 0 ? palette.rose : '#A7B5C7'} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {error ? (
@@ -364,6 +372,11 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 12,
     backgroundColor: palette.background,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerBtn: {
     width: 44,

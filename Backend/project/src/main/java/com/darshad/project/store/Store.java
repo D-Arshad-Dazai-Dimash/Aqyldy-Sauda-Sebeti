@@ -49,6 +49,10 @@ public class Store {
     @Builder.Default
     private boolean active = true;
 
+    private Double latitude;
+
+    private Double longitude;
+
     @Column(nullable = false)
     private OffsetDateTime createdAt;
 

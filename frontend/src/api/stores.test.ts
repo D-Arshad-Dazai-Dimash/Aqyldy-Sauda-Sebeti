@@ -1,4 +1,4 @@
-import { getStoreProductsPaged } from './stores';
+import { getNearbyStores, getStoreProductsPaged } from './stores';
 import { api } from './client';
 
 jest.mock('./client', () => ({
@@ -29,7 +29,7 @@ describe('stores api fallback behavior', () => {
 
     const page = await getStoreProductsPaged('store-1', { page: 0, size: 24 });
 
-    expect(api.get).toHaveBeenNthCalledWith(1, '/api/stores/store-1/products', {
+    expect(api.get).toHaveBeenNthCalledWith(1, '/api/stores/store-1/products/page', {
       params: {
         page: 0,
         size: 24,
@@ -42,5 +42,16 @@ describe('stores api fallback behavior', () => {
     expect(page.content).toEqual([]);
     expect(page.totalElements).toBe(0);
     expect(page.totalPages).toBe(1);
+  });
+
+  it('calls nearby endpoint with lat/lng/radius query params', async () => {
+    (api.get as jest.Mock).mockResolvedValueOnce({ data: [{ id: 's1', name: 'A', address: 'B' }] });
+
+    const result = await getNearbyStores(51.1694, 71.4491, 3000);
+
+    expect(api.get).toHaveBeenCalledWith('/api/stores/nearby', {
+      params: { lat: 51.1694, lng: 71.4491, radiusMeters: 3000 },
+    });
+    expect(result).toHaveLength(1);
   });
 });

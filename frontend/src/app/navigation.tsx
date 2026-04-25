@@ -42,6 +42,8 @@ import PersonalDataScreen from '../screens/PersonalDataScreen';
 import PromotionsScreen from '../screens/PromotionsScreen';
 import SmartShoppingScreen from '../screens/SmartShoppingScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import AddressPickerScreen from '../screens/AddressPickerScreen';
+import ShoppingListScreen from '../screens/ShoppingListScreen';
 import { authenticateWithBiometric, canUseBiometricUnlock, verifyAppPin } from '../utils/appPin';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -202,6 +204,9 @@ function AppStack() {
       <Stack.Screen name="Promotions" component={PromotionsScreen} />
       <Stack.Screen name="SmartShopping" component={SmartShoppingScreen} />
       <Stack.Screen name="NotificationsTab" component={NotificationsScreen} />
+
+      <Stack.Screen name="ShoppingList" component={ShoppingListScreen} />
+      <Stack.Screen name="AddressPicker" component={AddressPickerScreen} />
     </Stack.Navigator>
   );
 }

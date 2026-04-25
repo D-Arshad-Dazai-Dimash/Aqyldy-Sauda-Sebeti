@@ -11,20 +11,27 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   Image,
+  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import Geolocation from '@react-native-community/geolocation';
 import {
   sendChatMessage,
   type ChatMessage,
+  type IngredientChecklistItem,
   type ProductRecommendation,
+  type StoreSuggestion,
 } from '../api/ai';
+import { useShoppingListStore } from '../store/shoppingListStore';
 
 interface DisplayMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   products?: ProductRecommendation[];
+  ingredientChecklist?: IngredientChecklistItem[];
+  storeSuggestions?: StoreSuggestion[];
   timestamp: Date;
 }
 
@@ -40,7 +47,9 @@ export default function ChatbotScreen({navigation}: any) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const flatListRef = useRef<FlatList>(null);
+  const addToShoppingList = useShoppingListStore((s) => s.addItem);
 
   const quickActions = [
     '🏷️ Жеңілдіктер',
@@ -48,6 +57,72 @@ export default function ChatbotScreen({navigation}: any) {
     '🥛 Сүт бағасы',
     '❓ Көмек',
   ];
+
+  useEffect(() => {
+    const loadLocation = async () => {
+      try {
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            return;
+          }
+        }
+
+        Geolocation.getCurrentPosition(
+          position => {
+            setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          },
+          () => {
+            // Location is optional for chat flow.
+          },
+          {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000},
+        );
+      } catch {
+        // Ignore location errors; AI chat still works without coordinates.
+      }
+    };
+
+    loadLocation();
+  }, []);
+
+  const toggleChecklistItem = (messageId: string, itemKey: string) => {
+    setMessages(prev =>
+      prev.map(msg => {
+        if (msg.id !== messageId || !msg.ingredientChecklist) return msg;
+        return {
+          ...msg,
+          ingredientChecklist: msg.ingredientChecklist.map(it =>
+            it.key === itemKey ? {...it, checked: !it.checked} : it,
+          ),
+        };
+      }),
+    );
+  };
+
+  const handleAddCheckedToShoppingList = async (messageId: string) => {
+    const targetMessage = messages.find(m => m.id === messageId);
+    if (!targetMessage?.ingredientChecklist?.length) return;
+
+    const preferredStore = targetMessage.storeSuggestions?.[0];
+    const selected = targetMessage.ingredientChecklist.filter(
+      item => item.checked && item.product_id,
+    );
+    if (selected.length === 0) return;
+
+    for (const item of selected) {
+      await addToShoppingList({
+        productId: item.product_id!,
+        title: item.product_title || item.name,
+        price: item.estimated_price ?? 0,
+        storeId: preferredStore?.store_id,
+      });
+    }
+  };
 
   const handleSend = async (text?: string) => {
     const msg = (text || input).trim();
@@ -69,7 +144,18 @@ export default function ChatbotScreen({navigation}: any) {
         .filter(m => m.id !== 'welcome')
         .map(m => ({role: m.role, content: m.content}));
 
-      const response = await sendChatMessage(msg, history);
+      const response = await sendChatMessage(
+        msg,
+        history,
+        undefined,
+        location
+          ? {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              radiusMeters: 5000,
+            }
+          : undefined,
+      );
 
       const assistantMsg: DisplayMessage = {
         id: `assistant_${Date.now()}`,
@@ -78,6 +164,14 @@ export default function ChatbotScreen({navigation}: any) {
         products:
           response.suggested_products.length > 0
             ? response.suggested_products
+            : undefined,
+        ingredientChecklist:
+          response.ingredient_checklist.length > 0
+            ? response.ingredient_checklist
+            : undefined,
+        storeSuggestions:
+          response.store_suggestions.length > 0
+            ? response.store_suggestions
             : undefined,
         timestamp: new Date(),
       };
@@ -163,6 +257,65 @@ export default function ChatbotScreen({navigation}: any) {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+          )}
+
+          {item.ingredientChecklist && item.ingredientChecklist.length > 0 && (
+            <View style={styles.checklistWrap}>
+              <Text style={styles.sectionTitle}>Ингредиенттер / Ингредиенты</Text>
+              {item.ingredientChecklist.map((ingredient) => (
+                <TouchableOpacity
+                  key={`${item.id}-${ingredient.key}`}
+                  style={styles.checklistRow}
+                  onPress={() => toggleChecklistItem(item.id, ingredient.key)}>
+                  <Feather
+                    name={ingredient.checked ? 'check-square' : 'square'}
+                    size={18}
+                    color={ingredient.checked ? '#0F766E' : '#64748B'}
+                  />
+                  <View style={styles.checklistTextWrap}>
+                    <Text style={styles.checklistMainText}>{ingredient.name}</Text>
+                    {!!ingredient.product_title && (
+                      <Text style={styles.checklistSubText} numberOfLines={1}>
+                        {ingredient.product_title}
+                        {ingredient.estimated_price
+                          ? ` · ${ingredient.estimated_price.toFixed(0)} ₸`
+                          : ''}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.addChecklistBtn}
+                onPress={() => handleAddCheckedToShoppingList(item.id)}>
+                <Text style={styles.addChecklistBtnText}>Таңдалғанын тізімге қосу</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {item.storeSuggestions && item.storeSuggestions.length > 0 && (
+            <View style={styles.storeSuggestionsWrap}>
+              <Text style={styles.sectionTitle}>Ұсынылған дүкендер</Text>
+              {item.storeSuggestions.map((store) => (
+                <TouchableOpacity
+                  key={`${item.id}-${store.store_id}`}
+                  style={styles.storeSuggestionCard}
+                  onPress={() => navigation.navigate('StoreScreen', {storeId: store.store_id})}>
+                  <Text style={styles.storeSuggestionTitle}>{store.store_name}</Text>
+                  <Text style={styles.storeSuggestionMeta}>
+                    Қамту: {store.coverage_count} / {Math.max(item.ingredientChecklist?.length || 0, 1)}
+                    {typeof store.distance_meters === 'number'
+                      ? ` · ${Math.round(store.distance_meters)} м`
+                      : ''}
+                  </Text>
+                  {typeof store.estimated_total === 'number' && (
+                    <Text style={styles.storeSuggestionPrice}>
+                      Шамамен: {store.estimated_total.toFixed(0)} ₸
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </View>
@@ -363,6 +516,79 @@ const styles = StyleSheet.create({
   productChipInfo: {flex: 1},
   productChipTitle: {fontSize: 12, fontWeight: '600', color: '#334155'},
   productChipPrice: {fontSize: 13, fontWeight: '800', color: '#4AB7B6'},
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  checklistWrap: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 8,
+    gap: 6,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checklistTextWrap: {
+    flex: 1,
+  },
+  checklistMainText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  checklistSubText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  addChecklistBtn: {
+    marginTop: 6,
+    backgroundColor: '#CCFBF1',
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  addChecklistBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#115E59',
+  },
+  storeSuggestionsWrap: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingTop: 8,
+    gap: 6,
+  },
+  storeSuggestionCard: {
+    borderRadius: 10,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  storeSuggestionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  storeSuggestionMeta: {
+    fontSize: 12,
+    color: '#0F766E',
+    marginTop: 2,
+  },
+  storeSuggestionPrice: {
+    fontSize: 12,
+    color: '#334155',
+    marginTop: 2,
+  },
   quickActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

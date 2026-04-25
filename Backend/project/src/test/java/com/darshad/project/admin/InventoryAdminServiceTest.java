@@ -7,6 +7,9 @@ import com.darshad.project.store.InventoryRepository;
 import com.darshad.project.store.Store;
 import com.darshad.project.store.StoreRepository;
 import com.darshad.project.store.dto.Inventory;
+import com.darshad.project.user.Role;
+import com.darshad.project.user.User;
+import com.darshad.project.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,10 +34,14 @@ class InventoryAdminServiceTest {
     @Mock InventoryRepository inventoryRepo;
     @Mock StoreRepository storeRepo;
     @Mock ProductRepository productRepo;
+    @Mock UserRepository userRepo;
 
     @InjectMocks InventoryAdminService inventoryAdminService;
 
     UUID storeId, productId;
+    UUID ownerId;
+    String email;
+    User owner;
     Store store;
     Product product;
     Inventory inventory;
@@ -43,8 +50,12 @@ class InventoryAdminServiceTest {
     void setUp() {
         storeId   = UUID.randomUUID();
         productId = UUID.randomUUID();
+        ownerId = UUID.randomUUID();
+        email = "merchant@test.com";
 
-        store = Store.builder().id(storeId).name("Test Store").active(true).build();
+        owner = User.builder().id(ownerId).email(email).role(Role.MERCHANT).enabled(true).build();
+
+        store = Store.builder().id(storeId).name("Test Store").ownerId(ownerId).active(true).build();
         product = Product.builder().id(productId).title("Test Product")
                 .price(BigDecimal.valueOf(100)).barcode("123456").build();
 
@@ -61,10 +72,11 @@ class InventoryAdminServiceTest {
     @Test
     @DisplayName("getInventory — возвращает список инвентаря для магазина")
     void getInventory_returnsList() {
+        when(userRepo.findByEmail(email)).thenReturn(Optional.of(owner));
         when(storeRepo.findById(storeId)).thenReturn(Optional.of(store));
         when(inventoryRepo.findWithProductByStore_Id(storeId)).thenReturn(List.of(inventory));
 
-        var result = inventoryAdminService.getInventory(storeId);
+        var result = inventoryAdminService.getInventory(email, storeId);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).productId()).isEqualTo(productId);
@@ -74,9 +86,10 @@ class InventoryAdminServiceTest {
     @Test
     @DisplayName("getInventory — бросает исключение если магазин не найден")
     void getInventory_throwsWhenStoreNotFound() {
+        when(userRepo.findByEmail(email)).thenReturn(Optional.of(owner));
         when(storeRepo.findById(storeId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> inventoryAdminService.getInventory(storeId))
+        assertThatThrownBy(() -> inventoryAdminService.getInventory(email, storeId))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Store not found");
     }
@@ -86,13 +99,14 @@ class InventoryAdminServiceTest {
     @Test
     @DisplayName("upsertInventory — обновляет quantity если строка уже существует")
     void upsertInventory_updatesExisting() {
+        when(userRepo.findByEmail(email)).thenReturn(Optional.of(owner));
         when(storeRepo.findById(storeId)).thenReturn(Optional.of(store));
         when(productRepo.findById(productId)).thenReturn(Optional.of(product));
         when(inventoryRepo.findByStore_IdAndProduct_Id(storeId, productId))
                 .thenReturn(Optional.of(inventory));
         when(inventoryRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var result = inventoryAdminService.upsertInventory(storeId, productId, 25);
+        var result = inventoryAdminService.upsertInventory(email, storeId, productId, 25);
 
         assertThat(result.quantity()).isEqualTo(25);
         verify(inventoryRepo).save(any(Inventory.class));
@@ -101,13 +115,14 @@ class InventoryAdminServiceTest {
     @Test
     @DisplayName("upsertInventory — создаёт новую строку если не существует")
     void upsertInventory_createsNew() {
+        when(userRepo.findByEmail(email)).thenReturn(Optional.of(owner));
         when(storeRepo.findById(storeId)).thenReturn(Optional.of(store));
         when(productRepo.findById(productId)).thenReturn(Optional.of(product));
         when(inventoryRepo.findByStore_IdAndProduct_Id(storeId, productId))
                 .thenReturn(Optional.empty());
         when(inventoryRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var result = inventoryAdminService.upsertInventory(storeId, productId, 50);
+        var result = inventoryAdminService.upsertInventory(email, storeId, productId, 50);
 
         assertThat(result.quantity()).isEqualTo(50);
         verify(inventoryRepo).save(any(Inventory.class));
@@ -116,7 +131,9 @@ class InventoryAdminServiceTest {
     @Test
     @DisplayName("upsertInventory — бросает если quantity отрицательный")
     void upsertInventory_throwsOnNegativeQuantity() {
-        assertThatThrownBy(() -> inventoryAdminService.upsertInventory(storeId, productId, -1))
+        when(userRepo.findByEmail(email)).thenReturn(Optional.of(owner));
+        when(storeRepo.findById(storeId)).thenReturn(Optional.of(store));
+        assertThatThrownBy(() -> inventoryAdminService.upsertInventory(email, storeId, productId, -1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("quantity");
     }

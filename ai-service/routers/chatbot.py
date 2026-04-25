@@ -23,4 +23,7 @@ async def chat_endpoint(
         message=req.message,
         conversation_history=req.conversation_history,
         user_id=authenticated_user_id,
+        user_latitude=req.user_latitude,
+        user_longitude=req.user_longitude,
+        radius_meters=req.radius_meters,
     )

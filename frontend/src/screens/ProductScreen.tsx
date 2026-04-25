@@ -10,6 +10,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Pressable,
+  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -21,11 +22,14 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import Geolocation from '@react-native-community/geolocation';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
 import { api } from '../api/client';
+import { getNearbyStores } from '../api/stores';
 import { getPriceInsight } from '../api/priceInsights';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
+import type { Store } from '../types/api';
 import type { PriceInsight, RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
 
@@ -65,6 +69,38 @@ export default function ProductScreen({ route, navigation }: any) {
   const { addItem, storeId: cartStoreId } = useCartStore();
   const storeId = routeStoreId || cartStoreId;
 
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') return true;
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        title: 'Орналасқан жер рұқсаты',
+        message: 'Жақын дүкенді табу үшін орналасқан жерге рұқсат қажет',
+        buttonPositive: 'Рұқсат беру',
+        buttonNegative: 'Бас тарту',
+      }
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  };
+
+  const getCurrentPosition = () =>
+    new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+      Geolocation.getCurrentPosition(
+        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    });
+
+  const resolveNearestStore = async (): Promise<Store | null> => {
+    const allowed = await requestLocationPermission();
+    if (!allowed) return null;
+
+    const { latitude, longitude } = await getCurrentPosition();
+    const nearby = await getNearbyStores(latitude, longitude, 5000);
+    return nearby[0] ?? null;
+  };
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -86,14 +122,22 @@ export default function ProductScreen({ route, navigation }: any) {
   }, [productId]);
 
   const handleAddToCart = async () => {
-    if (!storeId) {
-      setCartMessage('Алдымен дүкенді таңдаңыз');
-      return;
-    }
     try {
+      let effectiveStoreId = storeId;
+      if (!effectiveStoreId) {
+        setCartMessage('Жақын дүкен ізделуде...');
+        const nearest = await resolveNearestStore();
+        if (!nearest) {
+          setCartMessage('Алдымен дүкенді таңдаңыз');
+          setTimeout(() => setCartMessage(''), 2500);
+          return;
+        }
+        effectiveStoreId = nearest.id;
+      }
+
       setAddingToCart(true);
       setCartMessage('Себет жаңартылып жатыр...');
-      await addItem(storeId, productId, 1, {
+      await addItem(effectiveStoreId, productId, 1, {
         productId,
         productTitle: product.title,
         price: product.price,
@@ -337,6 +381,18 @@ export default function ProductScreen({ route, navigation }: any) {
             {cartMessage}
           </Animated.Text>
         ) : null}
+
+        <TouchableOpacity
+          style={styles.chooseStoreBtn}
+          onPress={() => navigation.navigate('Map')}
+          activeOpacity={0.85}
+        >
+          <Feather name="map-pin" size={16} color={P.teal} />
+          <Text style={styles.chooseStoreText}>
+            {storeId ? 'Басқа дүкенді көру' : 'Дүкен таңдау'}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.addToCartBtn, (!product.active || product.stock === 0) && styles.disabledBtn]}
           onPress={handleAddToCart}
@@ -566,6 +622,19 @@ const styles = StyleSheet.create({
     textAlign: 'center', color: P.teal, fontWeight: '600',
     fontSize: 13, marginBottom: 8,
   },
+  chooseStoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: P.border,
+    borderRadius: 14,
+    paddingVertical: 11,
+    marginBottom: 10,
+    backgroundColor: P.surface,
+  },
+  chooseStoreText: { color: P.teal, fontSize: 14, fontWeight: '700' },
   addToCartBtn: {
     backgroundColor: P.teal,
     borderRadius: 18,

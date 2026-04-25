@@ -20,6 +20,8 @@ export type BusinessRegisterRequest = {
   phone?: string;
   bin?: string;
   workingHours?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type AuthResponse = {

@@ -12,5 +12,7 @@ public record BusinessRegisterRequest(
         @Size(max = 300) String storeAddress,
         @Size(max = 20) String phone,
         @Size(max = 20) String bin,
-        @Size(max = 100) String workingHours
+        @Size(max = 100) String workingHours,
+        Double latitude,
+        Double longitude
 ) {}

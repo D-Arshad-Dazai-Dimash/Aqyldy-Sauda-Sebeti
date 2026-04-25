@@ -146,14 +146,16 @@ public class AuthService {
         userRepository.save(user);
 
         Store store = Store.builder()
-                .name(req.storeName().trim())
-                .address(req.storeAddress())
-                .phone(req.phone())
-                .bin(req.bin())
-                .workingHours(req.workingHours())
-                .ownerId(user.getId())
-                .active(true)
-                .build();
+            .name(req.storeName().trim())
+            .address(req.storeAddress())
+            .phone(req.phone())
+            .bin(req.bin())
+            .workingHours(req.workingHours())
+            .latitude(req.latitude())
+            .longitude(req.longitude())
+            .ownerId(user.getId())
+            .active(true)
+            .build();
 
         storeRepository.save(store);
         log.info("✓ REGISTER BUSINESS success: email={}, userId={}, storeId={}", email, user.getId(), store.getId());

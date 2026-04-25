@@ -25,8 +25,8 @@ export type RootStackParamList = {
   StoreScreen: { storeId?: string } | undefined;
   SubCategory: { categoryId?: string; categoryName?: string } | undefined;
   ProductList: { categoryId?: string; query?: string } | undefined;
-  ProductScreen: { productId: string };
-  ScanScreen: { mode?: 'buyer' | 'business' } | undefined;
+  ProductScreen: { productId: string; storeId?: string };
+  ScanScreen: { mode?: 'buyer' | 'business' | 'shoppingList' } | undefined;
   Orders: undefined;
   OrderDetail: { orderId: string };
   BusinessOrderDetail: { orderId: string };
@@ -39,6 +39,8 @@ export type RootStackParamList = {
   Promotions: undefined;
   SmartShopping: undefined;
   NotificationsTab: undefined;
+  ShoppingList: { storeId?: string } | undefined;
+  AddressPicker: { onConfirm: (address: string, lat: number, lng: number) => void };
 };
 
 export type AuthStackParamList = {

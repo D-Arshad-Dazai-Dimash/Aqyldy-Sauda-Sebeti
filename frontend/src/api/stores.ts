@@ -36,6 +36,17 @@ export async function getStores(): Promise<Store[]> {
   return res.data;
 }
 
+export async function getNearbyStores(
+  lat: number,
+  lng: number,
+  radiusMeters: number = 5000
+): Promise<Store[]> {
+  const res = await api.get<Store[]>('/api/stores/nearby', {
+    params: { lat, lng, radiusMeters },
+  });
+  return res.data;
+}
+
 export async function getStore(id: string): Promise<Store> {
   const res = await api.get<Store>(`/api/stores/${id}`);
   return res.data;

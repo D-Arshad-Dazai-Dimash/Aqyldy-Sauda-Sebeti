@@ -76,4 +76,67 @@ class StoreServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("User not found");
     }
+
+        @Test
+        @DisplayName("getNearby — фильтрует только активные магазины с координатами в радиусе")
+        void getNearby_filtersByRadiusAndCoordinates() {
+        Store near = Store.builder()
+            .id(UUID.randomUUID())
+            .name("Near")
+            .address("A")
+            .active(true)
+            .latitude(51.1695)
+            .longitude(71.4492)
+            .build();
+        Store far = Store.builder()
+            .id(UUID.randomUUID())
+            .name("Far")
+            .address("B")
+            .active(true)
+            .latitude(51.2500)
+            .longitude(71.6000)
+            .build();
+        Store noCoords = Store.builder()
+            .id(UUID.randomUUID())
+            .name("NoCoords")
+            .active(true)
+            .latitude(null)
+            .longitude(null)
+            .build();
+
+        when(storeRepository.findAllByActiveTrue()).thenReturn(List.of(near, far, noCoords));
+
+        List<StoreResponse> result = storeService.getNearby(51.1694, 71.4491, 2_000);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).name()).isEqualTo("Near");
+        assertThat(result.get(0).latitude()).isEqualTo(51.1695);
+        assertThat(result.get(0).longitude()).isEqualTo(71.4492);
+        }
+
+        @Test
+        @DisplayName("getNearby — возвращает магазины по возрастанию расстояния")
+        void getNearby_returnsSortedByDistance() {
+        Store closest = Store.builder()
+            .id(UUID.randomUUID())
+            .name("Closest")
+            .active(true)
+            .latitude(51.16941)
+            .longitude(71.44911)
+            .build();
+        Store middle = Store.builder()
+            .id(UUID.randomUUID())
+            .name("Middle")
+            .active(true)
+            .latitude(51.1700)
+            .longitude(71.4500)
+            .build();
+
+        when(storeRepository.findAllByActiveTrue()).thenReturn(List.of(middle, closest));
+
+        List<StoreResponse> result = storeService.getNearby(51.1694, 71.4491, 20_000);
+
+        assertThat(result).extracting(StoreResponse::name)
+            .containsExactly("Closest", "Middle");
+        }
 }

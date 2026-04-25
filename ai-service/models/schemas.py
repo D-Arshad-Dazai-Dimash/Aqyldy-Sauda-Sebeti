@@ -41,8 +41,36 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: list[ChatMessage] = []
     user_id: Optional[str] = None
+    user_latitude: Optional[float] = None
+    user_longitude: Optional[float] = None
+    radius_meters: int = 5000
+
+
+class IngredientChecklistItem(BaseModel):
+    key: str
+    name: str
+    product_id: Optional[str] = None
+    product_title: Optional[str] = None
+    estimated_price: Optional[float] = None
+    available: bool = False
+    checked: bool = True
+
+
+class StoreSuggestion(BaseModel):
+    store_id: str
+    store_name: str
+    store_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    coverage_count: int
+    coverage_ratio: float
+    distance_meters: Optional[float] = None
+    estimated_total: Optional[float] = None
+    matched_products: list[ProductRecommendation] = []
 
 
 class ChatResponse(BaseModel):
     reply: str
     suggested_products: list[ProductRecommendation] = []
+    ingredient_checklist: list[IngredientChecklistItem] = []
+    store_suggestions: list[StoreSuggestion] = []

@@ -26,6 +26,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import Collapsible from 'react-native-collapsible';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
+import { useShoppingListStore } from '../store/shoppingListStore';
 import { useStoreCatalogStore } from '../store/storeCatalogStore';
 import * as StoresApi from '../api/stores';
 import type { Store, InventoryItem } from '../types/api';
@@ -93,6 +94,7 @@ export default function StoreScreen({ route, navigation }: any) {
   const [isAboutExpanded, setIsAboutExpanded] = useState(false);
   const { toggleFavorite, isFavorite } = useFavoritesStore();
   const addItem = useCartStore((s) => s.addItem);
+  const addToShoppingList = useShoppingListStore((s) => s.addItem);
 
   const loadStore = useCallback(async () => {
     setLoadingStore(true);
@@ -221,6 +223,21 @@ export default function StoreScreen({ route, navigation }: any) {
     } catch {}
   };
 
+  const handleAddToShopping = async (productId: string) => {
+    const product = products.find((entry) => entry.productId === productId);
+    if (!product) return;
+    try {
+      await addToShoppingList({
+        productId,
+        title: product.productTitle,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        storeId,
+        quantity: 1,
+      });
+    } catch {}
+  };
+
   const formatPrice = (price: number) => `${Math.round(price)} ₸`;
 
   const renderProductItem = ({ item, index }: { item: InventoryItem; index: number }) => {
@@ -261,13 +278,22 @@ export default function StoreScreen({ route, navigation }: any) {
           <Text style={styles.cardTitle} numberOfLines={2}>{item.productTitle}</Text>
           <View style={styles.cardFooter}>
             <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => handleAddToCart(item.productId)}
-              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-            >
-              <Feather name="plus" size={16} color="#FFF" />
-            </TouchableOpacity>
+            <View style={styles.cardActionsRow}>
+              <TouchableOpacity
+                style={styles.secondaryActionBtn}
+                onPress={() => handleAddToShopping(item.productId)}
+                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+              >
+                <Feather name="list" size={14} color={P.ink} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => handleAddToCart(item.productId)}
+                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+              >
+                <Feather name="plus" size={16} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </PressCard>
       </Animated.View>
@@ -309,9 +335,14 @@ export default function StoreScreen({ route, navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
           <Feather name="chevron-left" size={24} color={P.ink} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Search')}>
-          <Feather name="search" size={20} color={P.ink} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('ShoppingList', { storeId })}>
+            <Feather name="list" size={19} color={P.ink} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Search')}>
+            <Feather name="search" size={20} color={P.ink} />
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <ScrollView
@@ -518,6 +549,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
+  headerActions: { flexDirection: 'row', gap: 8 },
   scrollContent: { paddingHorizontal: 14, paddingBottom: 50 },
 
   topPanel: {
@@ -726,6 +758,17 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 10 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
+  cardActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  secondaryActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   addBtn: {
     width: 32, height: 32, borderRadius: 10,
     backgroundColor: P.teal,
