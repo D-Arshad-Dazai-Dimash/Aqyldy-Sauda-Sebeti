@@ -13,6 +13,7 @@ import com.darshad.project.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -98,17 +99,17 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     log.warn("✗ LOGIN failed: user not found — {}", email);
-                    return new IllegalArgumentException("Invalid credentials");
+                    return new BadCredentialsException("Invalid credentials");
                 });
 
         if (!user.isEnabled()) {
             log.warn("✗ LOGIN failed: user disabled — {}", email);
-            throw new IllegalArgumentException("User disabled");
+            throw new BadCredentialsException("User disabled");
         }
 
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             log.warn("✗ LOGIN failed: wrong password — {}", email);
-            throw new IllegalArgumentException("Invalid credentials");
+            throw new BadCredentialsException("Invalid credentials");
         }
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
