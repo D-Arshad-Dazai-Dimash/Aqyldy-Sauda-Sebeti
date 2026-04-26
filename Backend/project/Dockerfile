@@ -6,7 +6,9 @@ COPY gradle gradle
 COPY settings.gradle build.gradle gradle.properties ./
 COPY src src
 
-RUN chmod +x gradlew && ./gradlew clean bootJar -x test --no-daemon
+RUN chmod +x gradlew \
+    && sed -i '/org\.gradle\.java\.home/d' gradle.properties \
+    && ./gradlew clean bootJar -x test --no-daemon
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
