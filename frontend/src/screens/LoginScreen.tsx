@@ -156,7 +156,7 @@ export default function LoginScreen({ navigation }: any) {
               onPress={() => navigation.navigate('BusinessLogin')}
             >
               <Feather name="briefcase" size={16} color="#0EA5E9" />
-              <Text style={styles.businessLoginText}>Өндік ретінде кіру</Text>
+              <Text style={styles.businessLoginText}>Сатушы ретінде кіру</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

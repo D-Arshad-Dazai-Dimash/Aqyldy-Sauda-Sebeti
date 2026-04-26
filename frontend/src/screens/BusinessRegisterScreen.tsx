@@ -90,8 +90,8 @@ export default function BusinessRegisterScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Бизнес тіркелу</Text>
-            <Text style={styles.subtitle}>Дүкеніңізді тіркеп, тауарларды басқарыңыз</Text>
+            <Text style={styles.title}>Сатушы ретінде тіркелу</Text>
+            <Text style={styles.subtitle}>Дүкеніңізді тіркеп, сатушы порталын пайдаланыңыз</Text>
           </View>
 
           <View style={styles.formCard}>

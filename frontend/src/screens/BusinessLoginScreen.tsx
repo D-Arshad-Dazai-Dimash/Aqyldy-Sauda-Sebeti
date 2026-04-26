@@ -64,21 +64,21 @@ export default function BusinessLoginScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Декоративный gradient-style header */}
+          {/* Декоративный header */}
           <View style={styles.headerDecoration} />
 
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Feather name="briefcase" size={48} color="#FFF" />
+              <Feather name="store" size={48} color="#FFF" />
             </View>
             <Text style={styles.title}>Aqyldy Sebet</Text>
-            <Text style={styles.subtitle}>Бизнес портал</Text>
+            <Text style={styles.subtitle}>Сатушы портали</Text>
           </View>
 
           <View style={styles.formCard}>
             <View style={styles.formHeader}>
               <Feather name="lock" size={20} color="#0EA5E9" />
-              <Text style={styles.formTitle}>Өндіктер үшін кіру</Text>
+              <Text style={styles.formTitle}>Дүкен ие ретінде кіру</Text>
             </View>
 
             <Text style={styles.inputLabel}>Email</Text>
@@ -128,7 +128,7 @@ export default function BusinessLoginScreen({ navigation }: any) {
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
-                  <Text style={styles.buttonText}>Құрылғыға кіру</Text>
+                  <Text style={styles.buttonText}>Портальға кіру</Text>
                   <Feather name="arrow-right" size={20} color="#FFF" />
                 </>
               )}
@@ -144,13 +144,13 @@ export default function BusinessLoginScreen({ navigation }: any) {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerLabel}>Өндік емес пе?</Text>
+            <Text style={styles.footerLabel}>Дүкен ие емес пе?</Text>
             <TouchableOpacity 
               activeOpacity={0.6} 
               onPress={() => navigation.navigate('BusinessRegister')}
               style={styles.registerLink}
             >
-              <Text style={styles.registerText}>Өндік ретінде тіркелу</Text>
+              <Text style={styles.registerText}>Сатушы ретінде тіркелу</Text>
               <Feather name="arrow-right" size={14} color="#0EA5E9" />
             </TouchableOpacity>
             
