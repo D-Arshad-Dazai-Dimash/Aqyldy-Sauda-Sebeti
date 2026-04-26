@@ -2,6 +2,7 @@ services:
   - type: web
     name: aqyldy-backend
     runtime: docker
+    plan: free
     rootDir: Backend/project
     healthCheckPath: /health
     envVars:
@@ -23,6 +24,7 @@ services:
   - type: web
     name: aqyldy-ai-service
     runtime: docker
+    plan: free
     rootDir: ai-service
     healthCheckPath: /health
     envVars:
