@@ -267,6 +267,7 @@ export default function RootNavigation() {
           <AuthStack.Screen name="BusinessRegister" component={BusinessRegisterScreen} />
           <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+          <AuthStack.Screen name="AddressPicker" component={AddressPickerScreen} />
         </AuthStack.Navigator>
       )}
     </NavigationContainer>

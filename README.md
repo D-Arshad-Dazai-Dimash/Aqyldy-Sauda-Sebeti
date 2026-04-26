@@ -164,6 +164,8 @@
 
 > ⚠️ Backend использует Java Toolchain 17. Для локальной и CI/CD сборки установите JDK 17.
 
+> 🔒 Безопасность: не храните реальные секреты в README и в Git. Используйте только переменные окружения и секрет-хранилище платформы (например, DigitalOcean App Platform Secrets).
+
 ---
 
 ## Быстрый старт
@@ -235,9 +237,9 @@ docker compose up -d
 |----------|----------|
 | Host | `localhost` |
 | Port | `55432` |
-| Database | `dbaqyldy` |
-| User | `aqsa` |
-| Password | `aqyldysebet123` |
+| Database | `<DB_NAME>` |
+| User | `<DB_USER>` |
+| Password | `<DB_PASS>` |
 
 Проверить подключение:
 ```powershell
@@ -250,8 +252,8 @@ docker exec -it aqyldy_sauda_sebeti__db psql -U aqsa -d dbaqyldy -c "\dt"
 cd Backend/project
 
 $env:DB_URL    = "jdbc:postgresql://localhost:55432/dbaqyldy"
-$env:DB_USER   = "aqsa"
-$env:DB_PASS   = "aqyldysebet123"
+$env:DB_USER   = "<DB_USER>"
+$env:DB_PASS   = "<DB_PASS>"
 $env:JWT_SECRET = "your-secret-key-at-least-32-chars!!"
 
 .\gradlew.bat bootRun
@@ -276,9 +278,9 @@ pip install -r requirements.txt
 @"
 DB_HOST=localhost
 DB_PORT=55432
-DB_NAME=dbaqyldy
-DB_USER=aqsa
-DB_PASS=aqyldysebet123
+DB_NAME=<DB_NAME>
+DB_USER=<DB_USER>
+DB_PASS=<DB_PASS>
 GEMINI_API_KEY=your_key_here
 "@ | Out-File -FilePath .env -Encoding utf8
 
@@ -313,8 +315,8 @@ npm run android
 | Переменная | По умолчанию | Описание |
 |-----------|-------------|----------|
 | `DB_URL` | `jdbc:postgresql://localhost:55432/dbaqyldy` | JDBC URL |
-| `DB_USER` | `aqsa` | Пользователь PostgreSQL |
-| `DB_PASS` | `aqyldysebet123` | Пароль PostgreSQL |
+| `DB_USER` | `<DB_USER>` | Пользователь PostgreSQL |
+| `DB_PASS` | — | Пароль PostgreSQL (только через секреты) |
 | `JWT_SECRET` | — | **Обязательно!** Секрет JWT ≥32 символа |
 | `JWT_EXPIRATION` | `86400000` | Время жизни токена (мс, 24 часа) |
 

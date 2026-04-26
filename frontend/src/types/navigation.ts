@@ -49,4 +49,5 @@ export type AuthStackParamList = {
   BusinessRegister: undefined;
   ForgotPassword: undefined;
   ResetPassword: { token?: string } | undefined;
+  AddressPicker: { onConfirm: (address: string, lat: number, lng: number) => void };
 };
