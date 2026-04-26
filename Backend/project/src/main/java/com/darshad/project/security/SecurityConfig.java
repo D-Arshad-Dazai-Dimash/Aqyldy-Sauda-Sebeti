@@ -37,7 +37,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
-        // CORS is env-driven for Render and mobile clients.
+        // CORS is env-driven for cloud and mobile clients.
         List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
@@ -73,7 +73,7 @@ public class SecurityConfig {
                 "/swagger", "/swagger/**", "/api-docs/**"
             ).permitAll()
 
-                        // Render and uptime checks
+                        // Health and uptime checks
                         .requestMatchers(HttpMethod.GET, "/health", "/actuator/health").permitAll()
 
                         // STATIC UPLOADS (B8: product images served by WebConfig)

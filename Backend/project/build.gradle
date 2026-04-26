@@ -5,7 +5,7 @@ plugins {
 }
 
 if (JavaVersion.current() != JavaVersion.VERSION_17) {
-    logger.warn("Backend is optimized for JDK 17. Current runtime: ${System.getProperty('java.version')}. Render may still work if JAVA_VERSION is configured correctly.")
+    logger.warn("Backend is optimized for JDK 17. Current runtime: ${System.getProperty('java.version')}. Ensure deployment environment uses Java 17.")
 }
 
 group = 'com.darshad'

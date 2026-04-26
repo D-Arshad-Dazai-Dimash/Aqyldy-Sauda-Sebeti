@@ -24,7 +24,7 @@
 - [Быстрый старт](#быстрый-старт)
 - [Пошаговый запуск (вручную)](#пошаговый-запуск-вручную)
 - [Переменные окружения](#переменные-окружения)
-- [Деплой в Render](#деплой-в-render)
+- [Деплой в DigitalOcean](#деплой-в-digitalocean)
 - [API-эндпоинты (Backend)](#api-эндпоинты-backend)
 - [AI-сервис (Python FastAPI)](#ai-сервис-python-fastapi)
 - [Структура проекта](#структура-проекта)
@@ -162,7 +162,7 @@
 | **Android Studio** | с SDK 34+ | ✅ |
 | **Python** | 3.11+ | Только для AI-сервиса |
 
-> ⚠️ Проект жёстко проверяет **JDK 17** в `build.gradle`. Java 11, 21, 22 вызовут ошибку сборки.
+> ⚠️ Backend использует Java Toolchain 17. Для локальной и CI/CD сборки установите JDK 17.
 
 ---
 
@@ -318,29 +318,44 @@ npm run android
 | `JWT_SECRET` | — | **Обязательно!** Секрет JWT ≥32 символа |
 | `JWT_EXPIRATION` | `86400000` | Время жизни токена (мс, 24 часа) |
 
-## Деплой в Render
+## Деплой в DigitalOcean
 
-В репозиторий добавлен blueprint-файл [render.yaml](render.yaml), который создает:
+Проект разворачивается в **DigitalOcean App Platform** двумя Docker-сервисами:
 - `aqyldy-backend` (Spring Boot)
 - `aqyldy-ai-service` (FastAPI)
-- `aqyldy-postgres` (PostgreSQL)
 
-### 1. Импорт blueprint
+PostgreSQL рекомендуется использовать внешний (например, Neon), чтобы не поднимать БД в App Platform.
 
-1. В Render нажмите **New +** → **Blueprint**.
-2. Выберите этот репозиторий.
-3. Render прочитает [render.yaml](render.yaml) и предложит создать 3 сервиса.
+### 0. Отключить и удалить Render-сервисы
 
-### 2. Заполните обязательные env-переменные
+Если ранее деплой был в Render:
+1. Остановите авто-деплой (Pause Auto Deploy).
+2. Удалите web-сервисы backend/ai-service.
+3. Удалите managed database (если создавали).
+
+### 1. Создать приложение в DigitalOcean
+
+1. Откройте **DigitalOcean → App Platform → Create App**.
+2. Подключите GitHub и выберите этот репозиторий.
+3. Добавьте 2 компонента типа **Web Service**:
+  - `aqyldy-backend`, Source directory: `Backend/project`, Type: `Dockerfile`
+  - `aqyldy-ai-service`, Source directory: `ai-service`, Type: `Dockerfile`
+4. Для каждого сервиса оставьте авто-переменную `PORT` (App Platform задает ее автоматически).
+
+> Можно импортировать готовую спецификацию из файла `.do/app.yaml` через `doctl`:
+>
+> `doctl apps create --spec .do/app.yaml`
+
+### 2. Переменные окружения (Production)
 
 Для `aqyldy-backend`:
 - `SPRING_PROFILES_ACTIVE=prod`
 - `JAVA_VERSION=17`
-- `DB_URL=jdbc:postgresql://<host>:5432/<db_name>`
+- `DB_URL=jdbc:postgresql://<host>:5432/<db_name>?sslmode=require`
 - `DB_USER=<db_user>`
 - `DB_PASS=<db_password>`
 - `JWT_SECRET=<минимум 32 символа>`
-- `APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://*.onrender.com`
+- `APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://<app-name>.ondigitalocean.app`
 
 Для `aqyldy-ai-service`:
 - `DB_HOST=<host>`
@@ -350,14 +365,18 @@ npm run android
 - `DB_PASS=<db_password>`
 - `JWT_SECRET=<тот же, что у backend>`
 - `GEMINI_API_KEY=<google api key>`
-- `CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://*.onrender.com`
+- `CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://<app-name>.ondigitalocean.app`
 
 ### 3. Проверка после деплоя
 
-- Backend health: `https://<backend>.onrender.com/health`
-- AI health: `https://<ai-service>.onrender.com/health`
+- Backend health: `https://<backend-domain>/health`
+- AI health: `https://<ai-domain>/health`
 
 Если оба endpoint возвращают `status: ok`, сервисы готовы для подключения мобильного клиента.
+
+### 4. Подключить мобильный клиент к прод-сервису
+
+После успешного деплоя обновите backend URL в `frontend/src/config/api.ts` на домен backend из DigitalOcean и соберите приложение заново.
 
 ### AI-сервис (`ai-service/.env`)
 
@@ -556,11 +575,8 @@ Aqyldy-Sauda-Sebeti/
 │       │   └── resources/
 │       │       ├── application.yml
 │       │       ├── application-dev.yml
-│       │       └── db/migration/
-│       │           ├── V1__init.sql
-│       │           ├── V2__schema_redesign.sql
-│       │           └── V3__seed_data.sql
-│       └── test/java/...           # JUnit 5 тесты (11 тест-классов)
+│       │       └── db/migration/    # V1 ... V11
+│       └── test/java/...           # JUnit 5 тесты
 │
 ├── ai-service/                     # Python FastAPI AI Microservice
 │   ├── main.py                     # FastAPI app + CORS
@@ -589,11 +605,11 @@ Aqyldy-Sauda-Sebeti/
         │   ├── client.ts           # Axios instance + JWT interceptors
         │   ├── auth.ts, cart.ts, products.ts, orders.ts
         │   ├── ai.ts               # AI-сервис (чат, тренды, рекомендации)
-        │   ├── analytics.ts, priceInsights.ts, favorites.ts
+        │   ├── analytics.ts, priceInsights.ts, notifications.ts
         │   ├── stores.ts, scan.ts, categories.ts
         │   └── recommendations.ts
         ├── app/navigation.tsx      # React Navigation (Stack + BottomTabs)
-        ├── screens/                # 32 экрана
+        ├── screens/                # 35 экранов
         ├── store/                  # Zustand сторы
         │   ├── authStore.ts        # user, role, token, logout, changePin
         │   ├── cartStore.ts        # cart, storeId, fetchCart, updateItem
@@ -692,6 +708,7 @@ const { topPadding, contentTopOffset } = useHeaderLayout();
 | `V1__init.sql` | Схема: `users`, `stores`, `categories`, `products`, `carts`, `cart_items`, `orders`, `order_items` |
 | `V2__schema_redesign.sql` | `favorites`, `price_history`, полнотекстовые индексы `tsvector`, constraints |
 | `V3__seed_data.sql` | Тестовые данные: 3 магазина, 10+ категорий, ~30 товаров с ценами в тенге |
+| `V4__business_stores.sql` ... `V11__localize_catalog.sql` | Бизнес-функции, индексы/фиксы, платежи, уведомления, координаты магазинов, локализация каталога |
 
 ### Основная схема
 
@@ -731,21 +748,24 @@ cd Backend/project
 
 HTML-отчёт: `build/reports/tests/test/index.html`
 
-Тест-классы:
+Основные тест-классы:
 
 | Класс | Что тестирует |
 |-------|--------------|
 | `AuthServiceTest` | Регистрация, логин, генерация JWT |
 | `AuthControllerTest` | HTTP-эндпоинты `/api/auth/**` |
+| `ProjectApplicationTests` | Smoke test контекста Spring |
 | `OrderServiceTest` | Оформление заказа, статусы |
 | `OrderAdminServiceTest` | Управление заказами администратором |
 | `AnalyticsServiceTest` | Расчёт аналитики расходов |
 | `RecommendationServiceTest` | Алгоритм рекомендаций |
 | `PriceInsightServiceTest` | История цен |
 | `StoreServiceTest` | Магазины и инвентарь |
+| `StoreControllerTest` | HTTP-эндпоинты магазинов |
 | `StatsServiceTest` | Бизнес-статистика |
 | `InventoryAdminServiceTest` | Управление инвентарём |
 | `CatalogPublicControllerTest` | Публичные эндпоинты каталога |
+| `CartServiceTest` | Логика корзины |
 
 ### Frontend (Jest)
 
@@ -758,11 +778,7 @@ npm test
 
 ## Установка JDK 17
 
-Проект **жёстко требует JDK 17**. Не 11, не 21, не 22 — только 17.
-
-```
-GradleException: Backend must run with JDK 17. Current runtime: 21.0.x
-```
+Backend собирается с Java Toolchain 17. Рекомендуется использовать JDK 17 локально и в CI/CD.
 
 ### Windows
 
@@ -799,7 +815,7 @@ echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
 
 ## Типовые проблемы
 
-### «Backend must run with JDK 17»
+### Backend стартует с неверной Java-версией
 
 Проверьте и переназначьте `JAVA_HOME`:
 ```powershell
@@ -860,7 +876,7 @@ npm start -- --reset-cache
 
 ## Лицензия
 
-MIT License — свободное использование и модификация.
+Лицензия для публичного использования в репозитории сейчас не задана отдельным файлом.
 
 ---
 

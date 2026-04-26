@@ -1,0 +1,57 @@
+name: aqyldy-sauda-sebeti
+region: fra
+
+services:
+  - name: aqyldy-backend
+    github:
+      repo: D-Arshad-Dazai-Dimash/Aqyldy-Sauda-Sebeti
+      branch: main
+      deploy_on_push: true
+    source_dir: Backend/project
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    health_check:
+      http_path: /health
+    envs:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JAVA_VERSION
+        value: "17"
+      - key: DB_URL
+        type: SECRET
+      - key: DB_USER
+        type: SECRET
+      - key: DB_PASS
+        type: SECRET
+      - key: JWT_SECRET
+        type: SECRET
+      - key: APP_CORS_ALLOWED_ORIGINS
+        type: SECRET
+
+  - name: aqyldy-ai-service
+    github:
+      repo: D-Arshad-Dazai-Dimash/Aqyldy-Sauda-Sebeti
+      branch: main
+      deploy_on_push: true
+    source_dir: ai-service
+    dockerfile_path: Dockerfile
+    http_port: 8000
+    health_check:
+      http_path: /health
+    envs:
+      - key: DB_HOST
+        type: SECRET
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        type: SECRET
+      - key: DB_USER
+        type: SECRET
+      - key: DB_PASS
+        type: SECRET
+      - key: JWT_SECRET
+        type: SECRET
+      - key: GEMINI_API_KEY
+        type: SECRET
+      - key: CORS_ALLOWED_ORIGINS
+        type: SECRET
