@@ -24,6 +24,7 @@
 - [Быстрый старт](#быстрый-старт)
 - [Пошаговый запуск (вручную)](#пошаговый-запуск-вручную)
 - [Переменные окружения](#переменные-окружения)
+- [Деплой в Render](#деплой-в-render)
 - [API-эндпоинты (Backend)](#api-эндпоинты-backend)
 - [AI-сервис (Python FastAPI)](#ai-сервис-python-fastapi)
 - [Структура проекта](#структура-проекта)
@@ -316,6 +317,47 @@ npm run android
 | `DB_PASS` | `aqyldysebet123` | Пароль PostgreSQL |
 | `JWT_SECRET` | — | **Обязательно!** Секрет JWT ≥32 символа |
 | `JWT_EXPIRATION` | `86400000` | Время жизни токена (мс, 24 часа) |
+
+## Деплой в Render
+
+В репозиторий добавлен blueprint-файл [render.yaml](render.yaml), который создает:
+- `aqyldy-backend` (Spring Boot)
+- `aqyldy-ai-service` (FastAPI)
+- `aqyldy-postgres` (PostgreSQL)
+
+### 1. Импорт blueprint
+
+1. В Render нажмите **New +** → **Blueprint**.
+2. Выберите этот репозиторий.
+3. Render прочитает [render.yaml](render.yaml) и предложит создать 3 сервиса.
+
+### 2. Заполните обязательные env-переменные
+
+Для `aqyldy-backend`:
+- `SPRING_PROFILES_ACTIVE=prod`
+- `JAVA_VERSION=17`
+- `DB_URL=jdbc:postgresql://<host>:5432/<db_name>`
+- `DB_USER=<db_user>`
+- `DB_PASS=<db_password>`
+- `JWT_SECRET=<минимум 32 символа>`
+- `APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://*.onrender.com`
+
+Для `aqyldy-ai-service`:
+- `DB_HOST=<host>`
+- `DB_PORT=5432`
+- `DB_NAME=<db_name>`
+- `DB_USER=<db_user>`
+- `DB_PASS=<db_password>`
+- `JWT_SECRET=<тот же, что у backend>`
+- `GEMINI_API_KEY=<google api key>`
+- `CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://*.onrender.com`
+
+### 3. Проверка после деплоя
+
+- Backend health: `https://<backend>.onrender.com/health`
+- AI health: `https://<ai-service>.onrender.com/health`
+
+Если оба endpoint возвращают `status: ok`, сервисы готовы для подключения мобильного клиента.
 
 ### AI-сервис (`ai-service/.env`)
 

@@ -1,6 +1,7 @@
 package com.darshad.project.security;
 
 import com.darshad.project.security.jwt.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,11 +18,16 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @EnableMethodSecurity
 @Configuration
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:8081,http://10.0.2.2:8080,http://localhost:19006}")
+    private String corsAllowedOrigins;
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -31,13 +37,13 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
-        // Mobile app + local dev — tighten in production
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:8081",
-                "http://10.0.2.2:8080",
-                "http://localhost:19006"
-        ));
+        // CORS is env-driven for Render and mobile clients.
+        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toList());
+
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -66,6 +72,9 @@ public class SecurityConfig {
                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                 "/swagger", "/swagger/**", "/api-docs/**"
             ).permitAll()
+
+                        // Render and uptime checks
+                        .requestMatchers(HttpMethod.GET, "/health", "/actuator/health").permitAll()
 
                         // STATIC UPLOADS (B8: product images served by WebConfig)
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()

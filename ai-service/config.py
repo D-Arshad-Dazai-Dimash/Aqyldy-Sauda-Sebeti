@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     # Service
     host: str = "0.0.0.0"
     port: int = 8000
+    reload: bool = False
+    cors_allowed_origins: str = "http://localhost:3000,http://localhost:8080,http://localhost:8081,http://10.0.2.2:8000,http://10.0.2.2:8080,http://localhost:19006"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
     @property
     def database_url(self) -> str:
