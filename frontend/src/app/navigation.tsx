@@ -10,6 +10,7 @@ import type { AuthStackParamList, BusinessTabParamList, MainTabParamList, RootSt
 
 // Экрандарды импорттау
 import LoginScreen from '../screens/LoginScreen';
+import BusinessLoginScreen from '../screens/BusinessLoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
@@ -263,6 +264,7 @@ export default function RootNavigation() {
       {token ? <AppStack /> : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="Login" component={LoginScreen} />
+          <AuthStack.Screen name="BusinessLogin" component={BusinessLoginScreen} />
           <AuthStack.Screen name="Register" component={RegisterScreen} />
           <AuthStack.Screen name="BusinessRegister" component={BusinessRegisterScreen} />
           <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />

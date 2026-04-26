@@ -45,6 +45,7 @@ export type RootStackParamList = {
 
 export type AuthStackParamList = {
   Login: undefined;
+  BusinessLogin: undefined;
   Register: undefined;
   BusinessRegister: undefined;
   ForgotPassword: undefined;

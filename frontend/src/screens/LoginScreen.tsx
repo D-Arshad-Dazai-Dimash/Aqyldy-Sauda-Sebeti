@@ -147,6 +147,17 @@ export default function LoginScreen({ navigation }: any) {
                 {t('Тіркелмедіңіз бе?', 'Нет аккаунта?')} <Text style={styles.linkText}>{t('Тіркелу', 'Регистрация')}</Text>
               </Text>
             </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              style={styles.businessLoginBtn}
+              onPress={() => navigation.navigate('BusinessLogin')}
+            >
+              <Feather name="briefcase" size={16} color="#0EA5E9" />
+              <Text style={styles.businessLoginText}>Өндік ретінде кіру</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -234,4 +245,26 @@ const styles = StyleSheet.create({
   footer: { marginTop: 35, alignItems: 'center' },
   footerText: { fontSize: 15, color: '#64748B', fontWeight: '500' },
   linkText: { color: '#27AE60', fontWeight: '800' },
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 16,
+  },
+  businessLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#0EA5E9',
+    gap: 8,
+  },
+  businessLoginText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0EA5E9',
+  },
 });

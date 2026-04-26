@@ -44,6 +44,7 @@ export default function AddProductScreen({ route, navigation }: any) {
 
   // Backend categories (for UUID mapping)
   const [backendCategories, setBackendCategories] = useState<BackendCategory[]>([]);
+  const [storeId, setStoreId] = useState<string | null>(null);
 
   // Frontend category picker
   const [selectedCategory, setSelectedCategory] = useState<FrontendCategory | null>(null);
@@ -55,6 +56,14 @@ export default function AddProductScreen({ route, navigation }: any) {
 
   useEffect(() => {
     getCategories().then(setBackendCategories).catch(() => {});
+    api.get('/api/stores/my')
+      .then(res => {
+        const stores = res.data;
+        if (Array.isArray(stores) && stores.length > 0) {
+          setStoreId(stores[0].id);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const showWeight = selectedCategory && WEIGHT_CATEGORY_IDS.includes(selectedCategory.id);
@@ -125,7 +134,20 @@ export default function AddProductScreen({ route, navigation }: any) {
       const response = await api.post('/api/admin/products', payload);
       const productId = response.data?.id;
 
-      // Step 2: upload photo if selected
+      // Step 2: add to merchant inventory
+      if (productId && storeId) {
+        try {
+          await api.post('/api/admin/inventory', {
+            storeId,
+            productId,
+            quantity: Number(stock) || 0,
+          });
+        } catch {
+          // Inventory can be managed separately from inventory screen
+        }
+      }
+
+      // Step 3: upload photo if selected
       if (photoUri && productId) {
         try {
           const formData = new FormData();
