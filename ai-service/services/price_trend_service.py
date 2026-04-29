@@ -108,62 +108,126 @@ def _build_price_timeline(
     return points
 
 
+def _detect_recent_promo(history: list[dict]) -> bool:
+    """
+    Detect a promo: a drop >= 15 % vs the previous price in the last 24h.
+    Returns True only if the most recent change satisfies that.
+    """
+    if not history:
+        return False
+    last = history[-1]
+    old_p = float(last.get("old_price") or 0)
+    new_p = float(last.get("new_price") or 0)
+    if old_p <= 0:
+        return False
+    drop_pct = (old_p - new_p) / old_p
+    if drop_pct < 0.15:
+        return False
+    changed_at = last.get("changed_at")
+    if hasattr(changed_at, "date"):
+        when = changed_at
+    else:
+        try:
+            when = datetime.fromisoformat(str(changed_at))
+        except Exception:
+            return False
+    return (datetime.utcnow() - when) <= timedelta(hours=24)
+
+
 def _predict_prices(
     history_points: list[PricePoint], days_ahead: int = 14
-) -> tuple[list[PricePoint], str, float]:
+) -> tuple[list[PricePoint], str, float, dict]:
     """
     Linear regression on price history to predict future prices.
-    Returns (predictions, trend_direction, trend_percentage).
+
+    Returns ``(predictions, trend_direction, trend_percentage, meta)``
+    where ``meta`` carries:
+        - ``confidence``: 'low' | 'medium' | 'high'
+        - ``model_type``: 'flat' | 'linear'
+        - ``volatility``:  residual std-dev in ₸
+        - ``horizon_days``: days actually forecast
+    The forecast carries 95 % confidence band (±1.96·σ) on every point.
     """
-    if len(history_points) < 2:
-        # Not enough data — return stable
-        last_price = history_points[-1].price if history_points else 0
-        last_date = datetime.fromisoformat(history_points[-1].date) if history_points else datetime.utcnow()
-        predictions = []
-        for i in range(1, days_ahead + 1):
-            pred_date = (last_date + timedelta(days=i)).date()
-            predictions.append(PricePoint(date=pred_date.isoformat(), price=last_price))
-        return predictions, "stable", 0.0
+    n = len(history_points)
+    last_date = (
+        datetime.fromisoformat(history_points[-1].date)
+        if history_points
+        else datetime.utcnow()
+    )
+    last_price = history_points[-1].price if history_points else 0.0
 
-    # Prepare data for regression
-    prices = np.array([p.price for p in history_points])
-    x = np.arange(len(prices)).reshape(-1, 1).astype(float)
-    y = prices.astype(float)
+    # ── Data-quality gate ──────────────────────────────────────────
+    if n < 5:
+        # Too little data → flat 3-day forecast, low confidence.
+        horizon = min(3, days_ahead)
+        predictions = [
+            PricePoint(
+                date=(last_date + timedelta(days=i)).date().isoformat(),
+                price=round(last_price, 2),
+                lower=round(last_price * 0.95, 2),
+                upper=round(last_price * 1.05, 2),
+            )
+            for i in range(1, horizon + 1)
+        ]
+        meta = {
+            "confidence": "low",
+            "model_type": "flat",
+            "volatility": 0.0,
+            "horizon_days": horizon,
+        }
+        return predictions, "stable", 0.0, meta
 
-    # Simple linear regression: y = mx + b
-    x_mean = np.mean(x)
-    y_mean = np.mean(y)
-    numerator = np.sum((x.flatten() - x_mean) * (y - y_mean))
-    denominator = np.sum((x.flatten() - x_mean) ** 2)
+    # ── Linear regression ──────────────────────────────────────────
+    prices = np.array([p.price for p in history_points], dtype=float)
+    x = np.arange(n, dtype=float)
 
+    x_mean = float(np.mean(x))
+    y_mean = float(np.mean(prices))
+    denominator = float(np.sum((x - x_mean) ** 2))
     if denominator == 0:
-        slope = 0.0
-        intercept = y_mean
+        slope, intercept = 0.0, y_mean
     else:
-        slope = numerator / denominator
+        slope = float(np.sum((x - x_mean) * (prices - y_mean)) / denominator)
         intercept = y_mean - slope * x_mean
 
-    # Predict future
-    last_date = datetime.fromisoformat(history_points[-1].date)
-    last_x = len(prices) - 1
-    predictions = []
-    for i in range(1, days_ahead + 1):
-        pred_x = last_x + i
-        pred_price = max(0, slope * pred_x + intercept)  # price can't be negative
-        pred_date = (last_date + timedelta(days=i)).date()
-        predictions.append(PricePoint(date=pred_date.isoformat(), price=round(pred_price, 2)))
+    # Residual std-dev → 95 % band
+    fitted = slope * x + intercept
+    residuals = prices - fitted
+    # Sample std with Bessel correction; guard tiny n.
+    sigma = float(np.std(residuals, ddof=1)) if n >= 2 else 0.0
+    band = 1.96 * sigma  # 95 % CI
 
-    # Determine trend
-    if len(prices) >= 2:
-        start_price = prices[0]
-        end_price = prices[-1]
-        if start_price > 0:
-            pct_change = ((end_price - start_price) / start_price) * 100
-        else:
-            pct_change = 0.0
+    # Confidence heuristic:
+    #   high   = lots of data + low relative volatility
+    #   medium = something in between
+    #   low    = small n already filtered above
+    rel_vol = sigma / max(y_mean, 1.0)
+    if n >= 30 and rel_vol < 0.05:
+        confidence = "high"
+    elif n >= 10 and rel_vol < 0.15:
+        confidence = "medium"
     else:
-        pct_change = 0.0
+        confidence = "low"
 
+    horizon = days_ahead
+    last_x = n - 1
+    predictions: list[PricePoint] = []
+    for i in range(1, horizon + 1):
+        pred_x = last_x + i
+        center = max(0.0, slope * pred_x + intercept)
+        predictions.append(
+            PricePoint(
+                date=(last_date + timedelta(days=i)).date().isoformat(),
+                price=round(center, 2),
+                lower=round(max(0.0, center - band), 2),
+                upper=round(center + band, 2),
+            )
+        )
+
+    # Trend direction (head-vs-tail % change)
+    start_price = float(prices[0])
+    end_price = float(prices[-1])
+    pct_change = ((end_price - start_price) / start_price) * 100 if start_price > 0 else 0.0
     if pct_change > 2:
         trend = "rising"
     elif pct_change < -2:
@@ -171,7 +235,13 @@ def _predict_prices(
     else:
         trend = "stable"
 
-    return predictions, trend, round(pct_change, 1)
+    meta = {
+        "confidence": confidence,
+        "model_type": "linear",
+        "volatility": round(sigma, 2),
+        "horizon_days": horizon,
+    }
+    return predictions, trend, round(pct_change, 1), meta
 
 
 def get_price_trend(
@@ -184,7 +254,7 @@ def get_price_trend(
 
     history = _fetch_price_history(db, product_id)
     timeline = _build_price_timeline(product_info, history)
-    predictions, trend, trend_pct = _predict_prices(timeline, days_ahead)
+    predictions, trend, trend_pct, meta = _predict_prices(timeline, days_ahead)
 
     return PriceTrendResponse(
         product_id=product_id,
@@ -194,4 +264,9 @@ def get_price_trend(
         predictions=predictions,
         trend=trend,
         trend_percentage=trend_pct,
+        confidence=meta["confidence"],
+        model_type=meta["model_type"],
+        volatility=meta["volatility"],
+        is_promo_recent=_detect_recent_promo(history),
+        horizon_days=meta["horizon_days"],
     )

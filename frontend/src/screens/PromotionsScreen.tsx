@@ -51,7 +51,7 @@ function ProductCard({ item, onPress, delay }: { item: Product; onPress: () => v
   const finalPrice = price - price * disc / 100;
 
   return (
-    <Animated.View entering={FadeInDown.delay(delay).duration(320)}>
+    <Animated.View style={styles.cardWrap} entering={FadeInDown.delay(delay).duration(320)}>
       <AnimatedTouchableOpacity
         style={[styles.card, anim]}
         activeOpacity={0.9}
@@ -276,14 +276,14 @@ const styles = StyleSheet.create({
   },
 
   grid: { padding: 12, paddingBottom: 80 },
-  row: { justifyContent: 'space-between' },
+  row: { gap: 12, marginBottom: 12 },
 
+  cardWrap: { flex: 1 },
   card: {
-    width: '48.5%',
+    flex: 1,
     backgroundColor: P.surface,
     borderRadius: 20,
     padding: 12,
-    marginBottom: 12,
     shadowColor: '#E63946',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.09,

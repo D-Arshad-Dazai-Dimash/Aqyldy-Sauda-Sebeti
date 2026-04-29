@@ -21,6 +21,11 @@ from models.schemas import (
     ProductRecommendation,
     StoreSuggestion,
 )
+from services.prompts import (
+    chat_system_prompt,
+    detect_language,
+    ingredient_extractor_system_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,69 @@ _RECIPE_HINT_WORDS = [
     "рецепт", "блюдо", "приготов", "қалай", "сделай", "ингредиент", "что нужно",
     "для", "для блюда", "құрамы", "құрам",
 ]
+
+
+def _load_user_cart_context(db: Session, user_id: str | None) -> str:
+    """Build a short text snapshot of the user's current cart for prompts."""
+    if not user_id:
+        return ""
+    try:
+        rows = db.execute(
+            text(
+                """
+                SELECT p.title, ci.quantity, p.price, p.discount
+                FROM carts c
+                JOIN cart_items ci ON ci.cart_id = c.id
+                JOIN products p ON p.id = ci.product_id
+                WHERE c.user_id = CAST(:uid AS uuid)
+                ORDER BY ci.created_at DESC
+                LIMIT 12
+                """
+            ),
+            {"uid": user_id},
+        ).fetchall()
+    except Exception as e:
+        logger.debug("cart context skipped: %s", e)
+        return ""
+    if not rows:
+        return ""
+    lines = []
+    for title, qty, price, discount in rows:
+        eff = float(price) * (1 - float(discount) / 100) if discount else float(price)
+        lines.append(f"- {title} x{qty} @ {eff:.0f}₸")
+    return "\n".join(lines)
+
+
+def _load_user_orders_context(db: Session, user_id: str | None) -> str:
+    """Build a short text of the user's last orders (for personalization)."""
+    if not user_id:
+        return ""
+    try:
+        rows = db.execute(
+            text(
+                """
+                SELECT o.created_at::date, o.total_amount,
+                       STRING_AGG(p.title, ', ') AS titles
+                FROM orders o
+                JOIN order_items oi ON oi.order_id = o.id
+                JOIN products p ON p.id = oi.product_id
+                WHERE o.user_id = CAST(:uid AS uuid)
+                GROUP BY o.id, o.created_at, o.total_amount
+                ORDER BY o.created_at DESC
+                LIMIT 5
+                """
+            ),
+            {"uid": user_id},
+        ).fetchall()
+    except Exception as e:
+        logger.debug("orders context skipped: %s", e)
+        return ""
+    if not rows:
+        return ""
+    lines = []
+    for created_at, total, titles in rows:
+        lines.append(f"- {created_at} ({float(total):.0f}₸): {titles}")
+    return "\n".join(lines)
 
 
 def _load_product_catalog(db: Session) -> list[dict]:
@@ -168,11 +236,7 @@ async def _extract_ingredients_with_gemini(message: str, conversation_history: l
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
         model_name=settings.gemini_model,
-        system_instruction=(
-            "You are a food ingredient extractor. "
-            "Return only compact JSON with shape: {\"ingredients\":[\"item\", ...]}. "
-            "No markdown, no explanations."
-        ),
+        system_instruction=ingredient_extractor_system_prompt(),
     )
 
     history = []
@@ -374,27 +438,20 @@ async def _chat_with_gemini(
     message: str,
     conversation_history: list[ChatMessage],
     catalog_context: str,
+    cart_context: str = "",
+    user_orders_context: str = "",
 ) -> str:
     """Call Google Gemini API with product catalog context."""
     import google.generativeai as genai
 
     genai.configure(api_key=settings.effective_gemini_api_key)
 
-    system_prompt = f"""Сіз «Ақылды Себет» қосымшасының AI көмекшісісіз — қазақстандық азық-түлік дүкені.
-Сіздің міндетіңіз — тұтынушыларға тауарлар табуға, бағаларды салыстыруға, 
-ұсыныстар беруге көмектесу.
-
-Қазақша және орысша сөйлеңіз (тұтынушының тіліне қарай).
-Қысқа, нақты жауап беріңіз. Бағаны ₸ белгісімен көрсетіңіз.
-
-ТАУАРЛАР ТІЗІМІ:
-{catalog_context}
-
-Ережелер:
-1. Тек осы тізімдегі тауарлар туралы ақпарат беріңіз
-2. Тауар табылмаса, ұқсас тауарларды ұсыныңыз
-3. Бағаларды дұрыс айтыңыз, жеңілдікті ескеріңіз
-4. Қоймада жоқ тауарларды ескертіңіз"""
+    system_prompt = chat_system_prompt(
+        catalog_context=catalog_context,
+        cart_context=cart_context,
+        user_orders_context=user_orders_context,
+        lang=detect_language(message),
+    )
 
     # Build conversation for Gemini
     model = genai.GenerativeModel(
@@ -541,7 +598,15 @@ async def chat(
     if settings.effective_gemini_api_key:
         try:
             catalog_ctx = _build_catalog_context(products) if products else "Тауар тізімі қазір қолжетімсіз."
-            reply = await _chat_with_gemini(message, conversation_history, catalog_ctx)
+            cart_ctx = _load_user_cart_context(db, user_id)
+            orders_ctx = _load_user_orders_context(db, user_id)
+            reply = await _chat_with_gemini(
+                message,
+                conversation_history,
+                catalog_ctx,
+                cart_context=cart_ctx,
+                user_orders_context=orders_ctx,
+            )
             return ChatResponse(
                 reply=reply,
                 suggested_products=suggested,

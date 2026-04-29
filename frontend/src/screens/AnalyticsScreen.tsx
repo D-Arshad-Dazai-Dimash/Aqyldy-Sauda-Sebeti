@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { LineChart, PieChart } from 'react-native-gifted-charts';
 import { productImageSource } from '../components/ProductImage';
 import { useIsFocused } from '@react-navigation/native';
 import { getSpendingAnalytics } from '../api/analytics';
@@ -34,12 +36,19 @@ const P = {
   goldSoft: '#FEF3C7',
 };
 
+const PERIODS: { key: number; label: string }[] = [
+  { key: 3, label: '3M' },
+  { key: 6, label: '6M' },
+  { key: 12, label: '12M' },
+];
+
 export default function AnalyticsScreen({ navigation }: any) {
   const { topPadding, contentTopOffset } = useHeaderLayout();
   const isFocused = useIsFocused();
   const [data, setData] = useState<SpendingAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [period, setPeriod] = useState<number>(6);
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +66,27 @@ export default function AnalyticsScreen({ navigation }: any) {
   useEffect(() => {
     if (isFocused) load();
   }, [isFocused, load]);
+
+  const lineData = useMemo(
+    () =>
+      (data?.monthlyTrend ?? []).slice(-period).map(item => ({
+        value: Math.round(item.amount),
+        label: formatMonthLabel(item.month),
+        dataPointText: formatShort(item.amount),
+      })),
+    [data?.monthlyTrend, period],
+  );
+
+  const pieData = useMemo(
+    () =>
+      (data?.categoryBreakdown ?? []).map((cat, idx) => ({
+        value: cat.percentage,
+        color: COLORS[idx % COLORS.length],
+        text: `${cat.percentage}%`,
+        label: cat.categoryName,
+      })),
+    [data?.categoryBreakdown],
+  );
 
   const Header = () => (
     <View style={[styles.header, { paddingTop: topPadding }]}>
@@ -128,6 +158,7 @@ export default function AnalyticsScreen({ navigation }: any) {
   }
 
   const maxMonthly = Math.max(...data.monthlyTrend.map(m => m.amount), 1);
+  const screenWidth = Dimensions.get('window').width;
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
@@ -181,62 +212,85 @@ export default function AnalyticsScreen({ navigation }: any) {
           </Animated.View>
         )}
 
-        {/* ── Monthly Bar Chart ── */}
+        {/* ── Monthly Line Chart with period switcher ── */}
         {data.monthlyTrend.length > 0 && (
           <Animated.View entering={FadeInDown.delay(180).duration(320)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionDot, { backgroundColor: P.teal }]} />
               <Text style={styles.sectionTitle}>Айлық шығын динамикасы</Text>
+              <View style={styles.periodSwitch}>
+                {PERIODS.map(p => (
+                  <TouchableOpacity
+                    key={p.key}
+                    onPress={() => setPeriod(p.key)}
+                    style={[styles.periodBtn, period === p.key && styles.periodBtnActive]}
+                  >
+                    <Text style={[styles.periodTxt, period === p.key && styles.periodTxtActive]}>{p.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <View style={styles.chartContainer}>
-              {data.monthlyTrend.slice(-6).map((item, idx) => (
-                <View key={item.month} style={styles.barGroup}>
-                  <Text style={styles.barValue}>{formatShort(item.amount)}</Text>
-                  <View style={styles.barTrack}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        {
-                          height: `${Math.max((item.amount / maxMonthly) * 100, 6)}%`,
-                          backgroundColor: COLORS[idx % COLORS.length],
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.barLabel}>{formatMonthLabel(item.month)}</Text>
-                </View>
-              ))}
+            <View style={{ marginTop: 8 }}>
+              <LineChart
+                data={lineData}
+                width={screenWidth - 80}
+                height={180}
+                color={P.teal}
+                thickness={3}
+                curved
+                areaChart
+                startFillColor={P.teal}
+                endFillColor={P.tealSoft}
+                startOpacity={0.4}
+                endOpacity={0.05}
+                noOfSections={4}
+                yAxisColor="transparent"
+                xAxisColor={P.border}
+                rulesColor={P.border}
+                rulesType="dashed"
+                yAxisTextStyle={{ color: P.muted, fontSize: 10 }}
+                xAxisLabelTextStyle={{ color: P.muted, fontSize: 10 }}
+                hideDataPoints={false}
+                dataPointsColor={P.tealDark}
+                dataPointsRadius={4}
+                spacing={Math.max(36, (screenWidth - 120) / Math.max(lineData.length, 1))}
+                initialSpacing={12}
+                yAxisLabelWidth={36}
+              />
             </View>
           </Animated.View>
         )}
 
-        {/* ── Category Breakdown ── */}
+        {/* ── Category Donut Chart ── */}
         {data.categoryBreakdown.length > 0 && (
           <Animated.View entering={FadeInDown.delay(240).duration(320)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionDot, { backgroundColor: '#8B5CF6' }]} />
               <Text style={styles.sectionTitle}>Санат бойынша шығын</Text>
             </View>
-            {data.categoryBreakdown.map((cat, idx) => (
-              <View key={cat.categoryId} style={styles.catRow}>
-                <View style={styles.catInfo}>
-                  <View style={[styles.catDot, { backgroundColor: COLORS[idx % COLORS.length] }]} />
-                  <Text style={styles.catName} numberOfLines={1}>{cat.categoryName}</Text>
-                </View>
-                <View style={styles.catBarContainer}>
-                  <View
-                    style={[
-                      styles.catBarFill,
-                      {
-                        width: `${Math.max(cat.percentage, 3)}%`,
-                        backgroundColor: COLORS[idx % COLORS.length],
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.catAmount}>{cat.percentage}%</Text>
+            <View style={styles.donutWrap}>
+              <PieChart
+                donut
+                radius={84}
+                innerRadius={52}
+                data={pieData}
+                centerLabelComponent={() => (
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ fontSize: 11, color: P.muted }}>Санаттар</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: P.text }}>{pieData.length}</Text>
+                  </View>
+                )}
+              />
+              <View style={styles.legend}>
+                {data.categoryBreakdown.map((cat, idx) => (
+                  <View key={cat.categoryId} style={styles.legendRow}>
+                    <View style={[styles.legendDot, { backgroundColor: COLORS[idx % COLORS.length] }]} />
+                    <Text style={styles.legendName} numberOfLines={1}>{cat.categoryName}</Text>
+                    <Text style={styles.legendPct}>{cat.percentage}%</Text>
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
           </Animated.View>
         )}
 
@@ -419,8 +473,21 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  sectionDot: { width: 8, height: 8, borderRadius: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: P.text, letterSpacing: -0.3 },
+  sectionDot: { width: 6, height: 6, borderRadius: 3 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: P.text, letterSpacing: -0.3, flex: 1 },
+
+  periodSwitch: { flexDirection: 'row', backgroundColor: P.tealSoft, borderRadius: 10, padding: 2 },
+  periodBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  periodBtnActive: { backgroundColor: P.teal },
+  periodTxt: { fontSize: 11, fontWeight: '700', color: P.muted },
+  periodTxtActive: { color: '#FFF' },
+
+  donutWrap: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  legend: { flex: 1, gap: 8 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendName: { flex: 1, fontSize: 12, color: P.text, fontWeight: '600' },
+  legendPct: { fontSize: 12, color: P.muted, fontWeight: '700' },
 
   chartContainer: {
     flexDirection: 'row',

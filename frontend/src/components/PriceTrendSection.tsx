@@ -24,7 +24,12 @@ function MiniChart({
   width: number;
   height: number;
 }) {
-  const allPrices = [...points, ...predictions].map(p => p.price);
+  const allPrices = [
+    ...points.map(p => p.price),
+    ...predictions.map(p => p.price),
+    ...predictions.map(p => p.lower ?? p.price),
+    ...predictions.map(p => p.upper ?? p.price),
+  ];
   if (allPrices.length < 2) return null;
 
   const minP = Math.min(...allPrices);
@@ -37,41 +42,78 @@ function MiniChart({
   const totalPoints = points.length + predictions.length;
   const stepX = (width - padding * 2) / Math.max(totalPoints - 1, 1);
 
-  // Build path segments as bar chart style
   const historyBars = points.map((p, i) => ({
     x: padding + i * stepX,
     y: toY(p.price),
     h: height - padding - toY(p.price),
-    isPrediction: false,
   }));
 
-  const predBars = predictions.map((p, i) => ({
-    x: padding + (points.length + i) * stepX,
-    y: toY(p.price),
-    h: height - padding - toY(p.price),
-    isPrediction: true,
-  }));
+  const predBars = predictions.map((p, i) => {
+    const x = padding + (points.length + i) * stepX;
+    const yCenter = toY(p.price);
+    const yLow = p.upper != null ? toY(p.upper) : yCenter;
+    const yHigh = p.lower != null ? toY(p.lower) : yCenter;
+    return {
+      x,
+      y: yCenter,
+      h: height - padding - yCenter,
+      bandTop: yLow,
+      bandHeight: Math.max(0, yHigh - yLow),
+    };
+  });
 
   const barWidth = Math.max(2, stepX * 0.6);
 
   return (
     <View style={{width, height, flexDirection: 'row', alignItems: 'flex-end'}}>
-      {[...historyBars, ...predBars].map((bar, i) => (
+      {/* Confidence band (drawn first so bars overlay it) */}
+      {predBars.map((bar, i) =>
+        bar.bandHeight > 0 ? (
+          <View
+            key={`band-${i}`}
+            style={{
+              position: 'absolute',
+              left: bar.x - barWidth / 2,
+              top: bar.bandTop,
+              width: barWidth,
+              height: bar.bandHeight,
+              backgroundColor: '#94A3B8',
+              opacity: 0.18,
+              borderRadius: 1,
+            }}
+          />
+        ) : null,
+      )}
+      {historyBars.map((bar, i) => (
         <View
-          key={i}
+          key={`h-${i}`}
           style={{
             position: 'absolute',
             left: bar.x - barWidth / 2,
             bottom: padding,
             width: barWidth,
             height: Math.max(1, bar.h),
-            backgroundColor: bar.isPrediction ? '#94A3B8' : '#4AB7B6',
+            backgroundColor: '#4AB7B6',
             borderRadius: 1,
-            opacity: bar.isPrediction ? 0.5 : 0.8,
+            opacity: 0.85,
           }}
         />
       ))}
-      {/* Divider line between history and prediction */}
+      {predBars.map((bar, i) => (
+        <View
+          key={`p-${i}`}
+          style={{
+            position: 'absolute',
+            left: bar.x - barWidth / 2,
+            bottom: padding,
+            width: barWidth,
+            height: Math.max(1, bar.h),
+            backgroundColor: '#94A3B8',
+            borderRadius: 1,
+            opacity: 0.55,
+          }}
+        />
+      ))}
       {predictions.length > 0 && points.length > 0 && (
         <View
           style={{
@@ -167,6 +209,50 @@ export default function PriceTrendSection({productId}: Props) {
         <Text style={styles.currentPrice}>{data.current_price} ₸</Text>
       </View>
 
+      {/* Confidence + promo badges */}
+      <View style={styles.metaRow}>
+        {data.confidence && (
+          <View
+            style={[
+              styles.metaBadge,
+              {
+                backgroundColor:
+                  data.confidence === 'high'
+                    ? '#DCFCE7'
+                    : data.confidence === 'medium'
+                    ? '#FEF3C7'
+                    : '#FEE2E2',
+              },
+            ]}>
+            <Feather
+              name="shield"
+              size={11}
+              color={
+                data.confidence === 'high'
+                  ? '#15803D'
+                  : data.confidence === 'medium'
+                  ? '#B45309'
+                  : '#B91C1C'
+              }
+            />
+            <Text style={styles.metaText}>
+              Сенімділік:{' '}
+              {data.confidence === 'high'
+                ? 'жоғары'
+                : data.confidence === 'medium'
+                ? 'орташа'
+                : 'төмен'}
+            </Text>
+          </View>
+        )}
+        {data.is_promo_recent && (
+          <View style={[styles.metaBadge, {backgroundColor: '#FEE2E2'}]}>
+            <Feather name="zap" size={11} color="#B91C1C" />
+            <Text style={[styles.metaText, {color: '#B91C1C'}]}>Промо!</Text>
+          </View>
+        )}
+      </View>
+
       {/* Chart */}
       <View style={styles.chartContainer}>
         <MiniChart
@@ -190,7 +276,14 @@ export default function PriceTrendSection({productId}: Props) {
       {/* Prediction summary */}
       {predictions.length > 0 && (
         <Text style={styles.predictionText}>
-          14 күндік болжам: ~{predictions[predictions.length - 1].price.toFixed(0)} ₸
+          {data.horizon_days ?? predictions.length} күндік болжам: ~
+          {predictions[predictions.length - 1].price.toFixed(0)} ₸
+          {predictions[predictions.length - 1].lower != null &&
+          predictions[predictions.length - 1].upper != null
+            ? `  (${predictions[predictions.length - 1].lower!.toFixed(
+                0,
+              )}–${predictions[predictions.length - 1].upper!.toFixed(0)} ₸)`
+            : ''}
         </Text>
       )}
     </View>
@@ -283,5 +376,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
     fontStyle: 'italic',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  metaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  metaText: {
+    fontSize: 11,
+    color: '#1E293B',
+    fontWeight: '600',
   },
 });

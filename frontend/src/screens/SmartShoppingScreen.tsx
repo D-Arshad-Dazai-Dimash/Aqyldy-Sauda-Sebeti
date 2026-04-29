@@ -19,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { productImageSource } from '../components/ProductImage';
+import { CartQtyControl } from '../components/CartQtyControl';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import { useI18n } from '../i18n/useI18n';
@@ -88,7 +89,14 @@ function ProductCard({
         {disc > 0 && (
           <Text style={styles.oldPrice}>{safePrice.toFixed(0)} ₸</Text>
         )}
-        <Text style={styles.productPrice}>{finalPrice.toFixed(0)} ₸</Text>
+        <View style={styles.priceCartRow}>
+          <Text style={styles.productPrice}>{finalPrice.toFixed(0)} ₸</Text>
+          <CartQtyControl
+            productId={item.id}
+            size="sm"
+            optimistic={{ productId: item.id, productTitle: item.title, price: finalPrice, imageUrl: item.imageUrl ?? null }}
+          />
+        </View>
       </AnimatedTouchableOpacity>
     </Animated.View>
   );
@@ -409,6 +417,7 @@ const styles = StyleSheet.create({
   productName: { fontSize: 12, fontWeight: '600', color: P.text, marginBottom: 4, lineHeight: 16 },
   oldPrice: { fontSize: 11, color: P.muted, textDecorationLine: 'line-through', marginBottom: 1 },
   productPrice: { fontSize: 15, fontWeight: '800', color: P.tealDark, letterSpacing: -0.2 },
+  priceCartRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
 
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   emptyText: { fontSize: 15, color: P.muted, marginTop: 12 },

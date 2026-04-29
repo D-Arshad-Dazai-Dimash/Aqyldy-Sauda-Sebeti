@@ -20,6 +20,8 @@ class RecommendationResponse(BaseModel):
 class PricePoint(BaseModel):
     date: str
     price: float
+    lower: Optional[float] = None
+    upper: Optional[float] = None
 
 
 class PriceTrendResponse(BaseModel):
@@ -30,6 +32,11 @@ class PriceTrendResponse(BaseModel):
     predictions: list[PricePoint]
     trend: str  # "rising", "falling", "stable"
     trend_percentage: float  # e.g. +5.2 or -3.1
+    confidence: str = "medium"  # "low", "medium", "high"
+    model_type: str = "linear"  # "flat", "linear"
+    volatility: float = 0.0  # std dev of residuals (₸)
+    is_promo_recent: bool = False  # detected drop ≥ 15% in last 24h
+    horizon_days: int = 14
 
 
 class ChatMessage(BaseModel):

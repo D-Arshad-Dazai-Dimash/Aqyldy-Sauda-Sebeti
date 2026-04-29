@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { productImageSource } from '../components/ProductImage';
+import { CartQtyControl } from '../components/CartQtyControl';
 import Collapsible from 'react-native-collapsible';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
@@ -287,13 +288,17 @@ export default function StoreScreen({ route, navigation }: any) {
               >
                 <Feather name="list" size={14} color={P.ink} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => handleAddToCart(item.productId)}
-                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-              >
-                <Feather name="plus" size={16} color="#FFF" />
-              </TouchableOpacity>
+              <CartQtyControl
+                productId={item.productId}
+                storeId={storeId}
+                size="sm"
+                optimistic={{
+                  productId: item.productId,
+                  productTitle: item.productTitle,
+                  price: Number(item.price),
+                  imageUrl: item.imageUrl ?? null,
+                }}
+              />
             </View>
           </View>
         </PressCard>

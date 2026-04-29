@@ -38,6 +38,8 @@ export interface RecommendationResponse {
 export interface PricePoint {
   date: string;
   price: number;
+  lower?: number | null;
+  upper?: number | null;
 }
 
 export interface PriceTrendResponse {
@@ -48,6 +50,11 @@ export interface PriceTrendResponse {
   predictions: PricePoint[];
   trend: 'rising' | 'falling' | 'stable';
   trend_percentage: number;
+  confidence?: 'low' | 'medium' | 'high';
+  model_type?: 'flat' | 'linear';
+  volatility?: number;
+  is_promo_recent?: boolean;
+  horizon_days?: number;
 }
 
 // ── Chatbot Types ──

@@ -25,6 +25,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { api } from '../api/client';
 import { productImageSource } from '../components/ProductImage';
+import { CartQtyControl } from '../components/CartQtyControl';
 import SkeletonBlock from '../components/SkeletonBlock';
 
 const { width } = Dimensions.get('window');
@@ -115,7 +116,14 @@ export default function ProductListScreen({ route, navigation }: any) {
 
           <View style={styles.infoContainer}>
             <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
-            <Text style={styles.productPrice}>{item.price} ₸</Text>
+            <View style={styles.priceRowInline}>
+              <Text style={styles.productPrice}>{item.price} ₸</Text>
+              <CartQtyControl
+                productId={item.id}
+                size="sm"
+                optimistic={{ productId: item.id, productTitle: item.title, price: Number(item.price), imageUrl: item.imageUrl ?? null }}
+              />
+            </View>
           </View>
         </PressCard>
       </Animated.View>
@@ -296,6 +304,7 @@ const styles = StyleSheet.create({
   imageWrapper: { width: '100%', height: 100, marginBottom: 10 },
   productImage: { width: '100%', height: '100%' },
   infoContainer: { width: '100%' },
+  priceRowInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   productTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 6 },
   productPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
   skeletonTitle: { marginBottom: 8 },
