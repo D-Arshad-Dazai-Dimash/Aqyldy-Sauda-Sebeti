@@ -159,12 +159,13 @@ def _looks_like_recipe_request(message: str) -> bool:
 
 
 async def _extract_ingredients_with_gemini(message: str, conversation_history: list[ChatMessage]) -> list[str]:
-    if not settings.gemini_api_key:
+    api_key = settings.effective_gemini_api_key
+    if not api_key:
         return []
 
     import google.generativeai as genai
 
-    genai.configure(api_key=settings.gemini_api_key)
+    genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
         model_name=settings.gemini_model,
         system_instruction=(
@@ -377,7 +378,7 @@ async def _chat_with_gemini(
     """Call Google Gemini API with product catalog context."""
     import google.generativeai as genai
 
-    genai.configure(api_key=settings.gemini_api_key)
+    genai.configure(api_key=settings.effective_gemini_api_key)
 
     system_prompt = f"""Сіз «Ақылды Себет» қосымшасының AI көмекшісісіз — қазақстандық азық-түлік дүкені.
 Сіздің міндетіңіз — тұтынушыларға тауарлар табуға, бағаларды салыстыруға, 
@@ -537,7 +538,7 @@ async def chat(
         radius_meters=radius_meters,
     )
 
-    if settings.gemini_api_key:
+    if settings.effective_gemini_api_key:
         try:
             catalog_ctx = _build_catalog_context(products) if products else "Тауар тізімі қазір қолжетімсіз."
             reply = await _chat_with_gemini(message, conversation_history, catalog_ctx)
@@ -548,7 +549,7 @@ async def chat(
                 store_suggestions=store_suggestions,
             )
         except Exception as e:
-            logger.error("Gemini API error: %s", e)
+            logger.exception("Gemini API error: %s", e)
             # Fall back to rule-based
             reply = _rule_based_chat(message, products)
             return ChatResponse(
@@ -558,6 +559,9 @@ async def chat(
                 store_suggestions=store_suggestions,
             )
     else:
+        logger.warning(
+            "Chat called without Gemini API key configured — returning rule-based reply."
+        )
         reply = _rule_based_chat(message, products)
         return ChatResponse(
             reply=reply,

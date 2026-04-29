@@ -38,8 +38,11 @@ export default function AddProductScreen({ route, navigation }: any) {
   const [stock, setStock] = useState('');
   const [weight, setWeight] = useState('');
 
-  // Photo
+  // Photo: we keep the local URI for preview and the base64 data URL
+  // that we send to the backend so the image is persisted in PostgreSQL
+  // (works on ephemeral PaaS like DigitalOcean App Platform).
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // Backend categories (for UUID mapping)
@@ -77,28 +80,34 @@ export default function AddProductScreen({ route, navigation }: any) {
       .map(bc => bc.id);
   };
 
-  // Photo handlers
+  // Photo handlers — request base64 so we can persist the image directly in
+  // the DB (image_url TEXT column) without needing a writable filesystem.
+  const applyPickerResponse = (response: any) => {
+    const asset = response?.assets?.[0];
+    if (!asset?.uri) return;
+    setPhotoUri(asset.uri);
+    if (asset.base64) {
+      const mime = asset.type || 'image/jpeg';
+      setPhotoDataUrl(`data:${mime};base64,${asset.base64}`);
+    } else {
+      // Picker did not return base64 — we'll fall back to multipart upload.
+      setPhotoDataUrl(null);
+    }
+  };
+
   const handleTakePhoto = () => {
     setShowPhotoModal(false);
     launchCamera(
-      { mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.8 },
-      (response) => {
-        if (response.assets?.[0]?.uri) {
-          setPhotoUri(response.assets[0].uri);
-        }
-      },
+      { mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.8, includeBase64: true },
+      applyPickerResponse,
     );
   };
 
   const handlePickFromGallery = () => {
     setShowPhotoModal(false);
     launchImageLibrary(
-      { mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.8 },
-      (response) => {
-        if (response.assets?.[0]?.uri) {
-          setPhotoUri(response.assets[0].uri);
-        }
-      },
+      { mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.8, includeBase64: true },
+      applyPickerResponse,
     );
   };
 
@@ -130,6 +139,13 @@ export default function AddProductScreen({ route, navigation }: any) {
         payload.weight = weight;
       }
 
+      // Send the photo together with the product create call — the backend
+      // stores it directly in the products.image_url column, so it survives
+      // container restarts on DigitalOcean App Platform.
+      if (photoDataUrl) {
+        payload.imageUrl = photoDataUrl;
+      }
+
       // Step 1: create product
       const response = await api.post('/api/admin/products', payload);
       const productId = response.data?.id;
@@ -147,8 +163,9 @@ export default function AddProductScreen({ route, navigation }: any) {
         }
       }
 
-      // Step 3: upload photo if selected
-      if (photoUri && productId) {
+      // Step 3 (fallback): if we have a local URI but no base64 (very rare),
+      // upload via multipart so the backend can still encode and store it.
+      if (productId && photoUri && !photoDataUrl) {
         try {
           const formData = new FormData();
           formData.append('file', {
@@ -156,43 +173,11 @@ export default function AddProductScreen({ route, navigation }: any) {
             type: 'image/jpeg',
             name: 'photo.jpg',
           } as any);
-          
-          let photoUploadSuccess = false;
-          let photoError: string | null = null;
-          
-          // Retry logic: try 3 times
-          for (let i = 0; i < 3; i++) {
-            try {
-              await api.post(`/api/admin/products/${productId}/image`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-              });
-              photoUploadSuccess = true;
-              break;
-            } catch (error: any) {
-              photoError = error.response?.data?.message || error.message;
-              if (i < 2) {
-                // Wait before retry
-                await new Promise<void>((resolve) => setTimeout(() => resolve(), 500));
-              }
-            }
-          }
-          
-          if (!photoUploadSuccess) {
-            console.warn('Photo upload failed after retries:', photoError);
-            // Show warning but don't block product creation
-            Alert.alert(
-              'Внимание',
-              'Товар создан, но не удалось загрузить фото. Вы можете добавить его позже.',
-              [{ text: 'OK' }]
-            );
-          }
+          await api.post(`/api/admin/products/${productId}/image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
         } catch (error: any) {
-          console.warn('Unexpected error during photo upload:', error);
-          Alert.alert(
-            'Внимание',
-            'Фото не загружено, но товар сохранен.',
-            [{ text: 'OK' }]
-          );
+          console.warn('Multipart photo upload failed:', error?.message);
         }
       }
 
@@ -372,7 +357,7 @@ export default function AddProductScreen({ route, navigation }: any) {
             {photoUri && (
               <TouchableOpacity
                 style={styles.photoOption}
-                onPress={() => { setPhotoUri(null); setShowPhotoModal(false); }}
+                onPress={() => { setPhotoUri(null); setPhotoDataUrl(null); setShowPhotoModal(false); }}
               >
                 <View style={[styles.photoOptionIcon, { backgroundColor: '#FEF2F2' }]}>
                   <Feather name="trash-2" size={24} color="#EF4444" />

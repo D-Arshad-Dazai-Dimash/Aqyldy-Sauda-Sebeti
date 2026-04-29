@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
   TouchableOpacity, Image, Platform, StatusBar, ActivityIndicator, Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { api } from '../api/client';
 
 export default function BusinessInventoryScreen({ route, navigation }: any) {
@@ -13,6 +15,9 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
+  // Photo editor for an already-created product
+  const [photoTargetId, setPhotoTargetId] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -69,6 +74,84 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
   const inStock = allProducts.filter((p) => (p.quantity ?? p.stock ?? 0) > 0);
   const outOfStock = allProducts.filter((p) => (p.quantity ?? p.stock ?? 0) === 0);
 
+  // ===== Photo handling for existing products =====
+  const sendPhotoToBackend = async (productId: string, dataUrl: string | null, fallbackUri?: string) => {
+    try {
+      setUploadingPhoto(true);
+      let updated: any = null;
+      if (dataUrl) {
+        // Cheapest path: PUT the data URL via the upsert endpoint.
+        // We need to fetch the product first to send a complete payload.
+        const current = allProducts.find((p) => (p.productId ?? p.id) === productId) || {};
+        const res = await api.put(`/api/admin/products/${productId}`, {
+          title: current.productTitle ?? current.title,
+          barcode: current.barcode ?? '',
+          price: current.price ?? 0,
+          stock: current.quantity ?? current.stock ?? 0,
+          discount: current.discount ?? null,
+          imageUrl: dataUrl,
+          unit: current.unit ?? null,
+          weight: current.weight ?? null,
+          active: current.active !== false,
+          categoryIds: current.categoryIds ?? undefined,
+        });
+        updated = res.data;
+      } else if (fallbackUri) {
+        // Multipart fallback if base64 was not produced for any reason.
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fallbackUri,
+          type: 'image/jpeg',
+          name: 'photo.jpg',
+        } as any);
+        const res = await api.post(`/api/admin/products/${productId}/image`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        updated = res.data;
+      }
+
+      if (updated?.imageUrl) {
+        setAllProducts((prev) =>
+          prev.map((p) => {
+            const pid = p.productId ?? p.id;
+            return pid === productId ? { ...p, imageUrl: updated.imageUrl } : p;
+          })
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Қате', e?.response?.data?.message || 'Суретті жаңарту мүмкін болмады');
+    } finally {
+      setUploadingPhoto(false);
+      setPhotoTargetId(null);
+    }
+  };
+
+  const handlePhotoResponse = (productId: string, response: any) => {
+    const asset = response?.assets?.[0];
+    if (!asset?.uri) {
+      setPhotoTargetId(null);
+      return;
+    }
+    const dataUrl = asset.base64
+      ? `data:${asset.type || 'image/jpeg'};base64,${asset.base64}`
+      : null;
+    sendPhotoToBackend(productId, dataUrl, asset.uri);
+  };
+
+  const openCameraForProduct = (productId: string) => {
+    launchCamera(
+      { mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.8, includeBase64: true },
+      (response) => handlePhotoResponse(productId, response),
+    );
+  };
+
+  const openGalleryForProduct = (productId: string) => {
+    launchImageLibrary(
+      { mediaType: 'photo', maxWidth: 800, maxHeight: 800, quality: 0.8, includeBase64: true },
+      (response) => handlePhotoResponse(productId, response),
+    );
+  };
+
   const updateStock = async (item: any, delta: number) => {
     const currentQty = item.quantity ?? item.stock ?? 0;
     const newQty = currentQty + delta;
@@ -102,13 +185,23 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
   const ProductItem = ({ item }: { item: any }) => {
     const isUpdating = updatingId === (item.productId ?? item.id);
     const qty = item.quantity ?? item.stock ?? 0;
+    const productId = item.productId ?? item.id;
     return (
       <View style={[styles.productCard, activeTab === 'inStock' ? styles.shadowGreen : styles.shadowRed]}>
-        <Image
-          source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
-          style={styles.productImage}
-          resizeMode="contain"
-        />
+        <TouchableOpacity
+          onPress={() => setPhotoTargetId(productId)}
+          activeOpacity={0.8}
+          style={styles.productImageWrap}
+        >
+          <Image
+            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            style={styles.productImage}
+            resizeMode="contain"
+          />
+          <View style={styles.editPhotoBadge}>
+            <Feather name="camera" size={12} color="#FFF" />
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={2}>{item.productTitle ?? item.title}</Text>
@@ -176,6 +269,50 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Photo edit modal */}
+      <Modal visible={!!photoTargetId} transparent animationType="fade" onRequestClose={() => setPhotoTargetId(null)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => !uploadingPhoto && setPhotoTargetId(null)}
+        >
+          <View style={styles.photoModalContent}>
+            <Text style={styles.photoModalTitle}>Суретті өзгерту</Text>
+
+            {uploadingPhoto ? (
+              <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#4AB7B6" />
+                <Text style={{ marginTop: 10, color: '#64748B' }}>Жүктелуде...</Text>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.photoOption}
+                  onPress={() => photoTargetId && openCameraForProduct(photoTargetId)}
+                >
+                  <View style={styles.photoOptionIcon}>
+                    <Feather name="camera" size={24} color="#4AB7B6" />
+                  </View>
+                  <Text style={styles.photoOptionText}>Камерамен түсіру</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.photoOption}
+                  onPress={() => photoTargetId && openGalleryForProduct(photoTargetId)}
+                >
+                  <View style={styles.photoOptionIcon}>
+                    <Feather name="image" size={24} color="#4AB7B6" />
+                  </View>
+                  <Text style={styles.photoOptionText}>Галереядан таңдау</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.photoCancel} onPress={() => setPhotoTargetId(null)}>
+                  <Text style={styles.photoCancelText}>Бас тарту</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {loading ? (
         <ActivityIndicator size="large" color="#4AB7B6" style={{ flex: 1 }} />
@@ -249,7 +386,42 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
   },
+  productImageWrap: { width: 45, height: 45, position: 'relative' },
   productImage: { width: 45, height: 45, borderRadius: 12 },
+  editPhotoBadge: {
+    position: 'absolute', right: -4, bottom: -4,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#4AB7B6', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  photoModalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  photoModalTitle: {
+    fontSize: 20, fontWeight: '800', color: '#1E293B',
+    marginBottom: 20, textAlign: 'center',
+  },
+  photoOption: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+  },
+  photoOptionIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    backgroundColor: '#E0F2F1', justifyContent: 'center', alignItems: 'center',
+    marginRight: 14,
+  },
+  photoOptionText: { fontSize: 16, color: '#1E293B', fontWeight: '600' },
+  photoCancel: {
+    marginTop: 12, paddingVertical: 14,
+    alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F1F5F9',
+  },
+  photoCancelText: { fontSize: 16, color: '#94A3B8', fontWeight: '600' },
   productInfo: { flex: 2.2, marginLeft: 12 },
   productName: { fontSize: 14, fontWeight: '800', color: '#1E293B' },
   productBarcode: { fontSize: 10, color: '#94A3B8', fontWeight: '500', marginTop: 2 },

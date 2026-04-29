@@ -8,61 +8,138 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/navigation';
-import { GOOGLE_MAPS_API_KEY } from '../config/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddressPicker'>;
 
-const DEFAULT_REGION: Region = {
-  latitude: 51.1694,
-  longitude: 71.4491,
-  latitudeDelta: 0.03,
-  longitudeDelta: 0.03,
-};
+const DEFAULT_LAT = 51.1694;
+const DEFAULT_LNG = 71.4491;
 
+// Поиск через Nominatim (OpenStreetMap), не требует API-ключа.
+// Согласно политике использования передаём User-Agent и Accept-Language.
 async function geocodeAddress(query: string) {
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  const first = json?.results?.[0];
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ru,kk,en&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'AqyldySaudaSebeti/1.0 (mobile app)',
+      'Accept-Language': 'ru,kk,en',
+    },
+  });
+  if (!res.ok) return null;
+  const json = (await res.json()) as Array<{ lat: string; lon: string; display_name: string }>;
+  const first = json?.[0];
   if (!first) return null;
   return {
-    address: first.formatted_address as string,
-    lat: first.geometry.location.lat as number,
-    lng: first.geometry.location.lng as number,
+    address: first.display_name,
+    lat: parseFloat(first.lat),
+    lng: parseFloat(first.lon),
   };
 }
 
 async function reverseGeocode(lat: number, lng: number) {
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  return (json?.results?.[0]?.formatted_address as string) || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ru,kk,en`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'AqyldySaudaSebeti/1.0 (mobile app)',
+        'Accept-Language': 'ru,kk,en',
+      },
+    });
+    if (!res.ok) return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    const json = (await res.json()) as { display_name?: string };
+    return json?.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  } catch {
+    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
+}
+
+// HTML-страница с Leaflet, рендерится во WebView.
+// Тайлы OpenStreetMap, без API-ключа. Связь с RN через postMessage.
+function buildMapHtml(lat: number, lng: number): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body, #map { margin:0; padding:0; height:100%; width:100%; background:#e8eef2; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  (function() {
+    function send(payload) {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+      }
+    }
+
+    var map = L.map('map', { zoomControl: true }).setView([${lat}, ${lng}], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var marker = L.marker([${lat}, ${lng}], { draggable: true }).addTo(map);
+
+    function emit(latlng) {
+      send({ type: 'pick', lat: latlng.lat, lng: latlng.lng });
+    }
+
+    map.on('click', function(e) {
+      marker.setLatLng(e.latlng);
+      emit(e.latlng);
+    });
+
+    marker.on('dragend', function() {
+      var pos = marker.getLatLng();
+      emit(pos);
+    });
+
+    // Команды от RN: { type:'setView', lat, lng, zoom? }
+    function handleCommand(raw) {
+      try {
+        var msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (msg && msg.type === 'setView' && typeof msg.lat === 'number' && typeof msg.lng === 'number') {
+          map.setView([msg.lat, msg.lng], msg.zoom || 15, { animate: true });
+          marker.setLatLng([msg.lat, msg.lng]);
+        }
+      } catch (e) {}
+    }
+
+    document.addEventListener('message', function(e) { handleCommand(e.data); });
+    window.addEventListener('message', function(e) { handleCommand(e.data); });
+
+    send({ type: 'ready' });
+  })();
+  true;
+</script>
+</body>
+</html>`;
 }
 
 export default function AddressPickerScreen({ navigation, route }: Props) {
-  const mapRef = useRef<MapView | null>(null);
+  const webRef = useRef<WebView | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [address, setAddress] = useState('');
-  const [lat, setLat] = useState(DEFAULT_REGION.latitude);
-  const [lng, setLng] = useState(DEFAULT_REGION.longitude);
+  const [lat, setLat] = useState(DEFAULT_LAT);
+  const [lng, setLng] = useState(DEFAULT_LNG);
 
-  const region = useMemo<Region>(() => ({
-    latitude: lat,
-    longitude: lng,
-    latitudeDelta: 0.03,
-    longitudeDelta: 0.03,
-  }), [lat, lng]);
+  const initialHtml = useMemo(() => buildMapHtml(DEFAULT_LAT, DEFAULT_LNG), []);
+
+  const sendToMap = (payload: any) => {
+    const js = `(function(){ var ev = new MessageEvent('message', { data: ${JSON.stringify(JSON.stringify(payload))} }); document.dispatchEvent(ev); window.dispatchEvent(ev); })(); true;`;
+    webRef.current?.injectJavaScript(js);
+  };
 
   const onSearch = async () => {
     if (!query.trim()) return;
-    if (!GOOGLE_MAPS_API_KEY) {
-      Alert.alert('API кілті', 'GOOGLE_MAPS_API_KEY толтырылмаған');
-      return;
-    }
     setLoading(true);
     try {
       const result = await geocodeAddress(query.trim());
@@ -73,15 +150,7 @@ export default function AddressPickerScreen({ navigation, route }: Props) {
       setAddress(result.address);
       setLat(result.lat);
       setLng(result.lng);
-      mapRef.current?.animateToRegion(
-        {
-          latitude: result.lat,
-          longitude: result.lng,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        450
-      );
+      sendToMap({ type: 'setView', lat: result.lat, lng: result.lng, zoom: 16 });
     } catch {
       Alert.alert('Қате', 'Іздеу кезінде қате пайда болды');
     } finally {
@@ -89,32 +158,23 @@ export default function AddressPickerScreen({ navigation, route }: Props) {
     }
   };
 
-  const onMapPress = async (event: any) => {
-    const nextLat = event.nativeEvent.coordinate.latitude as number;
-    const nextLng = event.nativeEvent.coordinate.longitude as number;
-    setLat(nextLat);
-    setLng(nextLng);
-    mapRef.current?.animateToRegion(
-      {
-        latitude: nextLat,
-        longitude: nextLng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      },
-      350
-    );
-
-    if (!GOOGLE_MAPS_API_KEY) {
-      setAddress(`${nextLat.toFixed(6)}, ${nextLng.toFixed(6)}`);
+  const onMapMessage = async (event: any) => {
+    let msg: any;
+    try {
+      msg = JSON.parse(event.nativeEvent.data);
+    } catch {
       return;
     }
-
+    if (!msg || msg.type !== 'pick') return;
+    const nextLat = Number(msg.lat);
+    const nextLng = Number(msg.lng);
+    if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) return;
+    setLat(nextLat);
+    setLng(nextLng);
     setLoading(true);
     try {
       const resolved = await reverseGeocode(nextLat, nextLng);
       setAddress(resolved);
-    } catch {
-      setAddress(`${nextLat.toFixed(6)}, ${nextLng.toFixed(6)}`);
     } finally {
       setLoading(false);
     }
@@ -128,9 +188,18 @@ export default function AddressPickerScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
-      <MapView ref={mapRef} style={StyleSheet.absoluteFill} region={region} onPress={onMapPress}>
-        <Marker coordinate={{ latitude: lat, longitude: lng }} />
-      </MapView>
+      <WebView
+        ref={webRef}
+        originWhitelist={['*']}
+        source={{ html: initialHtml }}
+        style={StyleSheet.absoluteFill}
+        onMessage={onMapMessage}
+        javaScriptEnabled
+        domStorageEnabled
+        geolocationEnabled
+        mixedContentMode="always"
+        setSupportMultipleWindows={false}
+      />
 
       <View style={styles.searchWrap}>
         <TextInput

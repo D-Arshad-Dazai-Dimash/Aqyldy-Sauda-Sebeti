@@ -21,9 +21,6 @@ app:
     secret: ${JWT_SECRET}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:60}
     refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:30}
-  uploads:
-    dir: ${UPLOADS_DIR:./uploads}
-    public-base-url: ${UPLOADS_PUBLIC_BASE_URL:/uploads}
   password-reset:
     ttl-minutes: ${PASSWORD_RESET_TTL_MINUTES:30}
   rate-limit:

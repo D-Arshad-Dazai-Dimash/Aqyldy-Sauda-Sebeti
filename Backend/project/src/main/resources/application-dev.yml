@@ -23,11 +23,6 @@ app:
     secret: ${JWT_SECRET:dev-secret-at-least-32-chars-long!!}
     access-ttl-minutes: 60
     refresh-ttl-days: 30
-  uploads:
-    # Local directory for product images uploaded via /api/admin/products/{id}/image.
-    # Files are served back at /uploads/** by WebConfig. Override with env in prod.
-    dir: ${UPLOADS_DIR:./uploads}
-    public-base-url: ${UPLOADS_PUBLIC_BASE_URL:/uploads}
   password-reset:
     ttl-minutes: 30
   rate-limit:
