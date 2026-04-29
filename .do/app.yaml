@@ -42,6 +42,7 @@ services:
       - key: SPACES_PUBLIC_BASE
         type: SECRET
 
+
   - name: aqyldy-ai-service
     github:
       repo: D-Arshad-Dazai-Dimash/Aqyldy-Sauda-Sebeti

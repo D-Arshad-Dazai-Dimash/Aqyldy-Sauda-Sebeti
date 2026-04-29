@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
 import { productImageSource } from '../components/ProductImage';
+import { CartQtyControl } from '../components/CartQtyControl';
 import { searchProducts } from '../api/products';
 import type { Product } from '../types/api';
 import { useI18n } from '../i18n/useI18n';
@@ -83,7 +84,14 @@ function ProductCard({ item, onPress, delay }: { item: Product; onPress: () => v
               </Text>
             </View>
           </View>
-          <Text style={styles.newPrice}>{finalPrice.toFixed(0)} ₸</Text>
+          <View style={styles.bottomRow}>
+            <Text style={styles.newPrice}>{finalPrice.toFixed(0)} ₸</Text>
+            <CartQtyControl
+              productId={item.id}
+              size="sm"
+              optimistic={{ productId: item.id, productTitle: item.title, price: finalPrice, imageUrl: item.imageUrl ?? null }}
+            />
+          </View>
         </View>
       </AnimatedTouchableOpacity>
     </Animated.View>
@@ -310,6 +318,7 @@ const styles = StyleSheet.create({
   },
   saveText: { fontSize: 10, fontWeight: '700', color: P.amber },
   newPrice: { fontSize: 17, fontWeight: '800', color: P.rose, letterSpacing: -0.3 },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
 
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   loadingText: { fontSize: 14, color: P.muted, marginTop: 12 },

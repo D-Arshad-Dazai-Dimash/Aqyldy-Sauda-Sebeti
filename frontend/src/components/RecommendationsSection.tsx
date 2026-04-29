@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import { productImageSource } from './ProductImage';
+import { CartQtyControl } from './CartQtyControl';
 import {
   View,
   Text,
@@ -100,10 +101,16 @@ export default function RecommendationsSection({productId, onProductPress}: Prop
                   <Text style={styles.oldPrice}>{item.price} ₸</Text>
                 ) : null}
               </View>
-              {/* Relevance indicator */}
-              <View style={styles.scoreBar}>
-                <View
-                  style={[styles.scoreFill, {width: `${item.score * 100}%`}]}
+              <View style={styles.cartRow}>
+                <View style={styles.scoreBar}>
+                  <View
+                    style={[styles.scoreFill, {width: `${item.score * 100}%`}]}
+                  />
+                </View>
+                <CartQtyControl
+                  productId={item.id}
+                  size="sm"
+                  optimistic={{ productId: item.id, productTitle: item.title, price: effectivePrice, imageUrl: item.image_url ?? null }}
                 />
               </View>
             </TouchableOpacity>
@@ -187,6 +194,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   scoreBar: {
+    flex: 1,
     height: 3,
     backgroundColor: '#F1F5F9',
     borderRadius: 2,
@@ -196,5 +204,11 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#4AB7B6',
     borderRadius: 2,
+  },
+  cartRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
