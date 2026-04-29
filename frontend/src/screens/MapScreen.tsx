@@ -461,6 +461,7 @@ export default function MapScreen({ navigation }: any) {
   const setCartStore = useCartStore((s) => s.setStore);
 
   const [stores, setStores] = useState<StoreWithDistance[]>([]);
+  const [noCoordsStores, setNoCoordsStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -479,12 +480,14 @@ export default function MapScreen({ navigation }: any) {
       setError(null);
 
       const data = await getStores();
+      const noCoords: Store[] = [];
       const withCoords: StoreWithDistance[] = (data || [])
         .map((store) => {
           const latitude = normalizeCoordinate(store.latitude);
           const longitude = normalizeCoordinate(store.longitude);
 
           if (!hasValidCoordinates(latitude, longitude)) {
+            noCoords.push(store);
             return null;
           }
 
@@ -495,6 +498,8 @@ export default function MapScreen({ navigation }: any) {
           };
         })
         .filter((store): store is StoreWithDistance => store != null);
+
+      setNoCoordsStores(noCoords);
 
       const allowed = await requestLocationPermission();
       let current: { latitude: number; longitude: number } | null = null;
@@ -816,6 +821,34 @@ export default function MapScreen({ navigation }: any) {
                 </View>
               );
             })}
+
+            {noCoordsStores.length > 0 ? (
+              <>
+                <View style={styles.noCoordsHeader}>
+                  <Feather name="alert-triangle" size={13} color="#B45309" />
+                  <Text style={styles.noCoordsHeaderText}>
+                    Координаталары көрсетілмеген ({noCoordsStores.length})
+                  </Text>
+                </View>
+                {noCoordsStores.map((item) => (
+                  <View key={item.id} style={[styles.branchItem, styles.branchItemSpacer, styles.branchItemDisabled]}>
+                    <View style={styles.branchMainPress}>
+                      <View style={[styles.radioWrap, styles.radioWrapDisabled]}>
+                        <Feather name="map-pin" size={13} color="#9CA3AF" />
+                      </View>
+                      <View style={styles.branchTextBlock}>
+                        <Text style={styles.branchTitle} numberOfLines={1}>
+                          {item.address || item.name}
+                        </Text>
+                        <Text style={[styles.branchSubtitle, { color: '#B45309' }]} numberOfLines={1}>
+                          Картада белгіленбеген — тек тізімде
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </>
+            ) : null}
           </View>
 
           <TouchableOpacity
@@ -1230,6 +1263,26 @@ const styles = StyleSheet.create({
   radioWrapActive: {
     backgroundColor: palette.mint,
     borderColor: palette.mint,
+  },
+  radioWrapDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  branchItemDisabled: {
+    opacity: 0.75,
+  },
+  noCoordsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 18,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  noCoordsHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B45309',
   },
   branchTextBlock: {
     flex: 1,

@@ -350,24 +350,56 @@ PostgreSQL рекомендуется использовать внешний (�
 
 ### 2. Переменные окружения (Production)
 
-Для `aqyldy-backend`:
-- `SPRING_PROFILES_ACTIVE=prod`
-- `JAVA_VERSION=17`
-- `DB_URL=jdbc:postgresql://<host>:5432/<db_name>?sslmode=require`
-- `DB_USER=<db_user>`
-- `DB_PASS=<db_password>`
-- `JWT_SECRET=<минимум 32 символа>`
-- `APP_CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://<app-name>.ondigitalocean.app`
+> 🔒 **Чек-лист**: ВСЕ переменные ниже обязательны для корректной работы фич: фотоснимков
+> в Spaces, AI-чатбота, аналитики и карты. Если хотя бы одна не задана — продакшн упадёт
+> в фоллбек (фото в base64, чатбот в rule-based и т. п.).
 
-Для `aqyldy-ai-service`:
-- `DB_HOST=<host>`
-- `DB_PORT=5432`
-- `DB_NAME=<db_name>`
-- `DB_USER=<db_user>`
-- `DB_PASS=<db_password>`
-- `JWT_SECRET=<тот же, что у backend>`
-- `GEMINI_API_KEY=<google api key>`
-- `CORS_ALLOWED_ORIGINS=https://<frontend-domain>,https://<app-name>.ondigitalocean.app`
+#### `aqyldy-backend` (Spring Boot)
+
+| Переменная | Обязательна | Назначение |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | да | `prod` |
+| `JAVA_VERSION` | да | `17` |
+| `DB_URL` | да | `jdbc:postgresql://<host>:5432/<db>?sslmode=require` |
+| `DB_USER` / `DB_PASS` | да | креды Postgres (Neon / DO managed DB) |
+| `JWT_SECRET` | да | **минимум 32 символа**, тот же, что у `ai-service` |
+| `JWT_EXPIRATION` | нет | по умолчанию `86400000` (24 ч) |
+| `APP_CORS_ALLOWED_ORIGINS` | да | через запятую: домен фронта + DO App URL |
+| **DigitalOcean Spaces (фото товаров)** | | |
+| `SPACES_ENDPOINT` | да | напр. `https://fra1.digitaloceanspaces.com` |
+| `SPACES_REGION` | да | напр. `fra1` |
+| `SPACES_BUCKET` | да | имя бакета (без `s3://`) |
+| `SPACES_KEY` | да | Spaces Access Key ID |
+| `SPACES_SECRET` | да | Spaces Secret Access Key |
+| `SPACES_PUBLIC_BASE` | нет | CDN-домен, напр. `https://aqyldy.fra1.cdn.digitaloceanspaces.com` |
+
+> Если хотя бы один `SPACES_*` не задан — backend автоматически переходит в режим
+> base64-в-БД (см. `ImageStorageConfig`). Это работает, но раздувает таблицу `products`
+> и режет CDN-кеш.
+
+#### `aqyldy-ai-service` (FastAPI)
+
+| Переменная | Обязательна | Назначение |
+|---|---|---|
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASS` | да | те же креды, что у backend |
+| `JWT_SECRET` | да | **тот же**, что у backend (иначе чатбот вернёт 401) |
+| `GEMINI_API_KEY` | да | без него чатбот молча уйдёт в rule-based ответы |
+| `GEMINI_MODEL` | нет | по умолчанию `gemini-2.0-flash` |
+| `CORS_ALLOWED_ORIGINS` | да | через запятую: домен фронта + DO App URL |
+
+> Проверить готовность чатбота: `GET https://<ai-domain>/api/ai/health` →
+> `{"gemini_ready": true, "auth_required": true}`. Если `gemini_ready=false` —
+> ключ не подхватился, ребутни сервис в App Platform.
+
+#### Frontend (`frontend/app.json` → `extra`)
+
+| Поле | Назначение |
+|---|---|
+| `apiUrl` | публичный URL backend в DigitalOcean |
+| `aiUrl` | публичный URL ai-service в DigitalOcean |
+
+> Эти значения читаются runtime (см. [frontend/src/config/env.ts](frontend/src/config/env.ts)),
+> можно переопределить через `setApiUrl()` / `setAIUrl()` без пересборки.
 
 ### 3. Проверка после деплоя
 
