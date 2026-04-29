@@ -117,55 +117,78 @@ export default function AddProductScreen({ route, navigation }: any) {
       return;
     }
 
+    if (!storeId) {
+      Alert.alert('Қате', 'Сіздің дүкеніңіз табылмады. Алдымен бизнесті тіркеңіз.');
+      return;
+    }
+
     try {
       setLoading(true);
 
       const categoryIds = getBackendCategoryIds();
+      const barcodeStr = String(barcode).trim();
 
-      const payload: any = {
-        title: name,
-        barcode: String(barcode),
-        price: Number(price),
-        stock: Number(stock) || 0,
-        description: selectedSubcategory || '',
-        active: true,
-      };
-
-      if (categoryIds.length > 0) {
-        payload.categoryIds = categoryIds;
-      }
-
-      if (showWeight && weight) {
-        payload.weight = weight;
-      }
-
-      // Send the photo together with the product create call — the backend
-      // stores it directly in the products.image_url column, so it survives
-      // container restarts on DigitalOcean App Platform.
-      if (photoDataUrl) {
-        payload.imageUrl = photoDataUrl;
-      }
-
-      // Step 1: create product
-      const response = await api.post('/api/admin/products', payload);
-      const productId = response.data?.id;
-
-      // Step 2: add to merchant inventory
-      if (productId && storeId) {
+      // Step 1: try to reuse an existing product with the same barcode.
+      // The catalog is shared, so if anyone already added this barcode we
+      // just attach it to OUR store inventory instead of creating a duplicate
+      // (which would also fail on the UNIQUE(barcode) constraint).
+      let productId: string | undefined;
+      let reusedExisting = false;
+      if (barcodeStr) {
         try {
-          await api.post('/api/admin/inventory', {
-            storeId,
-            productId,
-            quantity: Number(stock) || 0,
-          });
+          const existing = await api.get(`/api/products/barcode/${encodeURIComponent(barcodeStr)}`);
+          if (existing.data?.id) {
+            productId = existing.data.id;
+            reusedExisting = true;
+          }
         } catch {
-          // Inventory can be managed separately from inventory screen
+          // 404 = no such barcode yet — we'll create a new product.
         }
+      }
+
+      if (!productId) {
+        const payload: any = {
+          title: name,
+          barcode: barcodeStr,
+          price: Number(price),
+          stock: Number(stock) || 0,
+          description: selectedSubcategory || '',
+          active: true,
+        };
+        if (categoryIds.length > 0) payload.categoryIds = categoryIds;
+        if (showWeight && weight) payload.weight = weight;
+        // Send the photo together with the product create call — the backend
+        // stores it directly in the products.image_url column, so it survives
+        // container restarts on DigitalOcean App Platform.
+        if (photoDataUrl) payload.imageUrl = photoDataUrl;
+
+        const response = await api.post('/api/admin/products', payload);
+        productId = response.data?.id;
+      }
+
+      if (!productId) {
+        throw new Error('Тауар жасалмады');
+      }
+
+      // Step 2: add (or update quantity for) this product in merchant's store.
+      // This is what actually makes the product show up in the merchant's
+      // inventory screen.
+      try {
+        await api.post('/api/admin/inventory', {
+          storeId,
+          productId,
+          quantity: Number(stock) || 0,
+        });
+      } catch (invErr: any) {
+        const m = invErr?.response?.data?.message || invErr?.message || '';
+        Alert.alert('Назар аударыңыз', `Тауар каталогта сақталды, бірақ дүкен қоймасына қосу мүмкін болмады.${m ? '\n\n' + m : ''}`);
       }
 
       // Step 3 (fallback): if we have a local URI but no base64 (very rare),
       // upload via multipart so the backend can still encode and store it.
-      if (productId && photoUri && !photoDataUrl) {
+      // We only do this when we created a NEW product — overwriting an existing
+      // shared product's image is up to its original owner.
+      if (!reusedExisting && photoUri && !photoDataUrl) {
         try {
           const formData = new FormData();
           formData.append('file', {
@@ -181,11 +204,21 @@ export default function AddProductScreen({ route, navigation }: any) {
         }
       }
 
-      Alert.alert('Сәтті!', 'Тауар базаға қосылды', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert(
+        'Сәтті!',
+        reusedExisting
+          ? 'Бұл тауар каталогта табылды және сіздің дүкеніңізге қосылды'
+          : 'Тауар базаға қосылды',
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
+      );
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Тауарды сақтау мүмкін болмады';
+      const status = error?.response?.status;
+      const serverMessage = error?.response?.data?.message;
+      let errorMessage = serverMessage || 'Тауарды сақтау мүмкін болмады';
+      if (status === 401) errorMessage = 'Сессия аяқталды. Қайтадан кіріңіз.';
+      else if (status === 403) errorMessage = 'Бұл әрекетке рұқсат жоқ (бизнес рөлі қажет).';
+      else if (status === 413) errorMessage = 'Сурет тым үлкен (макс. 10 МБ).';
+      else if (!status) errorMessage = 'Серверге қосылу мүмкін болмады. Интернетті тексеріңіз.';
       Alert.alert('Қате', errorMessage);
     } finally {
       setLoading(false);

@@ -92,6 +92,27 @@ public class ProductService {
     @Transactional
     public ProductDto create(ProductUpsertRequest req) {
         log.info("▶ CREATE product: title={}, barcode={}, price={}", req.title(), req.barcode(), req.price());
+
+        // Idempotent by barcode: if a product with this barcode already exists,
+        // reuse it instead of failing on the UNIQUE(barcode) constraint. This
+        // makes scanning a known barcode in the merchant flow safe — we just
+        // hand back the existing product so the caller can add it to its
+        // own inventory.
+        if (req.barcode() != null && !req.barcode().isBlank()) {
+            var existing = productRepo.findByBarcode(req.barcode().trim()).orElse(null);
+            if (existing != null) {
+                log.info("  product with barcode={} already exists (id={}) — reusing",
+                        req.barcode(), existing.getId());
+                // Optionally enrich missing image / title — but never overwrite
+                // an existing image so we don't trash data from another seller.
+                if ((existing.getImageUrl() == null || existing.getImageUrl().isBlank())
+                        && req.imageUrl() != null && !req.imageUrl().isBlank()) {
+                    existing.setImageUrl(req.imageUrl());
+                }
+                return toDto(existing);
+            }
+        }
+
         var p = Product.builder()
                 .title(req.title())
                 .description(req.description())
