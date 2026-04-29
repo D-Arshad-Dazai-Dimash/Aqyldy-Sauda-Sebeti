@@ -231,12 +231,11 @@ export default function SearchScreen({ navigation, route }: any) {
                   >
                     <Feather name="heart" size={16} color={isFav ? P.rose : P.faint} />
                   </TouchableOpacity>
-                  <View style={styles.cardImageWrap}>
-                    {product.imageUrl
-                      ? <Image source={{ uri: product.imageUrl }} style={styles.cardImage} resizeMode="contain" />
-                      : <Feather name="package" size={36} color={P.faint} />
-                    }
-                  </View>
+                  <ProductCardImage
+                    uri={product.imageUrl}
+                    title={product.title}
+                    containerStyle={styles.cardImageWrap}
+                  />
                   <Text style={styles.cardName} numberOfLines={2}>{product.title}</Text>
                   <Text style={styles.cardPrice}>{formatPrice(product.price)}</Text>
                 </PressCard>
@@ -832,9 +831,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: P.border,
   },
-  cardImageWrap: { height: 100, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  cardImageWrap: { width: '100%', marginBottom: 10 },
   cardImage: { width: '100%', height: '100%', borderRadius: 10 },
-  cardName: { fontSize: 12, fontWeight: '600', color: P.ink, marginBottom: 5, lineHeight: 17 },
+  cardName: { fontSize: 12, fontWeight: '600', color: P.ink, marginBottom: 5, lineHeight: 17, minHeight: 34 },
   cardPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
 
   storesSection: { marginTop: 28 },

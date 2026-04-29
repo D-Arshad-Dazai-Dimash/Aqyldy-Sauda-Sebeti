@@ -19,7 +19,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
-import { productImageSource } from '../components/ProductImage';
+import { ProductCardImage } from '../components/ProductImage';
 import { CartQtyControl } from '../components/CartQtyControl';
 import { searchProducts } from '../api/products';
 import type { Product } from '../types/api';
@@ -66,13 +66,11 @@ function ProductCard({ item, onPress, delay }: { item: Product; onPress: () => v
         </View>
 
         {/* Image */}
-        <View style={styles.imgWrapper}>
-          <Image
-            source={productImageSource({ uri: item.imageUrl, title: item.title })}
-            style={styles.img}
-            resizeMode="contain"
-          />
-        </View>
+        <ProductCardImage
+          uri={item.imageUrl}
+          title={item.title}
+          containerStyle={styles.imgWrapper}
+        />
 
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={2}>{item.title}</Text>
@@ -305,11 +303,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     marginBottom: 10,
-    paddingVertical: 4,
   },
   img: { width: '100%', height: 100 },
   info: {},
-  name: { fontSize: 13, fontWeight: '600', color: P.text, marginBottom: 6, lineHeight: 18 },
+  name: { fontSize: 13, fontWeight: '600', color: P.text, marginBottom: 6, lineHeight: 18, minHeight: 36 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
   oldPrice: { fontSize: 12, color: P.muted, textDecorationLine: 'line-through' },
   saveBadge: {

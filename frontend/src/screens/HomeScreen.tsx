@@ -23,7 +23,7 @@ import Animated, {
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
-import { productImageSource } from '../components/ProductImage';
+import { ProductCardImage } from '../components/ProductImage';
 import { useAuthStore } from '../store/authStore';
 import { useLanguageStore } from '../store/languageStore';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
@@ -385,10 +385,10 @@ export default function HomeScreen({ navigation }: any) {
                               <Text style={styles.discountBadgeText}>-{item.discount}%</Text>
                             </View>
                           ) : null}
-                          <Image
-                            source={productImageSource({ uri: item.imageUrl, title: item.title })}
-                            style={styles.recImage}
-                            resizeMode="contain"
+                          <ProductCardImage
+                            uri={item.imageUrl}
+                            title={item.title}
+                            containerStyle={styles.recImage}
                           />
                           <Text style={styles.recTitle} numberOfLines={2}>
                             {item.title}
@@ -744,8 +744,8 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   discountBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
-  recImage: { width: '100%', height: 100, borderRadius: 12, marginBottom: 10 },
-  recTitle: { fontSize: 12, fontWeight: '600', color: P.ink, marginBottom: 6, lineHeight: 17 },
+  recImage: { width: '100%', marginBottom: 10 },
+  recTitle: { fontSize: 12, fontWeight: '600', color: P.ink, marginBottom: 6, lineHeight: 17, minHeight: 34 },
   recPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   recPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
   recOldPrice: { fontSize: 11, color: P.faint, textDecorationLine: 'line-through' },

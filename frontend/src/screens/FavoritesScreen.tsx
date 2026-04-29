@@ -16,6 +16,7 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import * as ProductsApi from '../api/products';
 import type { Product } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
+import { ProductCardImage } from '../components/ProductImage';
 
 export default function FavoritesScreen({ navigation }: any) {
   const { favorites, toggleFavorite } = useFavoritesStore();
@@ -70,13 +71,11 @@ export default function FavoritesScreen({ navigation }: any) {
       activeOpacity={0.8}
       onPress={() => navigation.navigate('ProductScreen', { productId: item.id })}
     >
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
-      ) : (
-        <View style={[styles.image, styles.placeholderImage]}>
-          <Feather name="package" size={24} color="#CBD5E1" />
-        </View>
-      )}
+      <ProductCardImage
+        uri={item.imageUrl}
+        title={item.title}
+        containerStyle={styles.image}
+      />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.price}>{formatPrice(item.price)}</Text>

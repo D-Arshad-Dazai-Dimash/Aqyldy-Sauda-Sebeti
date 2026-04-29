@@ -24,7 +24,7 @@ import Animated, {
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { api } from '../api/client';
-import { productImageSource } from '../components/ProductImage';
+import { ProductCardImage } from '../components/ProductImage';
 import { CartQtyControl } from '../components/CartQtyControl';
 import SkeletonBlock from '../components/SkeletonBlock';
 
@@ -106,13 +106,11 @@ export default function ProductListScreen({ route, navigation }: any) {
             <Feather name="heart" size={16} color={isFav ? P.rose : P.faint} />
           </TouchableOpacity>
 
-          <View style={styles.imageWrapper}>
-            <Image
-              style={styles.productImage}
-              source={productImageSource({ uri: item.imageUrl, title: item.title })}
-              resizeMode="contain"
-            />
-          </View>
+          <ProductCardImage
+            uri={item.imageUrl}
+            title={item.title}
+            containerStyle={styles.imageWrapper}
+          />
 
           <View style={styles.infoContainer}>
             <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
@@ -301,7 +299,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: P.border,
   },
-  imageWrapper: { width: '100%', height: 100, marginBottom: 10 },
+  imageWrapper: { width: '100%', marginBottom: 10 },
   productImage: { width: '100%', height: '100%' },
   infoContainer: { width: '100%' },
   priceRowInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },

@@ -23,7 +23,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
-import { productImageSource } from '../components/ProductImage';
+import { ProductCardImage } from '../components/ProductImage';
 import { CartQtyControl } from '../components/CartQtyControl';
 import Collapsible from 'react-native-collapsible';
 import { useFavoritesStore } from '../store/favoritesStore';
@@ -270,13 +270,11 @@ export default function StoreScreen({ route, navigation }: any) {
           >
             <Feather name="heart" size={15} color={isFav ? P.rose : P.faint} />
           </TouchableOpacity>
-          <View style={styles.cardImageWrap}>
-            <Image
-              source={productImageSource({ uri: item.imageUrl, title: item.productTitle || item.title })}
-              style={styles.cardImage}
-              resizeMode="contain"
-            />
-          </View>
+          <ProductCardImage
+            uri={item.imageUrl}
+            title={item.productTitle || item.title}
+            containerStyle={styles.cardImageWrap}
+          />
           <Text style={styles.cardTitle} numberOfLines={2}>{item.productTitle}</Text>
           <View style={styles.cardFooter}>
             <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
@@ -759,9 +757,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: P.border,
   },
-  cardImageWrap: { height: 100, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  cardImageWrap: { width: '100%', marginBottom: 8 },
   cardImage: { width: '100%', height: '100%', borderRadius: 10 },
-  cardTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 10 },
+  cardTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 10, minHeight: 34 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
   cardActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

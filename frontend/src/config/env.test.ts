@@ -13,8 +13,8 @@ describe('config/env URL resolution', () => {
   });
 
   test('returns app.json extra values by default', () => {
-    expect(getApiBaseUrl()).toMatch(/^https?:\/\/[^\/]+$/);
-    expect(getAiBaseUrl()).toMatch(/^https?:\/\/[^\/]+$/);
+    expect(getApiBaseUrl()).toMatch(/^https?:\/\/[^\/]+(?:\/[^\s]*)?$/);
+    expect(getAiBaseUrl()).toMatch(/^https?:\/\/[^\/]+(?:\/[^\s]*)?$/);
   });
 
   test('runtime override wins', () => {

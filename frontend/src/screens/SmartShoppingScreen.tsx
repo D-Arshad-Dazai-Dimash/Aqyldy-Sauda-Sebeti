@@ -18,7 +18,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
-import { productImageSource } from '../components/ProductImage';
+import { ProductCardImage } from '../components/ProductImage';
 import { CartQtyControl } from '../components/CartQtyControl';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
@@ -78,13 +78,11 @@ function ProductCard({
             <Text style={styles.discPillText}>-{disc}%</Text>
           </View>
         )}
-        <View style={styles.productImgWrap}>
-          <Image
-            source={productImageSource({ uri: item.imageUrl, title: item.title })}
-            style={styles.productImg}
-            resizeMode="contain"
-          />
-        </View>
+        <ProductCardImage
+          uri={item.imageUrl}
+          title={item.title}
+          containerStyle={styles.productImgWrap}
+        />
         <Text style={styles.productName} numberOfLines={2}>{item.title}</Text>
         {disc > 0 && (
           <Text style={styles.oldPrice}>{safePrice.toFixed(0)} ₸</Text>
@@ -411,10 +409,10 @@ const styles = StyleSheet.create({
   discPillText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
   productImgWrap: {
     backgroundColor: P.tealSoft, borderRadius: 12,
-    overflow: 'hidden', marginBottom: 8, paddingVertical: 4,
+    overflow: 'hidden', marginBottom: 8,
   },
   productImg: { width: '100%', height: 90 },
-  productName: { fontSize: 12, fontWeight: '600', color: P.text, marginBottom: 4, lineHeight: 16 },
+  productName: { fontSize: 12, fontWeight: '600', color: P.text, marginBottom: 4, lineHeight: 16, minHeight: 32 },
   oldPrice: { fontSize: 11, color: P.muted, textDecorationLine: 'line-through', marginBottom: 1 },
   productPrice: { fontSize: 15, fontWeight: '800', color: P.tealDark, letterSpacing: -0.2 },
   priceCartRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },

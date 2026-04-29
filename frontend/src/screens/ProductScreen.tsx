@@ -33,6 +33,7 @@ import { getFrequentlyBoughtTogether } from '../api/recommendations';
 import type { Store } from '../types/api';
 import type { PriceInsight, RecommendedProduct } from '../types/api';
 import SkeletonBlock from '../components/SkeletonBlock';
+import PriceTrendSection from '../components/PriceTrendSection';
 
 const P = {
   bg: '#F7F8FC', surface: '#FFFFFF', navy: '#0F172A', ink: '#1E293B',
@@ -306,6 +307,9 @@ export default function ProductScreen({ route, navigation }: any) {
             </View>
           </Animated.View>
         )}
+
+        {/* 14-DAY PRICE FORECAST */}
+        <PriceTrendSection productId={productId} />
 
         {/* DESCRIPTION */}
         {product.description ? (

@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import { productImageSource } from './ProductImage';
+import { ProductCardImage } from './ProductImage';
 import { CartQtyControl } from './CartQtyControl';
 import {
   View,
@@ -87,10 +87,10 @@ export default function RecommendationsSection({productId, onProductPress}: Prop
               style={styles.card}
               onPress={() => onProductPress(item.id)}
               activeOpacity={0.7}>
-              <Image
-                source={productImageSource({ uri: item.image_url, title: item.title })}
-                style={styles.image}
-                resizeMode="contain"
+              <ProductCardImage
+                uri={item.image_url}
+                title={item.title}
+                containerStyle={styles.image}
               />
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {item.title}
@@ -166,8 +166,6 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 90,
-    borderRadius: 10,
     marginBottom: 8,
   },
   cardTitle: {
@@ -176,6 +174,7 @@ const styles = StyleSheet.create({
     color: '#334155',
     marginBottom: 6,
     lineHeight: 17,
+    minHeight: 34,
   },
   priceRow: {
     flexDirection: 'row',

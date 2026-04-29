@@ -23,8 +23,10 @@ from models.schemas import (
 )
 from services.prompts import (
     chat_system_prompt,
+    clarify_prompt,
     detect_language,
     ingredient_extractor_system_prompt,
+    looks_ambiguous,
 )
 
 logger = logging.getLogger(__name__)
@@ -446,12 +448,19 @@ async def _chat_with_gemini(
 
     genai.configure(api_key=settings.effective_gemini_api_key)
 
-    system_prompt = chat_system_prompt(
-        catalog_context=catalog_context,
-        cart_context=cart_context,
-        user_orders_context=user_orders_context,
-        lang=detect_language(message),
-    )
+    lang = detect_language(message)
+    # Short / ambiguous messages get a clarification-only prompt so we
+    # never blurt out an unrelated product list when the user just
+    # typed "молоко" or "что-нибудь".
+    if looks_ambiguous(message) and not conversation_history:
+        system_prompt = clarify_prompt(message, lang=lang)
+    else:
+        system_prompt = chat_system_prompt(
+            catalog_context=catalog_context,
+            cart_context=cart_context,
+            user_orders_context=user_orders_context,
+            lang=lang,
+        )
 
     # Build conversation for Gemini
     model = genai.GenerativeModel(

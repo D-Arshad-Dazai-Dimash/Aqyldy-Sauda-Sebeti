@@ -167,3 +167,79 @@ export default function ProductImage(props: ProductImageProps) {
   }
   return img;
 }
+
+/**
+ * Shared, opinionated wrapper for product cards.
+ *
+ * Enforces uniform card-image dimensions across the app:
+ *   - fixed `aspectRatio = 1` (square) — prevents tall portrait
+ *     photos from stretching the parent card,
+ *   - light gray background fills any letterboxing,
+ *   - `resizeMode="cover"` for real photos so the image fills the
+ *     square nicely,
+ *   - `resizeMode="contain"` for the bundled category illustrations
+ *     so the cartoon icon isn't cropped.
+ *
+ * Drop-in usage:
+ *   <ProductCardImage uri={item.imageUrl} title={item.title} />
+ *
+ * Override the wrapper if you need a non-square slot:
+ *   <ProductCardImage uri={...} containerStyle={{ aspectRatio: 4/3 }} />
+ */
+export const CARD_IMAGE_BG = '#F4F6F8';
+export const CARD_IMAGE_RADIUS = 12;
+
+export type ProductCardImageProps = ProductImageProps & {
+  rounded?: boolean;
+  /** Override resize mode (auto: cover for remote, contain for fallback) */
+  forceResizeMode?: 'cover' | 'contain';
+};
+
+export function ProductCardImage(props: ProductCardImageProps) {
+  const {
+    uri,
+    category,
+    categorySlug,
+    subcategory,
+    title,
+    containerStyle,
+    style,
+    rounded = true,
+    forceResizeMode,
+    testID,
+  } = props;
+  const [errored, setErrored] = useState(false);
+
+  const isRemote = !!uri && String(uri).trim().length > 0 && !errored;
+  const source = isRemote
+    ? { uri: String(uri) }
+    : fallbackSource(pickFallbackKey({ category, categorySlug, subcategory, title }));
+
+  const mode: 'cover' | 'contain' =
+    forceResizeMode ?? (isRemote ? 'cover' : 'contain');
+
+  return (
+    <View
+      style={[
+        {
+          width: '100%',
+          aspectRatio: 1,
+          backgroundColor: CARD_IMAGE_BG,
+          borderRadius: rounded ? CARD_IMAGE_RADIUS : 0,
+          overflow: 'hidden',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        containerStyle,
+      ]}
+    >
+      <Image
+        source={source}
+        resizeMode={mode}
+        onError={() => setErrored(true)}
+        testID={testID}
+        style={[{ width: '100%', height: '100%' }, style]}
+      />
+    </View>
+  );
+}
