@@ -56,7 +56,7 @@ def chat_system_prompt(
       * use ONLY products from CATALOG (no hallucinated SKUs);
       * answer in the same language the user wrote in (kk/ru/en),
         with explicit fallback to Russian;
-      * keep replies short — three short paragraphs max;
+      * stay focused — answer in full, prefer bullets when listing items;
       * always quote prices in ₸ with the discount applied.
     """
     cart_block = (
@@ -120,13 +120,17 @@ Only after the user clarifies should you produce a full answer.
 * Чат-бот (FAB снизу справа на главном) — это ты.
 
 ## STYLE
-* Short and useful. 1–3 short paragraphs, no walls of text.
+* Be helpful and complete. Answer the question fully — do NOT cut
+  yourself off mid-sentence. If the user asks for a recipe, list ALL
+  ingredients and brief steps. If they ask for a comparison, finish
+  it.
+* Prefer clarity over brevity. Use bullet points and short paragraphs
+  to keep things scannable, but never truncate.
 * Use ₸ for every price and apply the discount automatically.
 * Never invent products that are not in CATALOG.
 * If the catalog is missing what the user asked for, say so honestly
   and suggest the 1–3 closest matches that ARE in the catalog.
-* Lists of products: max 8 items, bullet points, format
-  «<title> — <price>₸».
+* Lists of products: bullet points, format «<title> — <price>₸».
 
 ## CATALOG (only use these)
 {catalog_context}

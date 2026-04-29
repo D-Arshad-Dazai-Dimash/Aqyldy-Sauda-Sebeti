@@ -16,6 +16,18 @@ import { api } from '../api/client';
 import { useCartStore } from '../store/cartStore';
 import { useShoppingListStore } from '../store/shoppingListStore';
 import { useLocationStore } from '../store/locationStore';
+import { ProductCardImage } from '../components/ProductImage';
+
+type PreviewProduct = {
+  id: string;
+  title: string;
+  price: number;
+  discount?: number | null;
+  weight?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  categoryName?: string | null;
+};
 
 type ToastType = 'success' | 'info' | 'warn';
 
@@ -27,6 +39,10 @@ export default function ScanScreen({ route, navigation }: any) {
   const [torch, setTorch] = useState<'off' | 'on'>('off');
   const [listModalVisible, setListModalVisible] = useState(false);
   const [cameraMessage, setCameraMessage] = useState<string | null>(null);
+  // Buyer-mode confirmation modal: when set, the camera is paused and a
+  // product preview is shown with "Add to cart" / "Cancel" buttons.
+  const [pendingProduct, setPendingProduct] = useState<PreviewProduct | null>(null);
+  const [adding, setAdding] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ text: string; type: ToastType } | null>(null);
@@ -172,8 +188,10 @@ export default function ScanScreen({ route, navigation }: any) {
         } else if (mode === 'shoppingList') {
           await handleShoppingListScan(barcode);
         } else {
-          // default buyer mode: lookup product, add to nearest store cart, toast.
-          // Stays on the scan screen so the buyer can keep scanning more items.
+          // Buyer mode: show a confirmation modal with full product info
+          // and let the user decide whether to add to cart. The camera
+          // stays paused while the modal is open. Resume on confirm or
+          // cancel.
           try {
             const res = await api.get(`/api/products/barcode/${barcode}`);
             const product = res.data;
@@ -182,33 +200,19 @@ export default function ScanScreen({ route, navigation }: any) {
               setIsActive(true);
               return;
             }
-
-            // Make sure we have an active store. If not, try to (re)init.
-            let storeId = activeStoreId;
-            if (!storeId) {
-              await initLocation();
-              storeId = useLocationStore.getState().activeStoreId;
-            }
-            if (!storeId) {
-              // No store yet — fall back to opening product details so the
-              // user can pick a store manually.
-              navigation.navigate('ProductScreen', { productId: product.id });
-              return;
-            }
-
-            try {
-              await addToCart(storeId, product.id, 1, {
-                productId: product.id,
-                productTitle: product.title,
-                price: product.price,
-                imageUrl: product.imageUrl,
-              });
-              showToast(`${product.title} себетке қосылды`, 'success');
-            } catch {
-              showToast('Себетке қосу қатесі', 'warn');
-            }
-            setIsActive(true);
-          } catch {
+            setPendingProduct({
+              id: product.id,
+              title: product.title,
+              price: Number(product.price ?? 0),
+              discount: product.discount ?? null,
+              weight: product.weight ?? null,
+              description: product.description ?? null,
+              imageUrl: product.imageUrl ?? null,
+              categoryName: product.categoryName ?? product.subcategoryName ?? null,
+            });
+            // Camera stays paused (isActive=false) while modal is shown.
+          } catch (e: any) {
+            console.error('[Scan] product lookup failed', e?.response?.status, e?.message);
             Alert.alert('Табылмады', 'Бұл тауар біздің дүкенде әлі тіркелмеген.');
             setIsActive(true);
           }
@@ -223,6 +227,42 @@ export default function ScanScreen({ route, navigation }: any) {
       : mode === 'shoppingList'
         ? 'Тізім бойынша сканерлеу'
         : 'Тауарды сканерлеу';
+
+  const closePreview = (resume = true) => {
+    setPendingProduct(null);
+    if (resume) setIsActive(true);
+  };
+
+  const confirmAddToCart = async () => {
+    if (!pendingProduct || adding) return;
+    setAdding(true);
+    try {
+      let storeId = activeStoreId;
+      if (!storeId) {
+        await initLocation();
+        storeId = useLocationStore.getState().activeStoreId;
+      }
+      if (!storeId) {
+        showToast('Дүкен табылмады. Картадан таңдаңыз.', 'warn');
+        setAdding(false);
+        return;
+      }
+      await addToCart(storeId, pendingProduct.id, 1, {
+        productId: pendingProduct.id,
+        productTitle: pendingProduct.title,
+        price: pendingProduct.price,
+        imageUrl: pendingProduct.imageUrl ?? null,
+      });
+      showToast(`${pendingProduct.title} себетке қосылды`, 'success');
+      closePreview(true);
+    } catch (e: any) {
+      const detail = e?.message || e?.response?.data?.detail || 'Failed to add';
+      console.error('[Scan] addToCart failed', detail, e?.response?.status, e?.response?.data);
+      showToast(`Қате: ${detail}`, 'warn');
+    } finally {
+      setAdding(false);
+    }
+  };
 
   if (!hasPermission) {
     return (
@@ -244,7 +284,7 @@ export default function ScanScreen({ route, navigation }: any) {
       <Camera
         style={StyleSheet.absoluteFill}
         device={device}
-        isActive={isActive && !listModalVisible}
+        isActive={isActive && !listModalVisible && !pendingProduct}
         codeScanner={codeScanner}
         torch={torch}
         onError={(error) => {
@@ -443,6 +483,88 @@ export default function ScanScreen({ route, navigation }: any) {
             >
               <Text style={styles.doneBtnText}>Жабу</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Buyer-mode product preview modal ── */}
+      <Modal
+        visible={!!pendingProduct}
+        animationType="slide"
+        transparent
+        onRequestClose={() => closePreview(true)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.previewSheet}>
+            <View style={styles.modalHandle} />
+
+            {pendingProduct && (
+              <>
+                <View style={styles.previewImageWrap}>
+                  <ProductCardImage
+                    uri={pendingProduct.imageUrl}
+                    title={pendingProduct.title}
+                    category={pendingProduct.categoryName}
+                    containerStyle={styles.previewImage}
+                  />
+                </View>
+
+                <Text style={styles.previewTitle} numberOfLines={2}>
+                  {pendingProduct.title}
+                </Text>
+
+                <View style={styles.previewPriceRow}>
+                  <Text style={styles.previewPrice}>
+                    {Math.round(pendingProduct.price)} ₸
+                  </Text>
+                  {!!pendingProduct.discount && pendingProduct.discount > 0 && (
+                    <View style={styles.previewDiscountChip}>
+                      <Text style={styles.previewDiscountText}>
+                        -{pendingProduct.discount}%
+                      </Text>
+                    </View>
+                  )}
+                  {!!pendingProduct.weight && (
+                    <Text style={styles.previewWeight}>
+                      {pendingProduct.weight}
+                    </Text>
+                  )}
+                </View>
+
+                {!!pendingProduct.description && (
+                  <ScrollView
+                    style={styles.previewDescScroll}
+                    contentContainerStyle={{ paddingVertical: 4 }}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Text style={styles.previewDesc}>
+                      {pendingProduct.description}
+                    </Text>
+                  </ScrollView>
+                )}
+
+                <View style={styles.previewBtnRow}>
+                  <TouchableOpacity
+                    style={[styles.previewBtn, styles.previewCancelBtn]}
+                    onPress={() => closePreview(true)}
+                    disabled={adding}
+                  >
+                    <Feather name="x" size={18} color="#475569" />
+                    <Text style={styles.previewCancelText}>Бас тарту</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.previewBtn, styles.previewAddBtn, adding && styles.previewBtnDisabled]}
+                    onPress={confirmAddToCart}
+                    disabled={adding}
+                  >
+                    <Feather name="shopping-cart" size={18} color="#FFF" />
+                    <Text style={styles.previewAddText}>
+                      {adding ? 'Қосылуда...' : 'Себетке қосу'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -670,4 +792,107 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   doneBtnText: { color: '#FFF', fontWeight: '800', fontSize: 15 },
+
+  // ── Buyer-mode product preview modal ──
+  previewSheet: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 28,
+    minHeight: 360,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 18,
+  },
+  previewImageWrap: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  previewImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 20,
+  },
+  previewTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  previewPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  previewPrice: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#0EA5E9',
+  },
+  previewDiscountChip: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  previewDiscountText: {
+    color: '#DC2626',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  previewWeight: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  previewDescScroll: {
+    maxHeight: 90,
+    marginBottom: 18,
+  },
+  previewDesc: {
+    color: '#475569',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  previewBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  previewBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 52,
+    borderRadius: 14,
+  },
+  previewCancelBtn: {
+    backgroundColor: '#F1F5F9',
+  },
+  previewCancelText: {
+    color: '#475569',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  previewAddBtn: {
+    backgroundColor: '#0EA5E9',
+  },
+  previewBtnDisabled: {
+    opacity: 0.7,
+  },
+  previewAddText: {
+    color: '#FFF',
+    fontWeight: '800',
+    fontSize: 15,
+  },
 });

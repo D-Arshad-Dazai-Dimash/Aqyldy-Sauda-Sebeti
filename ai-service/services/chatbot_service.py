@@ -462,10 +462,19 @@ async def _chat_with_gemini(
             lang=lang,
         )
 
-    # Build conversation for Gemini
+    # Build conversation for Gemini.
+    # `generation_config` is critical here — without an explicit
+    # `max_output_tokens` Gemini sometimes truncates long answers (e.g.
+    # full recipes / multi-product comparisons) at the default budget.
+    generation_config = {
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_output_tokens": 1024,
+    }
     model = genai.GenerativeModel(
         model_name=settings.gemini_model,
         system_instruction=system_prompt,
+        generation_config=generation_config,
     )
 
     # Build chat history
@@ -478,7 +487,23 @@ async def _chat_with_gemini(
 
     chat = model.start_chat(history=history)
     response = await chat.send_message_async(message)
-    return response.text
+
+    # `response.text` can raise / return empty when Gemini emits multiple
+    # parts or hits a safety stop. Fall back to manual concatenation.
+    try:
+        text = response.text
+        if text:
+            return text
+    except Exception:  # noqa: BLE001
+        pass
+    parts: list[str] = []
+    for cand in getattr(response, "candidates", []) or []:
+        content = getattr(cand, "content", None)
+        for part in getattr(content, "parts", []) or []:
+            value = getattr(part, "text", None)
+            if value:
+                parts.append(value)
+    return "".join(parts).strip() or "Кешіріңіз, жауап ала алмадым. Қайталап көріңізші."
 
 
 def _rule_based_chat(message: str, products: list[dict]) -> str:
