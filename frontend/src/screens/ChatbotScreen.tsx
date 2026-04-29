@@ -177,13 +177,28 @@ export default function ChatbotScreen({navigation}: any) {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMsg]);
-    } catch {
+    } catch (err: any) {
+      // Log full error so we can diagnose Gemini / network issues from Metro logs.
+      // eslint-disable-next-line no-console
+      console.warn('[Chatbot] sendChatMessage failed:', {
+        message: err?.message,
+        code: err?.code,
+        status: err?.response?.status,
+        data: err?.response?.data,
+      });
+      const isTimeout = err?.code === 'ECONNABORTED';
+      const isNetwork = err?.message === 'Network Error';
+      const fallbackText = isTimeout
+        ? 'Жауап тым ұзақ келді. Қайтадан көріңіз немесе сұрағыңызды қысқартыңыз.'
+        : isNetwork
+          ? 'Интернетке қосылу қатесі. Желіні тексеріп, қайтадан көріңіз.'
+          : 'Кешіріңіз, қате орын алды. Қайтадан көріңіз.';
       setMessages(prev => [
         ...prev,
         {
           id: `error_${Date.now()}`,
           role: 'assistant',
-          content: 'Кешіріңіз, қате орын алды. Қайтадан көріңіз.',
+          content: fallbackText,
           timestamp: new Date(),
         },
       ]);

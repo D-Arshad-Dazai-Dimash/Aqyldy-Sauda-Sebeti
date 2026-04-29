@@ -5,7 +5,7 @@ import { config } from '../config/env';
 // AI service URL (конфигурируется в зависимости от платформы)
 const aiClient = axios.create({
   baseURL: config.AI_URL,
-  timeout: 30000, // AI responses may take longer
+  timeout: 60000, // Gemini may stream slowly on first token; allow up to 60s
 });
 
 // Attach the same JWT token that is used for the Spring Boot API so that

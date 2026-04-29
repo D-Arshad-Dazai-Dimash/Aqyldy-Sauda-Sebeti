@@ -486,7 +486,34 @@ async def _chat_with_gemini(
         })
 
     chat = model.start_chat(history=history)
-    response = await chat.send_message_async(message)
+    try:
+        response = await chat.send_message_async(message)
+    except Exception as e:  # noqa: BLE001
+        msg = str(e).lower()
+        # If the configured model id is rejected by the API, retry once with a
+        # widely-available fallback so we don't silently degrade to rule-based.
+        if "not found" in msg or "404" in msg or "model" in msg and "support" in msg:
+            logger.warning(
+                "Gemini model '%s' rejected (%s) — retrying with gemini-1.5-flash-latest",
+                settings.gemini_model, e,
+            )
+            try:
+                fallback_model = genai.GenerativeModel(
+                    model_name="gemini-1.5-flash-latest",
+                    system_instruction=system_prompt,
+                    generation_config=generation_config,
+                )
+                fallback_chat = fallback_model.start_chat(history=history)
+                response = await fallback_chat.send_message_async(message)
+            except Exception as e2:  # noqa: BLE001
+                logger.exception("Gemini fallback model also failed: %s", e2)
+                raise
+        else:
+            logger.exception(
+                "Gemini send_message_async failed (model=%s, msg_len=%d): %s",
+                settings.gemini_model, len(message), e,
+            )
+            raise
 
     # `response.text` can raise / return empty when Gemini emits multiple
     # parts or hits a safety stop. Fall back to manual concatenation.

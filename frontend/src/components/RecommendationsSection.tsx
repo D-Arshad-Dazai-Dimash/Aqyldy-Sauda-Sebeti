@@ -158,6 +158,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 10,
     width: 140,
+    // Pin a stable card height so the footer (CartQtyControl) lands at the
+    // same Y on every card regardless of title length / discount presence.
+    // Without this, cards in the horizontal list visually "jump" as the user
+    // scrolls because flex height collapses around variable-content children.
+    minHeight: 260,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
@@ -181,6 +186,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginBottom: 6,
+    // Reserve space for the optional crossed-out old price so the row height
+    // doesn't change between discounted and full-price items.
+    minHeight: 22,
   },
   price: {
     fontSize: 15,
@@ -205,7 +213,8 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   cartRow: {
-    marginTop: 8,
+    marginTop: 'auto',
+    paddingTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

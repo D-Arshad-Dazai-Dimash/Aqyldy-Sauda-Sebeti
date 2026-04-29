@@ -399,7 +399,9 @@ export default function HomeScreen({ navigation }: any) {
                               <Text style={styles.recOldPrice}>{item.price} ₸</Text>
                             </View>
                           ) : (
-                            <Text style={styles.recPrice}>{item.price} ₸</Text>
+                            <View style={styles.recPriceRow}>
+                              <Text style={styles.recPrice}>{item.price} ₸</Text>
+                            </View>
                           )}
                         </PressCard>
                       </Animated.View>
@@ -722,6 +724,9 @@ const styles = StyleSheet.create({
   recsScroll: { paddingHorizontal: 18, paddingVertical: 10, gap: 12 },
   recCard: {
     width: 150,
+    // Stable card height so the price footer doesn't jump between cards
+    // depending on title length / discount badge.
+    minHeight: 240,
     backgroundColor: P.surface,
     borderRadius: 20,
     padding: 12,
@@ -746,7 +751,7 @@ const styles = StyleSheet.create({
   discountBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
   recImage: { width: '100%', marginBottom: 10 },
   recTitle: { fontSize: 12, fontWeight: '600', color: P.ink, marginBottom: 6, lineHeight: 17, minHeight: 34 },
-  recPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  recPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 22, marginTop: 'auto' },
   recPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
   recOldPrice: { fontSize: 11, color: P.faint, textDecorationLine: 'line-through' },
 

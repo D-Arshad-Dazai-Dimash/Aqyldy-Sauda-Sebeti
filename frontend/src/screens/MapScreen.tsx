@@ -183,16 +183,21 @@ function buildMapPreviewHtml() {
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
-      const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([43.238949, 76.889709], 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-
-      let storeMarker = null;
-      let userMarker = null;
-
       function postMessage(payload) {
         if (!window.ReactNativeWebView) return;
-        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        try { window.ReactNativeWebView.postMessage(JSON.stringify(payload)); } catch (e) {}
       }
+
+      function bootstrap() {
+        if (typeof L === 'undefined') {
+          postMessage({ type: 'previewError', reason: 'leaflet-missing' });
+          return;
+        }
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([43.238949, 76.889709], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+        let storeMarker = null;
+        let userMarker = null;
 
       window.updatePreview = function(payload) {
         if (storeMarker) {
@@ -237,6 +242,15 @@ function buildMapPreviewHtml() {
       });
 
       postMessage({ type: 'previewReady' });
+      } // end bootstrap()
+
+      if (document.readyState === 'complete') {
+        try { bootstrap(); } catch (e) { postMessage({ type: 'previewError', reason: String(e && e.message || e) }); }
+      } else {
+        window.addEventListener('load', function() {
+          try { bootstrap(); } catch (e) { postMessage({ type: 'previewError', reason: String(e && e.message || e) }); }
+        });
+      }
     </script>
   </body>
 </html>
@@ -293,23 +307,37 @@ function buildBranchMapHtml() {
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
     <script>
-      const defaultCenter = [43.238949, 76.889709];
-      const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(defaultCenter, 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-
-      const markersById = new Map();
-      let userMarker = null;
-      const clusterGroup = L.markerClusterGroup({
-        maxClusterRadius: 60,
-        showCoverageOnHover: false,
-        spiderfyOnMaxZoom: true,
-      });
-      map.addLayer(clusterGroup);
-
       function postMessage(payload) {
         if (!window.ReactNativeWebView) return;
-        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        try { window.ReactNativeWebView.postMessage(JSON.stringify(payload)); } catch (e) {}
       }
+
+      // Defer initialization until the page (and CDN scripts) have loaded.
+      // Without this, slow networks could cause Leaflet (`L`) to be undefined
+      // and the whole bootstrap to throw silently — leaving `branchMapReady`
+      // never being posted, so the React side never injects markers.
+      function bootstrap() {
+        if (typeof L === 'undefined') {
+          postMessage({ type: 'branchMapError', reason: 'leaflet-missing' });
+          return;
+        }
+
+        const defaultCenter = [43.238949, 76.889709];
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(defaultCenter, 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+        const markersById = new Map();
+        let userMarker = null;
+        // markercluster is optional — if the CDN script failed, fall back to a
+        // plain LayerGroup so single markers still render.
+        const clusterGroup = (typeof L.markerClusterGroup === 'function')
+          ? L.markerClusterGroup({
+              maxClusterRadius: 60,
+              showCoverageOnHover: false,
+              spiderfyOnMaxZoom: true,
+            })
+          : L.layerGroup();
+        map.addLayer(clusterGroup);
 
       function makeIcon(selected) {
         return L.divIcon({
@@ -372,6 +400,19 @@ function buildBranchMapHtml() {
       window.zoomOutMap = function() { map.zoomOut(); };
 
       postMessage({ type: 'branchMapReady' });
+      } // end bootstrap()
+
+      if (document.readyState === 'complete') {
+        try { bootstrap(); } catch (e) {
+          postMessage({ type: 'branchMapError', reason: String(e && e.message || e) });
+        }
+      } else {
+        window.addEventListener('load', function() {
+          try { bootstrap(); } catch (e) {
+            postMessage({ type: 'branchMapError', reason: String(e && e.message || e) });
+          }
+        });
+      }
     </script>
   </body>
 </html>
@@ -618,6 +659,11 @@ export default function MapScreen({ navigation }: any) {
         setMapReady(true);
         return;
       }
+      if (payload.type === 'branchMapError') {
+        // eslint-disable-next-line no-console
+        console.warn('[MapScreen] branch map failed to bootstrap:', payload.reason);
+        return;
+      }
       if (payload.type === 'markerPress' && payload.storeId) {
         setSelectedStoreId(payload.storeId);
         setMapSheetVisible(true);
@@ -735,6 +781,8 @@ export default function MapScreen({ navigation }: any) {
             onMessage={handleBranchMapMessage}
             javaScriptEnabled
             domStorageEnabled
+            mixedContentMode="always"
+            setSupportMultipleWindows={false}
             style={styles.fullMap}
           />
 
@@ -795,10 +843,10 @@ export default function MapScreen({ navigation }: any) {
 
                     <View style={styles.branchTextBlock}>
                       <Text style={styles.branchTitle} numberOfLines={1}>
-                        {item.address || item.name}
+                        {item.name}
                       </Text>
                       <Text style={styles.branchSubtitle} numberOfLines={1}>
-                        Алматы қаласы · Бауыржан Момышұлы
+                        {item.address || (item.distanceKm != null ? `${item.distanceKm.toFixed(1)} км қашық` : 'Мекенжай көрсетілмеген')}
                       </Text>
                       <View style={styles.branchStatusRow}>
                         <View style={styles.branchStatusDot} />
@@ -943,6 +991,7 @@ export default function MapScreen({ navigation }: any) {
                   onMessage={handleMapPreviewMessage}
                   javaScriptEnabled
                   domStorageEnabled
+                  mixedContentMode="always"
                   scrollEnabled={false}
                   style={styles.mapPreview}
                 />
