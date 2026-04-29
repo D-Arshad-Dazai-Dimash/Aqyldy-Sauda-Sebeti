@@ -33,8 +33,8 @@ class CatalogPublicControllerTest {
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
 
-        ProductDto p1 = new ProductDto(first, "Milk", null, BigDecimal.TEN, null, 1, null, null, null, null, true, List.of());
-        ProductDto p2 = new ProductDto(second, "Bread", null, BigDecimal.ONE, null, 1, null, null, null, null, true, List.of());
+        ProductDto p1 = new ProductDto(first, "Milk", null, BigDecimal.TEN, null, 1, null, null, null, null, true, List.of(), null, null, null);
+        ProductDto p2 = new ProductDto(second, "Bread", null, BigDecimal.ONE, null, 1, null, null, null, null, true, List.of(), null, null, null);
 
         when(productService.findAllByIds(List.of(first, second))).thenReturn(List.of(p1, p2));
 

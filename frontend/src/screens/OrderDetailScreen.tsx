@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { getOrderById, cancelOrder } from '../api/orders';
 import { useI18n } from '../i18n/useI18n';
 import { getApiErrorMessage } from '../utils/validation';
@@ -147,7 +148,7 @@ export default function OrderDetailScreen({ route, navigation }: any) {
               {orderItems.map((item: any, index: number) => (
                 <View key={item.id ?? index} style={styles.itemRow}>
                   <Image
-                    source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                    source={productImageSource({ uri: item.imageUrl, title: item.title || item.productTitle })}
                     style={styles.itemImage}
                     resizeMode="contain"
                   />

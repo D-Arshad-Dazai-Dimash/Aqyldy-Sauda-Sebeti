@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { useIsFocused } from '@react-navigation/native';
 import { getSpendingAnalytics } from '../api/analytics';
 import type { SpendingAnalytics } from '../types/api';
@@ -252,7 +253,7 @@ export default function AnalyticsScreen({ navigation }: any) {
                 style={[styles.freqCard, idx === data.frequentProducts.length - 1 && { borderBottomWidth: 0 }]}
               >
                 <Image
-                  source={fp.imageUrl ? { uri: fp.imageUrl } : require('../assets/p1.png')}
+                  source={productImageSource({ uri: fp.imageUrl, title: fp.title })}
                   style={styles.freqImage}
                   resizeMode="contain"
                 />

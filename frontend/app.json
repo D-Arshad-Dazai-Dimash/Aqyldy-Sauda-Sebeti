@@ -1,4 +1,8 @@
 {
   "name": "frontend",
-  "displayName": "frontend"
+  "displayName": "frontend",
+  "extra": {
+    "apiUrl": "https://aqyldy-sauda-sebeti-iw5jq.ondigitalocean.app",
+    "aiUrl": "https://aqyldy-ai-service-iw5jq.ondigitalocean.app"
+  }
 }

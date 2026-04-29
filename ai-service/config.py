@@ -79,7 +79,9 @@ if _key:
         len(_key), _key[-4:] if len(_key) >= 4 else "?", settings.gemini_model,
     )
 else:
-    logger.warning(
-        "No GEMINI_API_KEY / GOOGLE_API_KEY configured — chatbot will use the "
-        "rule-based fallback. Set GEMINI_API_KEY in the AI service env vars."
+    logger.error(
+        "❌ NO GEMINI_API_KEY / GOOGLE_API_KEY configured — chatbot will fall "
+        "back to rule-based answers and the /api/ai/chat endpoint will return "
+        "generic responses. Set GEMINI_API_KEY in the AI service env vars on "
+        "DigitalOcean App Platform to fix this."
     )

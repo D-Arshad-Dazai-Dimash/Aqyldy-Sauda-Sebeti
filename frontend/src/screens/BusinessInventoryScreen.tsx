@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { api } from '../api/client';
 
@@ -194,7 +195,7 @@ export default function BusinessInventoryScreen({ route, navigation }: any) {
           style={styles.productImageWrap}
         >
           <Image
-            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            source={productImageSource({ uri: item.imageUrl, title: item.productTitle || item.title })}
             style={styles.productImage}
             resizeMode="contain"
           />

@@ -20,6 +20,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { useIsFocused } from '@react-navigation/native';
 import { useCartStore } from '../store/cartStore';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
@@ -188,7 +189,7 @@ export default function CartScreen({ navigation }: any) {
       <View style={styles.card}>
         <View style={styles.imageContainer}>
           <Image
-            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            source={productImageSource({ uri: item.imageUrl, title: item.productTitle || item.title })}
             style={styles.productImage}
             resizeMode="contain"
           />
@@ -323,7 +324,7 @@ export default function CartScreen({ navigation }: any) {
                     onPress={() => navigation.navigate('ProductScreen', { productId: item.id, storeId })}
                   >
                     <Image
-                      source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                      source={productImageSource({ uri: item.imageUrl, title: item.title })}
                       style={styles.cartRecImage}
                       resizeMode="contain"
                     />

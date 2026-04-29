@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import { productImageSource } from './ProductImage';
 import {
   View,
   Text,
@@ -86,11 +87,7 @@ export default function RecommendationsSection({productId, onProductPress}: Prop
               onPress={() => onProductPress(item.id)}
               activeOpacity={0.7}>
               <Image
-                source={
-                  item.image_url
-                    ? {uri: item.image_url}
-                    : require('../assets/p1.png')
-                }
+                source={productImageSource({ uri: item.image_url, title: item.title })}
                 style={styles.image}
                 resizeMode="contain"
               />

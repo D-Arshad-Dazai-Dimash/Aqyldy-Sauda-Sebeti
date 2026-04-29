@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { api } from '../api/client';
 
 type Transition = { target: string; label: string; color: string };
@@ -126,7 +127,7 @@ export default function BusinessOrderDetailScreen({ route, navigation }: any) {
               {order.items.map((item: any, index: number) => (
                 <View key={item.id ?? index} style={styles.itemRow}>
                   <Image
-                    source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                    source={productImageSource({ uri: item.imageUrl, title: item.title || item.productTitle })}
                     style={styles.itemImage}
                     resizeMode="contain"
                   />

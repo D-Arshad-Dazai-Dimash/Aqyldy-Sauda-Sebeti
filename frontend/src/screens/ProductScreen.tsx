@@ -26,6 +26,7 @@ import Geolocation from '@react-native-community/geolocation';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
 import { api } from '../api/client';
+import { productImageSource } from '../components/ProductImage';
 import { getNearbyStores } from '../api/stores';
 import { getPriceInsight } from '../api/priceInsights';
 import { getFrequentlyBoughtTogether } from '../api/recommendations';
@@ -224,7 +225,7 @@ export default function ProductScreen({ route, navigation }: any) {
             </Animated.View>
           ) : null}
           <Image
-            source={product.imageUrl ? { uri: product.imageUrl } : require('../assets/p1.png')}
+            source={productImageSource({ uri: product.imageUrl, title: product.title })}
             style={styles.productImage}
             resizeMode="contain"
           />
@@ -360,7 +361,7 @@ export default function ProductScreen({ route, navigation }: any) {
                     onPress={() => navigation.push('ProductScreen', { productId: item.id, storeId })}
                   >
                     <Image
-                      source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                      source={productImageSource({ uri: item.imageUrl, title: item.title })}
                       style={styles.relatedImage}
                       resizeMode="contain"
                     />

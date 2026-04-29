@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { useShoppingListStore } from '../store/shoppingListStore';
 import { useCartStore } from '../store/cartStore';
 
@@ -169,7 +170,7 @@ export default function ShoppingListScreen({ navigation, route }: any) {
                   </TouchableOpacity>
 
                   <Image
-                    source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+                    source={productImageSource({ uri: item.imageUrl, title: item.title })}
                     style={styles.itemImage}
                     resizeMode="contain"
                   />

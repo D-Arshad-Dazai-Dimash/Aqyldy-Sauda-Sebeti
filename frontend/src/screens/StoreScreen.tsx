@@ -23,6 +23,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import Collapsible from 'react-native-collapsible';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { useCartStore } from '../store/cartStore';
@@ -270,7 +271,7 @@ export default function StoreScreen({ route, navigation }: any) {
           </TouchableOpacity>
           <View style={styles.cardImageWrap}>
             <Image
-              source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+              source={productImageSource({ uri: item.imageUrl, title: item.productTitle || item.title })}
               style={styles.cardImage}
               resizeMode="contain"
             />

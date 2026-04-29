@@ -19,6 +19,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { searchProducts } from '../api/products';
 import type { Product } from '../types/api';
 import { useI18n } from '../i18n/useI18n';
@@ -66,7 +67,7 @@ function ProductCard({ item, onPress, delay }: { item: Product; onPress: () => v
         {/* Image */}
         <View style={styles.imgWrapper}>
           <Image
-            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            source={productImageSource({ uri: item.imageUrl, title: item.title })}
             style={styles.img}
             resizeMode="contain"
           />

@@ -18,6 +18,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
 import type { RecommendedProduct } from '../types/api';
 import { useI18n } from '../i18n/useI18n';
@@ -78,7 +79,7 @@ function ProductCard({
         )}
         <View style={styles.productImgWrap}>
           <Image
-            source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+            source={productImageSource({ uri: item.imageUrl, title: item.title })}
             style={styles.productImg}
             resizeMode="contain"
           />

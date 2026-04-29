@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import Geolocation from '@react-native-community/geolocation';
 import {
   sendChatMessage,
@@ -239,11 +240,7 @@ export default function ChatbotScreen({navigation}: any) {
                       navigation.navigate('ProductScreen', {productId: p.id})
                     }>
                     <Image
-                      source={
-                        p.image_url
-                          ? {uri: p.image_url}
-                          : require('../assets/p1.png')
-                      }
+                      source={productImageSource({ uri: p.image_url, title: p.title })}
                       style={styles.productChipImage}
                     />
                     <View style={styles.productChipInfo}>

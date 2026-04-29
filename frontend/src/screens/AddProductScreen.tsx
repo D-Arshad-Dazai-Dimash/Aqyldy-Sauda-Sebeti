@@ -117,6 +117,14 @@ export default function AddProductScreen({ route, navigation }: any) {
       return;
     }
 
+    // Photo is required: a missing image is what makes every screen fall back
+    // to the generic category placeholder, which buyers complained about
+    // ("колбаса вместо молока"). Force merchants to attach one up front.
+    if (!photoUri || (!photoDataUrl && !photoUri)) {
+      Alert.alert('Қате', 'Тауар суреті міндетті. Камераны немесе галереяны ашыңыз.');
+      return;
+    }
+
     if (!storeId) {
       Alert.alert('Қате', 'Сіздің дүкеніңіз табылмады. Алдымен бизнесті тіркеңіз.');
       return;
@@ -244,7 +252,7 @@ export default function AddProductScreen({ route, navigation }: any) {
 
         {/* ====== Фото ====== */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Тауар суреті</Text>
+          <Text style={styles.label}>Тауар суреті *</Text>
           <TouchableOpacity
             style={styles.photoButton}
             onPress={() => setShowPhotoModal(true)}

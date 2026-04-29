@@ -24,6 +24,7 @@ import Animated, {
 import Feather from 'react-native-vector-icons/Feather';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { api } from '../api/client';
+import { productImageSource } from '../components/ProductImage';
 import SkeletonBlock from '../components/SkeletonBlock';
 
 const { width } = Dimensions.get('window');
@@ -107,7 +108,7 @@ export default function ProductListScreen({ route, navigation }: any) {
           <View style={styles.imageWrapper}>
             <Image
               style={styles.productImage}
-              source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+              source={productImageSource({ uri: item.imageUrl, title: item.title })}
               resizeMode="contain"
             />
           </View>

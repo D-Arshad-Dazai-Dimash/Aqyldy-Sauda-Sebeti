@@ -4,6 +4,7 @@ import com.darshad.project.catalog.category.Category;
 import com.darshad.project.catalog.category.CategoryRepository;
 import com.darshad.project.catalog.pricehistory.PriceHistory;
 import com.darshad.project.catalog.pricehistory.PriceHistoryRepository;
+import com.darshad.project.infra.storage.ImageStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -15,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,15 +35,18 @@ public class ProductService {
     private final ProductRepository productRepo;
     private final CategoryRepository categoryRepo;
     private final PriceHistoryRepository priceHistoryRepo;
+    private final ImageStorage imageStorage;
 
     public ProductService(
             ProductRepository productRepo,
             CategoryRepository categoryRepo,
-            PriceHistoryRepository priceHistoryRepo
+            PriceHistoryRepository priceHistoryRepo,
+            ImageStorage imageStorage
     ) {
         this.productRepo = productRepo;
         this.categoryRepo = categoryRepo;
         this.priceHistoryRepo = priceHistoryRepo;
+        this.imageStorage = imageStorage;
     }
 
     @Transactional(readOnly = true)
@@ -237,15 +240,32 @@ public class ProductService {
 
         try {
             byte[] bytes = file.getBytes();
-            String base64 = Base64.getEncoder().encodeToString(bytes);
-            String dataUrl = "data:" + contentType.toLowerCase() + ";base64," + base64;
-            p.setImageUrl(dataUrl);
-            log.info("✓ product image stored in DB: id={}, sizeBytes={}", id, bytes.length);
+            String ext = extensionFor(contentType);
+            String key = "products/" + id + "/" + UUID.randomUUID() + ext;
+            String url = imageStorage.store(key, bytes, contentType.toLowerCase());
+            p.setImageUrl(url);
+            log.info("✓ product image saved: id={}, sizeBytes={}, remote={}, url={}",
+                    id, bytes.length, imageStorage.isRemote(), maskUrl(url));
         } catch (IOException ex) {
             log.error("  ✗ failed to read uploaded file", ex);
             throw new IllegalStateException("Failed to read uploaded image", ex);
         }
         return toDto(p);
+    }
+
+    private static String extensionFor(String contentType) {
+        return switch (contentType.toLowerCase()) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            case "image/gif" -> ".gif";
+            default -> ".jpg";
+        };
+    }
+
+    private static String maskUrl(String url) {
+        if (url == null) return "<null>";
+        if (url.startsWith("data:")) return "data:..." + url.length() + "chars";
+        return url;
     }
 
     @Transactional(readOnly = true)

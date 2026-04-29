@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { api } from '../api/client';
 import { getBusinessAnalytics } from '../api/businessAnalytics';
 import { useLanguageStore } from '../store/languageStore';
@@ -86,7 +87,7 @@ export default function BusinessDashboard({ navigation }: any) {
   const ProductItem = ({ item }: { item: any }) => (
     <View style={styles.productRow}>
       <Image
-        source={item.imageUrl ? { uri: item.imageUrl } : require('../assets/p1.png')}
+        source={productImageSource({ uri: item.imageUrl, title: item.productTitle || item.title })}
         style={styles.productImage}
         resizeMode="contain"
       />

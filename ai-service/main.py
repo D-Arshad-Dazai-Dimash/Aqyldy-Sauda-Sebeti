@@ -39,6 +39,26 @@ def health():
     return {"status": "ok", "service": "ai-service"}
 
 
+@app.get("/api/ai/health")
+def ai_health():
+    """
+    Detailed readiness probe meant for the mobile app and ops dashboards.
+
+    Tells the caller whether Gemini will actually be used (key set) or
+    whether the chatbot is going to fall back to rule-based answers. The
+    frontend uses this to render an honest "AI temporarily unavailable"
+    banner instead of pretending the bot is broken.
+    """
+    key = settings.effective_gemini_api_key
+    return {
+        "status": "ok",
+        "service": "ai-service",
+        "gemini_ready": bool(key),
+        "gemini_model": settings.gemini_model,
+        "auth_required": settings.auth_required,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
 

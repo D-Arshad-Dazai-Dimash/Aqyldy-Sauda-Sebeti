@@ -15,6 +15,7 @@ import { Camera, useCameraDevice, useCodeScanner, type Code } from 'react-native
 import { api } from '../api/client';
 import { useCartStore } from '../store/cartStore';
 import { useShoppingListStore } from '../store/shoppingListStore';
+import { useLocationStore } from '../store/locationStore';
 
 type ToastType = 'success' | 'info' | 'warn';
 
@@ -34,6 +35,8 @@ export default function ScanScreen({ route, navigation }: any) {
   // Shopping list
   const { items, load: loadList, incrementCollected } = useShoppingListStore();
   const addToCart = useCartStore((s) => s.addItem);
+  const activeStoreId = useLocationStore((s) => s.activeStoreId);
+  const initLocation = useLocationStore((s) => s.init);
 
   const totalItems = items.length;
   const checkedCount = items.filter((it) => it.checked).length;
@@ -169,12 +172,42 @@ export default function ScanScreen({ route, navigation }: any) {
         } else if (mode === 'shoppingList') {
           await handleShoppingListScan(barcode);
         } else {
-          // default buyer mode
+          // default buyer mode: lookup product, add to nearest store cart, toast.
+          // Stays on the scan screen so the buyer can keep scanning more items.
           try {
             const res = await api.get(`/api/products/barcode/${barcode}`);
-            if (res.data) {
-              navigation.navigate('ProductScreen', { productId: res.data.id });
+            const product = res.data;
+            if (!product) {
+              showToast('Тауар табылмады', 'warn');
+              setIsActive(true);
+              return;
             }
+
+            // Make sure we have an active store. If not, try to (re)init.
+            let storeId = activeStoreId;
+            if (!storeId) {
+              await initLocation();
+              storeId = useLocationStore.getState().activeStoreId;
+            }
+            if (!storeId) {
+              // No store yet — fall back to opening product details so the
+              // user can pick a store manually.
+              navigation.navigate('ProductScreen', { productId: product.id });
+              return;
+            }
+
+            try {
+              await addToCart(storeId, product.id, 1, {
+                productId: product.id,
+                productTitle: product.title,
+                price: product.price,
+                imageUrl: product.imageUrl,
+              });
+              showToast(`${product.title} себетке қосылды`, 'success');
+            } catch {
+              showToast('Себетке қосу қатесі', 'warn');
+            }
+            setIsActive(true);
           } catch {
             Alert.alert('Табылмады', 'Бұл тауар біздің дүкенде әлі тіркелмеген.');
             setIsActive(true);

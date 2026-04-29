@@ -23,6 +23,7 @@ import Animated, {
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
 import Feather from 'react-native-vector-icons/Feather';
+import { productImageSource } from '../components/ProductImage';
 import { useAuthStore } from '../store/authStore';
 import { useLanguageStore } from '../store/languageStore';
 import { getPersonalRecommendations, getPopularProducts } from '../api/recommendations';
@@ -385,11 +386,7 @@ export default function HomeScreen({ navigation }: any) {
                             </View>
                           ) : null}
                           <Image
-                            source={
-                              item.imageUrl
-                                ? { uri: item.imageUrl }
-                                : require('../assets/p1.png')
-                            }
+                            source={productImageSource({ uri: item.imageUrl, title: item.title })}
                             style={styles.recImage}
                             resizeMode="contain"
                           />
