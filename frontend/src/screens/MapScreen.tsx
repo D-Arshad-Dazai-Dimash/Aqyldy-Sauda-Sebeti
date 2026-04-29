@@ -313,9 +313,10 @@ function buildBranchMapHtml() {
       }
 
       // Defer initialization until the page (and CDN scripts) have loaded.
-      // Without this, slow networks could cause Leaflet (`L`) to be undefined
-      // and the whole bootstrap to throw silently — leaving `branchMapReady`
-      // never being posted, so the React side never injects markers.
+      // Without this, slow networks could cause Leaflet (the L global) to be
+      // undefined and the whole bootstrap to throw silently — leaving
+      // 'branchMapReady' never being posted, so the React side never injects
+      // markers.
       function bootstrap() {
         if (typeof L === 'undefined') {
           postMessage({ type: 'branchMapError', reason: 'leaflet-missing' });
