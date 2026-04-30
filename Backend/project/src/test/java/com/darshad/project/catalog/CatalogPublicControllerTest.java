@@ -4,6 +4,7 @@ import com.darshad.project.catalog.category.CategoryService;
 import com.darshad.project.catalog.product.BatchRequest;
 import com.darshad.project.catalog.product.ProductDto;
 import com.darshad.project.catalog.product.ProductService;
+import com.darshad.project.store.InventoryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,9 @@ class CatalogPublicControllerTest {
     @Mock
     private ProductService productService;
 
+    @Mock
+    private InventoryRepository inventoryRepository;
+
     @Test
     @DisplayName("productsBatch returns only requested ids")
     void productsBatch() {
@@ -38,7 +42,7 @@ class CatalogPublicControllerTest {
 
         when(productService.findAllByIds(List.of(first, second))).thenReturn(List.of(p1, p2));
 
-        var controller = new CatalogPublicController(categoryService, productService);
+        var controller = new CatalogPublicController(categoryService, productService, inventoryRepository);
         List<ProductDto> result = controller.productsBatch(new BatchRequest(List.of(first, second)));
 
         assertThat(result).hasSize(2);

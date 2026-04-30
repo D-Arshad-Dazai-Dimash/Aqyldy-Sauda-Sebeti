@@ -73,18 +73,16 @@ public class CartService {
             throw new IllegalStateException("Product inactive");
         }
 
-        // Use store-specific inventory (matches checkout behaviour and avoids
-        // letting users add items that are out of stock in the chosen store).
+        // Inventory check intentionally relaxed: business decision is to let
+        // users add anything to the cart regardless of per-store stock. The
+        // hard stock check still happens at checkout (OrderService) where
+        // we hold a row-level lock on inventory and can safely refuse.
         int availableInStore = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
                 .map(inv -> inv.getQuantity())
-                .orElseThrow(() -> {
-                    log.warn("  ✗ no inventory for product in this store: product={}, store={}", product.getTitle(), storeId);
-                    return new IllegalStateException("Product not available in this store");
-                });
-
+                .orElse(Integer.MAX_VALUE);
         if (req.quantity() > availableInStore) {
-            log.warn("  ✗ not enough stock: requested={}, available={}, product={}", req.quantity(), availableInStore, product.getTitle());
-            throw new IllegalStateException("Not enough stock");
+            log.info("  ⚠ cart-add over current stock (allowed): requested={}, available={}, product={}",
+                    req.quantity(), availableInStore, product.getTitle());
         }
 
         var existing = itemRepo.findByCartIdAndProductId(cart.getId(), product.getId()).orElse(null);
@@ -110,8 +108,8 @@ public class CartService {
             int newQty = existing.getQuantity() + req.quantity();
 
             if (newQty > availableInStore) {
-                log.warn("  ✗ not enough stock (cumulative): requested={}, available={}, product={}", newQty, availableInStore, product.getTitle());
-                throw new IllegalStateException("Not enough stock");
+                log.info("  ⚠ cart-add cumulative over current stock (allowed): requested={}, available={}, product={}",
+                        newQty, availableInStore, product.getTitle());
             }
 
             existing.setQuantity(newQty);
@@ -147,17 +145,14 @@ public class CartService {
 
         var product = item.getProduct();
 
-        // Use store-specific inventory, not the global product.stock.
+        // Inventory check intentionally relaxed (see add() above) — the cart
+        // tolerates over-quantity, the hard check happens at checkout.
         int availableInStore = inventoryRepo.findByStore_IdAndProduct_Id(storeId, product.getId())
                 .map(inv -> inv.getQuantity())
-                .orElseThrow(() -> {
-                    log.warn("  ✗ no inventory for product in this store: product={}, store={}", product.getTitle(), storeId);
-                    return new IllegalStateException("Product not available in this store");
-                });
-
+                .orElse(Integer.MAX_VALUE);
         if (req.quantity() > availableInStore) {
-            log.warn("  ✗ not enough stock: requested={}, available={}", req.quantity(), availableInStore);
-            throw new IllegalStateException("Not enough stock");
+            log.info("  ⚠ cart-update over current stock (allowed): requested={}, available={}",
+                    req.quantity(), availableInStore);
         }
 
         if (req.quantity() <= 0) {

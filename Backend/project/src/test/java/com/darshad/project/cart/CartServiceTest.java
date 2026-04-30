@@ -134,19 +134,20 @@ class CartServiceTest {
         }
 
         @Test
-        @DisplayName("недостаточно товара на складе — ошибка")
-        void notEnoughStock() {
+        @DisplayName("недостаточно товара на складе — корзина всё равно принимает (стоп-чек на checkout)")
+        void notEnoughStockAllowed() {
             when(userRepo.findByEmail("buyer@test.com")).thenReturn(Optional.of(user));
             when(storeRepo.findById(storeId)).thenReturn(Optional.of(store));
             when(cartRepo.findGraphByUserIdAndStoreId(userId, storeId)).thenReturn(Optional.of(cart));
             when(productRepo.findById(productId)).thenReturn(Optional.of(product));
             when(inventoryRepo.findByStore_IdAndProduct_Id(storeId, productId))
                     .thenReturn(Optional.of(Inventory.builder().quantity(1).build()));
+            when(itemRepo.findByCartIdAndProductId(cartId, productId)).thenReturn(Optional.empty());
+            when(cartRepo.findGraphById(cartId)).thenReturn(Optional.of(cart));
 
-            assertThatThrownBy(() ->
-                    cartService.add("buyer@test.com", storeId, new AddToCartRequest(productId, 5)))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Not enough stock");
+            cartService.add("buyer@test.com", storeId, new AddToCartRequest(productId, 5));
+
+            verify(itemRepo).save(argThat(item -> item.getQuantity() == 5));
         }
 
         @Test

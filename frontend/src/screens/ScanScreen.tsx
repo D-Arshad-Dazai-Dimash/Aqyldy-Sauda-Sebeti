@@ -202,10 +202,10 @@ export default function ScanScreen({ route, navigation }: any) {
         } else if (mode === 'shoppingList') {
           await handleShoppingListScan(barcode);
         } else {
-          // Buyer mode: show a confirmation modal with full product info
-          // and let the user decide whether to add to cart. The camera
-          // stays paused while the modal is open. Resume on confirm or
-          // cancel.
+          // Buyer mode: scan → look up product → add straight to cart.
+          // No confirmation modal, no inventory checks — backend tolerates
+          // missing inventory on the cart endpoint, the hard stock check
+          // happens at checkout.
           try {
             const res = await api.get(`/api/products/barcode/${barcode}`);
             const product = res.data;
@@ -214,20 +214,45 @@ export default function ScanScreen({ route, navigation }: any) {
               setIsActive(true);
               return;
             }
-            setPendingProduct({
-              id: product.id,
-              title: product.title,
-              price: Number(product.price ?? 0),
-              discount: product.discount ?? null,
-              weight: product.weight ?? null,
-              description: product.description ?? null,
-              imageUrl: product.imageUrl ?? null,
-              categoryName: product.categoryName ?? product.subcategoryName ?? null,
-            });
-            // Camera stays paused (isActive=false) while modal is shown.
+
+            // Resolve a store id: prefer active, fall back to init().
+            let storeId = activeStoreId;
+            if (!storeId) {
+              try {
+                await initLocation();
+              } catch { /* ignore */ }
+              storeId = useLocationStore.getState().activeStoreId;
+            }
+            // Last-resort fallback: pick the first known store so the user
+            // never gets stuck on a "no store" error after a scan.
+            if (!storeId) {
+              const known = useLocationStore.getState().knownStores;
+              storeId = known[0]?.id ?? null;
+              if (storeId) setActiveStoreId(storeId);
+            }
+            if (!storeId) {
+              showToast('Дүкен табылмады', 'warn');
+              setIsActive(true);
+              return;
+            }
+
+            try {
+              await addToCart(storeId, product.id, 1, {
+                productId: product.id,
+                productTitle: product.title,
+                price: Number(product.price ?? 0),
+                imageUrl: product.imageUrl ?? null,
+              });
+              showToast(`${product.title} себетке қосылды`, 'success');
+            } catch (addErr: any) {
+              console.error('[Scan] direct addToCart failed', addErr?.response?.status, addErr?.message);
+              showToast('Себетке қосу қатесі', 'warn');
+            }
+            // Resume the camera so the user can keep scanning.
+            setIsActive(true);
           } catch (e: any) {
             console.error('[Scan] product lookup failed', e?.response?.status, e?.message);
-            Alert.alert('Табылмады', 'Бұл тауар біздің дүкенде әлі тіркелмеген.');
+            showToast('Тауар табылмады', 'warn');
             setIsActive(true);
           }
         }
