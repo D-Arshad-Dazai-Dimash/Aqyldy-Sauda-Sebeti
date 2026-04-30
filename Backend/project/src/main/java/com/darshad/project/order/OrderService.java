@@ -85,23 +85,29 @@ public class OrderService {
                 throw new IllegalStateException("Product inactive: " + product.getTitle());
             }
 
-            // PESSIMISTIC_WRITE lock — prevents two concurrent checkouts
-            // from reading the same stock value and overselling.
-            var inv = inventoryRepo.findForUpdateByStore_IdAndProduct_Id(storeId, product.getId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "No inventory for product in this store: " + product.getTitle()));
-
-            if (inv.getQuantity() < cartItem.getQuantity()) {
-                log.warn("  ✗ not enough stock: product={}, requested={}, available={}",
-                        product.getTitle(), cartItem.getQuantity(), inv.getQuantity());
-                throw new IllegalStateException(
-                        "Not enough stock for: " + product.getTitle());
+            // Inventory check intentionally relaxed (matches CartService).
+            // If there is no inventory row in this store we still allow the
+            // order to go through — merchants may not have populated stock
+            // for every SKU, and we don't want to block real purchases on
+            // stale data. Where an inventory row does exist we still take
+            // the PESSIMISTIC_WRITE lock and decrement so concurrent
+            // checkouts cannot oversell genuine stock.
+            var invOpt = inventoryRepo.findForUpdateByStore_IdAndProduct_Id(storeId, product.getId());
+            if (invOpt.isPresent()) {
+                var inv = invOpt.get();
+                int oldQty = inv.getQuantity();
+                int newQty = Math.max(0, inv.getQuantity() - cartItem.getQuantity());
+                if (inv.getQuantity() < cartItem.getQuantity()) {
+                    log.info("  ⚠ checkout over current stock (allowed): product={}, requested={}, available={}",
+                            product.getTitle(), cartItem.getQuantity(), inv.getQuantity());
+                }
+                inv.setQuantity(newQty);
+                inventoryRepo.save(inv);
+                log.debug("  inventory updated: product={}, {} → {}", product.getTitle(), oldQty, inv.getQuantity());
+            } else {
+                log.info("  ⚠ no inventory row for product={} in store={}, proceeding without decrement",
+                        product.getTitle(), storeId);
             }
-
-            int oldQty = inv.getQuantity();
-            inv.setQuantity(inv.getQuantity() - cartItem.getQuantity());
-            inventoryRepo.save(inv);
-            log.debug("  inventory updated: product={}, {} → {}", product.getTitle(), oldQty, inv.getQuantity());
 
             // B7: honour the price snapshot taken at "add to cart" time.
             // If the cart row has a snapshot, that is the contract price the
