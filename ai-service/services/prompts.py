@@ -47,6 +47,7 @@ def chat_system_prompt(
     catalog_context: str,
     user_orders_context: str = "",
     cart_context: str = "",
+    stores_context: str = "",
     lang: str = "ru",
 ) -> str:
     """
@@ -67,6 +68,11 @@ def chat_system_prompt(
     orders_block = (
         f"\n## RECENT ORDERS (last 5)\n{user_orders_context.strip()}\n"
         if user_orders_context and user_orders_context.strip()
+        else ""
+    )
+    stores_block = (
+        f"\n## STORES (use ONLY these names/addresses)\n{stores_context.strip()}\n"
+        if stores_context and stores_context.strip()
         else ""
     )
     return f"""## ROLE
@@ -134,7 +140,7 @@ Only after the user clarifies should you produce a full answer.
 
 ## CATALOG (only use these)
 {catalog_context}
-{cart_block}{orders_block}
+{stores_block}{cart_block}{orders_block}
 ## RULES
 1. Pricing: always show the EFFECTIVE price (discount applied).
    Add the original price in parentheses if the discount is > 0.

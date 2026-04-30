@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import { useCartStore } from '../store/cartStore';
 import { useLocationStore } from '../store/locationStore';
@@ -55,9 +56,30 @@ export function CartQtyControl({
   const [busy, setBusy] = React.useState(false);
   const qty = item?.quantity ?? 0;
   const dim = size === 'sm' ? 28 : 34;
+  const navigation = useNavigation<any>();
 
   if (!storeId) {
-    return null;
+    // No active store yet — instead of hiding (which leaves the user
+    // wondering why "+" isn't there), surface a tap target that takes
+    // them to the map to pick a store.
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Дүкен таңдау"
+        testID={`cart-pickstore-${productId}`}
+        style={[
+          styles.pickStore,
+          { height: dim, borderRadius: dim / 2 },
+          style,
+        ]}
+        onPress={() => navigation.navigate('Map')}
+      >
+        <Feather name="map-pin" size={size === 'sm' ? 12 : 14} color={COLORS.primary} />
+        <Text style={styles.pickStoreText} numberOfLines={1}>
+          Дүкен
+        </Text>
+      </TouchableOpacity>
+    );
   }
 
   const guard = async (fn: () => Promise<void>, nextQty: number) => {
@@ -174,6 +196,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.text,
     fontSize: 13,
+  },
+  pickStore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    backgroundColor: COLORS.primarySoft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pickStoreText: {
+    color: COLORS.primary,
+    fontWeight: '700',
+    fontSize: 11,
   },
 });
 

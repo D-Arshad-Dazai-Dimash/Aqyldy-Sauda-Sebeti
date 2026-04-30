@@ -159,7 +159,7 @@ export default function AddProductScreen({ route, navigation }: any) {
           title: name,
           barcode: barcodeStr,
           price: Number(price),
-          stock: Number(stock) || 0,
+          stock: Number(stock) > 0 ? Number(stock) : 1,
           description: selectedSubcategory || '',
           active: true,
         };
@@ -185,7 +185,7 @@ export default function AddProductScreen({ route, navigation }: any) {
         await api.post('/api/admin/inventory', {
           storeId,
           productId,
-          quantity: Number(stock) || 0,
+          quantity: Number(stock) > 0 ? Number(stock) : 1,
         });
       } catch (invErr: any) {
         const m = invErr?.response?.data?.message || invErr?.message || '';
@@ -298,12 +298,16 @@ export default function AddProductScreen({ route, navigation }: any) {
           <Text style={styles.label}>Саны (Қоймада)</Text>
           <TextInput
             style={styles.input}
-            placeholder="0"
+            placeholder="1"
             keyboardType="numeric"
             value={stock}
             onChangeText={setStock}
             placeholderTextColor="#94A3B8"
           />
+          <Text style={styles.hint}>
+            Бос қалдырсаңыз — әдепкі мән 1 болады. Сатып алушылар тауарды
+            себетке тек қоймада 1+ дана болғанда қоса алады.
+          </Text>
         </View>
 
         {/* ====== Категория picker ====== */}
@@ -517,6 +521,7 @@ const styles = StyleSheet.create({
   barcodeValue: { fontSize: 16, fontWeight: 'bold', color: '#4AB7B6' },
   inputGroup: { marginBottom: 18 },
   label: { fontSize: 14, fontWeight: '700', color: '#64748B', marginBottom: 8 },
+  hint: { fontSize: 11, color: '#94A3B8', marginTop: 6, lineHeight: 15 },
   input: {
     backgroundColor: '#FFF', padding: 15, borderRadius: 12,
     borderWidth: 1, borderColor: '#E2E8F0', fontSize: 16, color: '#1E293B',

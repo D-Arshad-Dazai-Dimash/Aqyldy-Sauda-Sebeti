@@ -13,6 +13,10 @@ jest.mock('../api/cart', () => ({
   getCart: jest.fn(),
 }));
 
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
+
 const milk = {
   id: 'item-1',
   productId: 'product-1',
@@ -59,9 +63,10 @@ describe('CartQtyControl', () => {
     expect(getByTestId('cart-qty-text-product-1').props.children).toBe(2);
   });
 
-  it('returns null when no active store is available', () => {
+  it('renders pick-store fallback when no active store is available', () => {
     useLocationStore.setState({ activeStoreId: null } as any);
-    const { queryByTestId } = render(<CartQtyControl productId="product-1" />);
+    const { getByTestId, queryByTestId } = render(<CartQtyControl productId="product-1" />);
+    expect(getByTestId('cart-pickstore-product-1')).toBeTruthy();
     expect(queryByTestId('cart-add-product-1')).toBeNull();
   });
 

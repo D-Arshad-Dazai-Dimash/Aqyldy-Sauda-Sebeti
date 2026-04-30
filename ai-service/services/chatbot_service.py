@@ -113,6 +113,31 @@ def _load_user_orders_context(db: Session, user_id: str | None) -> str:
     return "\n".join(lines)
 
 
+def _load_stores_context(db: Session) -> str:
+    """Build a short text listing of active stores for the LLM."""
+    try:
+        rows = db.execute(
+            text(
+                """
+                SELECT name, address
+                FROM stores
+                WHERE active = true
+                ORDER BY name
+                LIMIT 30
+                """
+            )
+        ).fetchall()
+    except Exception as e:
+        logger.debug("stores context skipped: %s", e)
+        return ""
+    if not rows:
+        return ""
+    return "\n".join(
+        f"- {name}" + (f" — {address}" if address else "")
+        for name, address in rows
+    )
+
+
 def _load_product_catalog(db: Session) -> list[dict]:
     """Load active products as knowledge base."""
     rows = db.execute(
@@ -547,6 +572,7 @@ async def _chat_with_llm(
     catalog_context: str,
     cart_context: str = "",
     user_orders_context: str = "",
+    stores_context: str = "",
 ) -> str:
     """Dispatch chat to whichever LLM provider is configured."""
     lang = detect_language(message)
@@ -557,6 +583,7 @@ async def _chat_with_llm(
             catalog_context=catalog_context,
             cart_context=cart_context,
             user_orders_context=user_orders_context,
+            stores_context=stores_context,
             lang=lang,
         )
 
@@ -577,6 +604,7 @@ async def _chat_with_llm(
         catalog_context,
         cart_context=cart_context,
         user_orders_context=user_orders_context,
+        stores_context=stores_context,
     )
 
 
@@ -586,6 +614,7 @@ async def _chat_with_gemini(
     catalog_context: str,
     cart_context: str = "",
     user_orders_context: str = "",
+    stores_context: str = "",
 ) -> str:
     """Call Google Gemini API with product catalog context."""
     import google.generativeai as genai
@@ -603,6 +632,7 @@ async def _chat_with_gemini(
             catalog_context=catalog_context,
             cart_context=cart_context,
             user_orders_context=user_orders_context,
+            stores_context=stores_context,
             lang=lang,
         )
 
@@ -809,12 +839,14 @@ async def chat(
             catalog_ctx = _build_catalog_context(products) if products else "Тауар тізімі қазір қолжетімсіз."
             cart_ctx = _load_user_cart_context(db, user_id)
             orders_ctx = _load_user_orders_context(db, user_id)
+            stores_ctx = _load_stores_context(db)
             reply = await _chat_with_llm(
                 message,
                 conversation_history,
                 catalog_ctx,
                 cart_context=cart_ctx,
                 user_orders_context=orders_ctx,
+                stores_context=stores_ctx,
             )
             return ChatResponse(
                 reply=reply,

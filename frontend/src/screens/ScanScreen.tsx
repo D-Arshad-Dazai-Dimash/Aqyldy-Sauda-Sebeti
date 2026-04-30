@@ -65,6 +65,12 @@ export default function ScanScreen({ route, navigation }: any) {
     if (mode === 'shoppingList') {
       loadList();
     }
+    // Buyer mode needs an activeStoreId to add items to the cart. Trigger
+    // the location store init eagerly so the user doesn't have to wait the
+    // full GPS timeout the moment they actually scan something.
+    if (mode === 'buyer' && !activeStoreId) {
+      initLocation().catch(() => { /* non-fatal */ });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -103,18 +109,23 @@ export default function ScanScreen({ route, navigation }: any) {
               text: 'Себетке қосу',
               onPress: async () => {
                 try {
-                  const fallbackStore = items.find((it) => it.storeId)?.storeId;
-                  if (fallbackStore) {
-                    await addToCart(fallbackStore, product.id, 1, {
-                      productId: product.id,
-                      productTitle: product.title,
-                      price: product.price,
-                      imageUrl: product.imageUrl,
-                    });
-                    showToast(`${product.title} себетке қосылды`, 'info');
-                  } else {
+                  const fallbackStore =
+                    items.find((it) => it.storeId)?.storeId ?? activeStoreId;
+                  if (!fallbackStore) {
+                    // No store context anywhere — punt to ProductScreen so
+                    // the user can pick a store from the catalog flow
+                    // instead of crashing addToCart with a null storeId.
+                    showToast('Дүкен таңдаңыз', 'warn');
                     navigation.navigate('ProductScreen', { productId: product.id });
+                    return;
                   }
+                  await addToCart(fallbackStore, product.id, 1, {
+                    productId: product.id,
+                    productTitle: product.title,
+                    price: product.price,
+                    imageUrl: product.imageUrl,
+                  });
+                  showToast(`${product.title} себетке қосылды`, 'info');
                 } catch {
                   showToast('Себетке қосу қатесі', 'warn');
                 } finally {
