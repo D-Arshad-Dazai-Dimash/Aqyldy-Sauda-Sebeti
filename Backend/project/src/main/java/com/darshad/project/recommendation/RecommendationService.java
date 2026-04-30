@@ -71,7 +71,7 @@ public class RecommendationService {
 
         if (ids.isEmpty()) {
             log.debug("  no personalized results, falling back to popular");
-            return popularProducts(limit);
+            return popularProducts(limit, java.util.List.of());
         }
 
         var products = fetchProductsInOrder(ids);
@@ -86,11 +86,32 @@ public class RecommendationService {
     @Cacheable(value = "recommendations:popular", key = "'top' + #limit")
     @Transactional(readOnly = true)
     public List<RecommendedProductDto> popularProducts(int limit) {
-        log.debug("▶ popular products: limit={}", limit);
+        return popularProducts(limit, java.util.List.of());
+    }
 
-        var ids = orderItemRepo.findPopularProductIds(PageRequest.of(0, limit));
+    /**
+     * Globally popular products, excluding the given product IDs (used so
+     * the "Popular" rail does not show duplicates from "Personal").
+     */
+    @Transactional(readOnly = true)
+    public List<RecommendedProductDto> popularProducts(int limit, java.util.List<UUID> excludeIds) {
+        log.debug("▶ popular products: limit={}, exclude={}", limit, excludeIds == null ? 0 : excludeIds.size());
+
+        java.util.Set<UUID> excludeSet = excludeIds == null || excludeIds.isEmpty()
+                ? java.util.Set.of()
+                : new java.util.HashSet<>(excludeIds);
+
+        // Pull more than needed so we still have `limit` items after filtering.
+        int fetchSize = excludeSet.isEmpty() ? limit : Math.max(limit + excludeSet.size(), limit * 2);
+        var ids = orderItemRepo.findPopularProductIds(PageRequest.of(0, fetchSize));
+        if (!excludeSet.isEmpty()) {
+            ids = ids.stream().filter(id -> !excludeSet.contains(id)).toList();
+        }
+        if (ids.size() > limit) {
+            ids = ids.subList(0, limit);
+        }
         var products = fetchProductsInOrder(ids);
-        log.debug("  found {} popular products", products.size());
+        log.debug("  found {} popular products (after exclude)", products.size());
         return toScoredDtos(products);
     }
 

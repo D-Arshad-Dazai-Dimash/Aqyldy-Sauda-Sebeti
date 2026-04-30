@@ -114,8 +114,8 @@ export default function ProductListScreen({ route, navigation }: any) {
 
           <View style={styles.infoContainer}>
             <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
-            <View style={styles.priceRowInline}>
-              <Text style={styles.productPrice}>{item.price} ₸</Text>
+            <Text style={styles.productPrice} numberOfLines={1}>{item.price} ₸</Text>
+            <View style={styles.cartRowInline}>
               <CartQtyControl
                 productId={item.id}
                 size="sm"
@@ -302,8 +302,11 @@ const styles = StyleSheet.create({
   imageWrapper: { width: '100%', marginBottom: 10 },
   productImage: { width: '100%', height: '100%' },
   infoContainer: { width: '100%' },
-  priceRowInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  productTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 6 },
+  // Stacked layout: price on its own line, cart control on a row below.
+  // Previous side-by-side layout overflowed the card whenever the +/- pill
+  // expanded (price + 3-segment pill needed ~145px in a ~128px content area).
+  cartRowInline: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 },
+  productTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 6, minHeight: 34 },
   productPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
   skeletonTitle: { marginBottom: 8 },
   skeletonPrice: { alignSelf: 'center' },

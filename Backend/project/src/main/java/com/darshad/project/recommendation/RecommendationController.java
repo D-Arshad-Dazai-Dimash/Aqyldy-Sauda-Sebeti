@@ -38,7 +38,8 @@ public class RecommendationController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/popular")
     public List<RecommendedProductDto> popular(
-            @RequestParam(defaultValue = "10") int limit) {
-        return recommendationService.popularProducts(limit);
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(name = "exclude", required = false) List<UUID> exclude) {
+        return recommendationService.popularProducts(limit, exclude);
     }
 }

@@ -24,10 +24,21 @@ export async function getPersonalRecommendations(
 
 export async function getPopularProducts(
   limit = 10,
+  excludeIds?: string[],
 ): Promise<RecommendedProduct[]> {
+  const params: Record<string, any> = { limit };
+  if (excludeIds && excludeIds.length > 0) {
+    // Spring binds repeated `exclude` params into List<UUID>
+    params.exclude = excludeIds;
+  }
   const res = await api.get<RecommendedProduct[]>(
     '/api/recommendations/popular',
-    { params: { limit } },
+    {
+      params,
+      paramsSerializer: {
+        indexes: null, // -> exclude=a&exclude=b (no [] suffix)
+      },
+    },
   );
   return res.data;
 }

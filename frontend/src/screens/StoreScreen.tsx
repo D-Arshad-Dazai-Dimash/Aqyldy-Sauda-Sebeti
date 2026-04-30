@@ -276,8 +276,8 @@ export default function StoreScreen({ route, navigation }: any) {
             containerStyle={styles.cardImageWrap}
           />
           <Text style={styles.cardTitle} numberOfLines={2}>{item.productTitle}</Text>
+          <Text style={styles.cardPrice} numberOfLines={1}>{formatPrice(item.price)}</Text>
           <View style={styles.cardFooter}>
-            <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
             <View style={styles.cardActionsRow}>
               <TouchableOpacity
                 style={styles.secondaryActionBtn}
@@ -760,8 +760,8 @@ const styles = StyleSheet.create({
   cardImageWrap: { width: '100%', marginBottom: 8 },
   cardImage: { width: '100%', height: '100%', borderRadius: 10 },
   cardTitle: { fontSize: 12, fontWeight: '600', color: P.ink, lineHeight: 17, marginBottom: 10, minHeight: 34 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardPrice: { fontSize: 15, fontWeight: '800', color: P.teal },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 },
+  cardPrice: { fontSize: 15, fontWeight: '800', color: P.teal, marginBottom: 4 },
   cardActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   secondaryActionBtn: {
     width: 32,

@@ -83,7 +83,9 @@ function ProductCard({ item, onPress, delay }: { item: Product; onPress: () => v
             </View>
           </View>
           <View style={styles.bottomRow}>
-            <Text style={styles.newPrice}>{finalPrice.toFixed(0)} ₸</Text>
+            <Text style={styles.newPrice} numberOfLines={1}>{finalPrice.toFixed(0)} ₸</Text>
+          </View>
+          <View style={styles.cartRow}>
             <CartQtyControl
               productId={item.id}
               size="sm"
@@ -315,7 +317,8 @@ const styles = StyleSheet.create({
   },
   saveText: { fontSize: 10, fontWeight: '700', color: P.amber },
   newPrice: { fontSize: 17, fontWeight: '800', color: P.rose, letterSpacing: -0.3 },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
+  cartRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 6 },
 
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   loadingText: { fontSize: 14, color: P.muted, marginTop: 12 },

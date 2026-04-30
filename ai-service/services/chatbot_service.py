@@ -486,6 +486,10 @@ async def _chat_with_gemini(
         })
 
     chat = model.start_chat(history=history)
+    logger.info(
+        "Calling Gemini (model=%s, history_msgs=%d, prompt_len=%d, message_len=%d)",
+        settings.gemini_model, len(history), len(system_prompt or ""), len(message),
+    )
     try:
         response = await chat.send_message_async(message)
     except Exception as e:  # noqa: BLE001

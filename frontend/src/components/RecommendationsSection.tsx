@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 14,
     padding: 10,
-    width: 140,
+    width: 150,
     // Pin a stable card height so the footer (CartQtyControl) lands at the
     // same Y on every card regardless of title length / discount presence.
     // Without this, cards in the horizontal list visually "jump" as the user

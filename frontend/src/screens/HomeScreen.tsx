@@ -215,7 +215,6 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.langPill}
             onPress={async () => {
               await toggleLanguage();
-              Alert.alert(t.languageLabel, t.languageChanged);
             }}
           >
             <Feather name="globe" size={13} color={P.muted} />
@@ -726,7 +725,7 @@ const styles = StyleSheet.create({
     width: 150,
     // Stable card height so the price footer doesn't jump between cards
     // depending on title length / discount badge.
-    minHeight: 240,
+    minHeight: 260,
     backgroundColor: P.surface,
     borderRadius: 20,
     padding: 12,

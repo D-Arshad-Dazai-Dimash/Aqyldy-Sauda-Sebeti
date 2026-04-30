@@ -29,6 +29,7 @@ import Animated, {
 import Feather from 'react-native-vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FilterModal } from '../components/FilterModal';
+import { ProductCardImage } from '../components/ProductImage';
 import { useFavoritesStore } from '../store/favoritesStore';
 import * as ProductsApi from '../api/products';
 import * as StoresApi from '../api/stores';

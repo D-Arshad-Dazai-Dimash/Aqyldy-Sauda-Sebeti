@@ -92,7 +92,6 @@ export default function CategoriesScreen({ navigation }: any) {
             style={styles.langSelector}
             onPress={async () => {
               await toggleLanguage();
-              Alert.alert(t.languageTitle, t.languageChanged);
             }}
             activeOpacity={0.85}
           >

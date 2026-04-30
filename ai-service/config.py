@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     # Google Gemini (for chatbot). Accept either GEMINI_API_KEY or GOOGLE_API_KEY.
     gemini_api_key: str = ""
     google_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    # Default to a stable, GA model id. `gemini-2.0-flash` is occasionally
+    # rejected with 404 from non-US regions, so we keep 1.5-flash-latest as
+    # the safe default and let DigitalOcean override via env var when needed.
+    gemini_model: str = "gemini-1.5-flash-latest"
 
     # JWT — must match Spring Boot's app.jwt.secret
     jwt_secret: str = "dev-secret-at-least-32-chars-long!!"

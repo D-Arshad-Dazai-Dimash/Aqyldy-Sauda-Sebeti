@@ -88,7 +88,9 @@ function ProductCard({
           <Text style={styles.oldPrice}>{safePrice.toFixed(0)} ₸</Text>
         )}
         <View style={styles.priceCartRow}>
-          <Text style={styles.productPrice}>{finalPrice.toFixed(0)} ₸</Text>
+          <Text style={styles.productPrice} numberOfLines={1}>{finalPrice.toFixed(0)} ₸</Text>
+        </View>
+        <View style={styles.cartRowSm}>
           <CartQtyControl
             productId={item.id}
             size="sm"
@@ -122,14 +124,18 @@ export default function SmartShoppingScreen({ navigation }: any) {
       }
       setError('');
 
-      const [personalData, popularData] = await Promise.allSettled([
-        getPersonalRecommendations(12),
-        getPopularProducts(16),
-      ]);
-
+      // Fetch personalized first; then ask backend for popular EXCLUDING
+      // any IDs we already have in the personalized rail so the two lists
+      // never overlap visually.
+      const personalRes = await Promise.allSettled([getPersonalRecommendations(12)]);
+      const personalData = personalRes[0];
       const nextPersonal = personalData.status === 'fulfilled'
         ? personalData.value.filter((item) => item?.active !== false)
         : [];
+      const personalIds = nextPersonal.map((p) => p.id);
+
+      const popularRes = await Promise.allSettled([getPopularProducts(16, personalIds)]);
+      const popularData = popularRes[0];
       const nextPopular = popularData.status === 'fulfilled'
         ? popularData.value.filter((item) => item?.active !== false)
         : [];
@@ -415,7 +421,8 @@ const styles = StyleSheet.create({
   productName: { fontSize: 12, fontWeight: '600', color: P.text, marginBottom: 4, lineHeight: 16, minHeight: 32 },
   oldPrice: { fontSize: 11, color: P.muted, textDecorationLine: 'line-through', marginBottom: 1 },
   productPrice: { fontSize: 15, fontWeight: '800', color: P.tealDark, letterSpacing: -0.2 },
-  priceCartRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  priceCartRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
+  cartRowSm: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6 },
 
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   emptyText: { fontSize: 15, color: P.muted, marginTop: 12 },

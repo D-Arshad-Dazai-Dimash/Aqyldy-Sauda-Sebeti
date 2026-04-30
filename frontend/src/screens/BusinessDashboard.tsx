@@ -122,7 +122,6 @@ export default function BusinessDashboard({ navigation }: any) {
               style={styles.langSelector}
               onPress={async () => {
                 await toggleLanguage();
-                Alert.alert(t.languageTitle, t.languageChanged);
               }}
             >
               <Text style={styles.langText}>{t.langName} </Text>
