@@ -29,3 +29,22 @@ export async function getProductsBatch(ids: string[]): Promise<Product[]> {
   const res = await api.post<Product[]>('/api/products/batch', { ids });
   return res.data;
 }
+
+export interface ProductStoreAvailability {
+  storeId: string;
+  storeName: string;
+  storeAddress: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  quantity: number;
+}
+
+/**
+ * Returns every active store that currently has stock for this product.
+ * Used by the buyer scan flow to offer a store-switch when the user's
+ * active store doesn't carry the item.
+ */
+export async function getStoresForProduct(productId: string): Promise<ProductStoreAvailability[]> {
+  const res = await api.get<ProductStoreAvailability[]>(`/api/products/${productId}/stores`);
+  return res.data;
+}

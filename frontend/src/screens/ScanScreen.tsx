@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { Camera, useCameraDevice, useCodeScanner, type Code } from 'react-native-vision-camera';
 import { api } from '../api/client';
+import { getStoresForProduct, type ProductStoreAvailability } from '../api/products';
 import { useCartStore } from '../store/cartStore';
 import { useShoppingListStore } from '../store/shoppingListStore';
 import { useLocationStore } from '../store/locationStore';
@@ -51,7 +52,9 @@ export default function ScanScreen({ route, navigation }: any) {
   // Shopping list
   const { items, load: loadList, incrementCollected } = useShoppingListStore();
   const addToCart = useCartStore((s) => s.addItem);
+  const setCartStore = useCartStore((s) => s.setStore);
   const activeStoreId = useLocationStore((s) => s.activeStoreId);
+  const setActiveStoreId = useLocationStore((s) => s.setActiveStoreId);
   const initLocation = useLocationStore((s) => s.init);
 
   const totalItems = items.length;
@@ -283,24 +286,81 @@ export default function ScanScreen({ route, navigation }: any) {
 
       if (looksLikeNoInventory) {
         const titleText = pendingProduct?.title ?? 'Тауар';
-        Alert.alert(
-          'Бұл дүкенде жоқ',
-          `«${titleText}» қазіргі таңдалған дүкенде сатылмайды. Басқа дүкенді картадан таңдаңыз.`,
-          [
-            {
-              text: 'Картаны ашу',
-              onPress: () => {
-                closePreview(false);
-                navigation.navigate('Map');
+        // Ask the backend which OTHER stores actually have this item.
+        // If we find any, offer a one-tap switch to the closest one
+        // (or the one with most stock if we don't have user coords).
+        let candidates: ProductStoreAvailability[] = [];
+        try {
+          candidates = await getStoresForProduct(pendingProduct!.id);
+        } catch {
+          candidates = [];
+        }
+        const others = candidates.filter((s) => s.storeId !== activeStoreId);
+
+        if (others.length > 0) {
+          const userLoc = useLocationStore.getState().userLocation;
+          const ranked = [...others].sort((a, b) => {
+            if (userLoc && a.latitude && a.longitude && b.latitude && b.longitude) {
+              const da = (a.latitude - userLoc.latitude) ** 2 + (a.longitude - userLoc.longitude) ** 2;
+              const db = (b.latitude - userLoc.latitude) ** 2 + (b.longitude - userLoc.longitude) ** 2;
+              return da - db;
+            }
+            return b.quantity - a.quantity;
+          });
+          const best = ranked[0];
+
+          Alert.alert(
+            'Бұл дүкенде жоқ',
+            `«${titleText}» қазіргі дүкенде сатылмайды.\n\nБұл тауар бар: ${best.storeName}${best.storeAddress ? '\n' + best.storeAddress : ''}`,
+            [
+              {
+                text: `«${best.storeName}» дүкеніне ауысу`,
+                onPress: async () => {
+                  // Switch active store + cart store, then retry add.
+                  setActiveStoreId(best.storeId);
+                  setCartStore(best.storeId);
+                  try {
+                    await addToCart(best.storeId, pendingProduct!.id, 1, {
+                      productId: pendingProduct!.id,
+                      productTitle: pendingProduct!.title,
+                      price: pendingProduct!.price,
+                      imageUrl: pendingProduct!.imageUrl ?? null,
+                    });
+                    showToast(`${pendingProduct!.title} себетке қосылды`, 'success');
+                    closePreview(true);
+                  } catch (retryErr: any) {
+                    showToast('Себетке қосу қатесі', 'warn');
+                    closePreview(true);
+                  }
+                },
               },
-            },
-            {
-              text: 'Болдырмау',
-              style: 'cancel',
-              onPress: () => closePreview(true),
-            },
-          ],
-        );
+              {
+                text: 'Картаны ашу',
+                onPress: () => {
+                  closePreview(false);
+                  navigation.navigate('Map');
+                },
+              },
+              {
+                text: 'Болдырмау',
+                style: 'cancel',
+                onPress: () => closePreview(true),
+              },
+            ],
+          );
+        } else {
+          // No store has it in stock at all.
+          Alert.alert(
+            'Қоймада жоқ',
+            `«${titleText}» қазір ешбір дүкенде сатылмайды. Кейінірек қайталап көріңіз.`,
+            [
+              {
+                text: 'OK',
+                onPress: () => closePreview(true),
+              },
+            ],
+          );
+        }
       } else {
         showToast(`Қате: ${detail}`, 'warn');
       }

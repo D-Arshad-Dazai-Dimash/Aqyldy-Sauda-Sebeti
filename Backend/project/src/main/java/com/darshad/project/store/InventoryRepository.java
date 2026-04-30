@@ -36,4 +36,20 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     @Query("select i from Inventory i where i.store.id = :storeId and i.product.id = :productId")
     Optional<Inventory> findForUpdateByStore_IdAndProduct_Id(@Param("storeId") UUID storeId,
                                                              @Param("productId") UUID productId);
+
+    /**
+     * Returns all inventory rows that have stock for a given product, with
+     * the store eagerly loaded. Used by the buyer-facing "this product is
+     * not in your store — try one of these instead" flow when a barcode
+     * scan fails because the active store has no inventory.
+     */
+    @Query("""
+            select i from Inventory i
+            join fetch i.store s
+            where i.product.id = :productId
+              and i.quantity > 0
+              and s.active = true
+            order by i.quantity desc
+            """)
+    List<Inventory> findInStockStoresByProduct_Id(@Param("productId") UUID productId);
 }
