@@ -44,17 +44,20 @@ def ai_health():
     """
     Detailed readiness probe meant for the mobile app and ops dashboards.
 
-    Tells the caller whether Gemini will actually be used (key set) or
-    whether the chatbot is going to fall back to rule-based answers. The
-    frontend uses this to render an honest "AI temporarily unavailable"
-    banner instead of pretending the bot is broken.
+    Tells the caller which LLM provider will be used (Groq preferred, Gemini
+    legacy fallback) or whether the chatbot is going to fall back to
+    rule-based answers. Keeps the legacy `gemini_*` keys so older builds of
+    the mobile app keep working without an immediate update.
     """
-    key = settings.effective_gemini_api_key
     return {
         "status": "ok",
         "service": "ai-service",
-        "gemini_ready": bool(key),
-        "gemini_model": settings.gemini_model,
+        "llm_ready": settings.llm_ready,
+        "llm_provider": settings.llm_provider,
+        "llm_model": settings.llm_model,
+        # Backward-compat aliases used by older app builds.
+        "gemini_ready": settings.llm_ready,
+        "gemini_model": settings.llm_model,
         "auth_required": settings.auth_required,
     }
 

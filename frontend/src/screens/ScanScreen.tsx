@@ -256,9 +256,43 @@ export default function ScanScreen({ route, navigation }: any) {
       showToast(`${pendingProduct.title} себетке қосылды`, 'success');
       closePreview(true);
     } catch (e: any) {
-      const detail = e?.message || e?.response?.data?.detail || 'Failed to add';
-      console.error('[Scan] addToCart failed', detail, e?.response?.status, e?.response?.data);
-      showToast(`Қате: ${detail}`, 'warn');
+      const status = e?.response?.status;
+      const detail = e?.response?.data?.detail || e?.response?.data?.message || e?.message || 'Failed to add';
+      console.error('[Scan] addToCart failed', detail, status, e?.response?.data);
+
+      // Specific case: product exists in our catalog but the currently
+      // selected store has no inventory for it. The backend returns 400 with
+      // detail "Product not available in this store" — show a friendly
+      // dialog instead of a cryptic toast, and offer to pick another store
+      // from the map.
+      const looksLikeNoInventory =
+        status === 400 &&
+        typeof detail === 'string' &&
+        /not available|inventory|жоқ|нет в наличии/i.test(detail);
+
+      if (looksLikeNoInventory) {
+        const titleText = pendingProduct?.title ?? 'Тауар';
+        Alert.alert(
+          'Бұл дүкенде жоқ',
+          `«${titleText}» қазіргі таңдалған дүкенде сатылмайды. Басқа дүкенді картадан таңдаңыз.`,
+          [
+            {
+              text: 'Картаны ашу',
+              onPress: () => {
+                closePreview(false);
+                navigation.navigate('Map');
+              },
+            },
+            {
+              text: 'Болдырмау',
+              style: 'cancel',
+              onPress: () => closePreview(true),
+            },
+          ],
+        );
+      } else {
+        showToast(`Қате: ${detail}`, 'warn');
+      }
     } finally {
       setAdding(false);
     }

@@ -1,8 +1,10 @@
 """
 AI Shopping Assistant Chatbot
 
-RAG-lite approach: loads product catalog as context, uses Google Gemini API for conversation.
-Falls back to a rule-based system if no API key is configured.
+RAG-lite approach: loads product catalog as context, calls Groq's
+OpenAI-compatible Chat Completions API for conversation. Legacy Google
+Gemini calls are still kept as a fallback when only GEMINI_API_KEY is
+configured. Falls back to a rule-based system if no API key at all.
 """
 
 import logging
@@ -10,6 +12,7 @@ import math
 import re
 import json
 
+import httpx
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -228,6 +231,108 @@ def _looks_like_recipe_request(message: str) -> bool:
     return any(word in message_lower for word in _RECIPE_HINT_WORDS)
 
 
+async def _groq_chat_completion(
+    *,
+    system_prompt: str,
+    history: list[dict],
+    user_message: str,
+    max_tokens: int = 1024,
+    temperature: float = 0.7,
+    response_format: dict | None = None,
+) -> str:
+    """Call Groq's OpenAI-compatible /chat/completions endpoint.
+
+    Returns the assistant text. Raises on transport / API errors so the
+    caller can decide whether to fall back to the rule-based path.
+    """
+    api_key = settings.effective_groq_api_key
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY not configured")
+
+    messages: list[dict] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.extend(history)
+    messages.append({"role": "user", "content": user_message})
+
+    payload: dict = {
+        "model": settings.groq_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "top_p": 0.95,
+        "stream": False,
+    }
+    if response_format is not None:
+        payload["response_format"] = response_format
+
+    url = settings.groq_base_url.rstrip("/") + "/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    logger.info(
+        "Calling Groq (model=%s, history_msgs=%d, prompt_len=%d, message_len=%d)",
+        settings.groq_model, len(history), len(system_prompt or ""), len(user_message),
+    )
+    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+        response = await client.post(url, json=payload, headers=headers)
+
+    if response.status_code >= 400:
+        body_preview = (response.text or "")[:500]
+        logger.error(
+            "Groq API error %d (model=%s): %s",
+            response.status_code, settings.groq_model, body_preview,
+        )
+        response.raise_for_status()
+
+    data = response.json()
+    try:
+        choice = data["choices"][0]
+        return (choice.get("message", {}).get("content") or "").strip()
+    except (KeyError, IndexError, TypeError) as e:
+        logger.error("Groq response missing choices[0].message.content: %s | data=%r", e, data)
+        return ""
+
+
+def _to_openai_messages(history: list[ChatMessage]) -> list[dict]:
+    """Convert internal ChatMessage history to OpenAI-style messages."""
+    messages: list[dict] = []
+    for h in history[-10:]:
+        role = "user" if h.role == "user" else "assistant"
+        messages.append({"role": role, "content": h.content})
+    return messages
+
+
+async def _extract_ingredients_with_llm(message: str, conversation_history: list[ChatMessage]) -> list[str]:
+    """Ask the configured LLM (Groq preferred) to extract ingredients."""
+    if settings.llm_provider == "groq":
+        try:
+            history = _to_openai_messages(conversation_history[-6:])
+            user_msg = (
+                f"Extract ingredients for this request: {message}. "
+                "If this is not a dish/recipe request return {\"ingredients\":[]}."
+            )
+            raw = await _groq_chat_completion(
+                system_prompt=ingredient_extractor_system_prompt(),
+                history=history,
+                user_message=user_msg,
+                max_tokens=256,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+            return _normalize_ingredients(_extract_json_array_of_strings(raw))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Groq ingredient extraction failed: %s", e)
+            return []
+
+    if settings.llm_provider == "gemini":
+        return await _extract_ingredients_with_gemini(message, conversation_history)
+
+    return []
+
+
 async def _extract_ingredients_with_gemini(message: str, conversation_history: list[ChatMessage]) -> list[str]:
     api_key = settings.effective_gemini_api_key
     if not api_key:
@@ -436,6 +541,45 @@ def _build_store_suggestions(
     return suggestions[:5]
 
 
+async def _chat_with_llm(
+    message: str,
+    conversation_history: list[ChatMessage],
+    catalog_context: str,
+    cart_context: str = "",
+    user_orders_context: str = "",
+) -> str:
+    """Dispatch chat to whichever LLM provider is configured."""
+    lang = detect_language(message)
+    if looks_ambiguous(message) and not conversation_history:
+        system_prompt = clarify_prompt(message, lang=lang)
+    else:
+        system_prompt = chat_system_prompt(
+            catalog_context=catalog_context,
+            cart_context=cart_context,
+            user_orders_context=user_orders_context,
+            lang=lang,
+        )
+
+    if settings.llm_provider == "groq":
+        history = _to_openai_messages(conversation_history)
+        reply = await _groq_chat_completion(
+            system_prompt=system_prompt,
+            history=history,
+            user_message=message,
+            max_tokens=1024,
+            temperature=0.7,
+        )
+        return reply or "Кешіріңіз, жауап ала алмадым. Қайталап көріңізші."
+
+    return await _chat_with_gemini(
+        message,
+        conversation_history,
+        catalog_context,
+        cart_context=cart_context,
+        user_orders_context=user_orders_context,
+    )
+
+
 async def _chat_with_gemini(
     message: str,
     conversation_history: list[ChatMessage],
@@ -641,9 +785,9 @@ async def chat(
     ingredients: list[str] = []
     if _looks_like_recipe_request(message):
         try:
-            ingredients = await _extract_ingredients_with_gemini(message, conversation_history)
+            ingredients = await _extract_ingredients_with_llm(message, conversation_history)
         except Exception as e:
-            logger.warning("Gemini ingredient extraction failed: %s", e)
+            logger.warning("LLM ingredient extraction failed: %s", e)
 
     if not ingredients:
         ingredients = _normalize_ingredients(_detect_dish_ingredients(message))
@@ -660,12 +804,12 @@ async def chat(
         radius_meters=radius_meters,
     )
 
-    if settings.effective_gemini_api_key:
+    if settings.llm_ready:
         try:
             catalog_ctx = _build_catalog_context(products) if products else "Тауар тізімі қазір қолжетімсіз."
             cart_ctx = _load_user_cart_context(db, user_id)
             orders_ctx = _load_user_orders_context(db, user_id)
-            reply = await _chat_with_gemini(
+            reply = await _chat_with_llm(
                 message,
                 conversation_history,
                 catalog_ctx,
@@ -679,7 +823,7 @@ async def chat(
                 store_suggestions=store_suggestions,
             )
         except Exception as e:
-            logger.exception("Gemini API error: %s", e)
+            logger.exception("LLM (%s) chat error: %s", settings.llm_provider, e)
             # Fall back to rule-based
             reply = _rule_based_chat(message, products)
             return ChatResponse(
@@ -690,7 +834,8 @@ async def chat(
             )
     else:
         logger.warning(
-            "Chat called without Gemini API key configured — returning rule-based reply."
+            "Chat called without any LLM API key configured (set GROQ_API_KEY) — "
+            "returning rule-based reply."
         )
         reply = _rule_based_chat(message, products)
         return ChatResponse(

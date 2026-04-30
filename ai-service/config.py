@@ -17,12 +17,18 @@ class Settings(BaseSettings):
     # Useful on DigitalOcean App Platform where Spring Boot already gets DB_URL.
     db_url: str = ""
 
-    # Google Gemini (for chatbot). Accept either GEMINI_API_KEY or GOOGLE_API_KEY.
+    # Groq (primary LLM provider for the chatbot).
+    # Get a free key at https://console.groq.com/keys.
+    groq_api_key: str = ""
+    # Default to llama-3.3-70b-versatile — fast, generous free tier, good
+    # multilingual quality for KK / RU / EN. Override via env var if needed.
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+
+    # Legacy Google Gemini settings — kept for backward compatibility but no
+    # longer used by default. Remove from your env vars to fully cut over.
     gemini_api_key: str = ""
     google_api_key: str = ""
-    # Default to a stable, GA model id. `gemini-2.0-flash` is occasionally
-    # rejected with 404 from non-US regions, so we keep 1.5-flash-latest as
-    # the safe default and let DigitalOcean override via env var when needed.
     gemini_model: str = "gemini-1.5-flash-latest"
 
     # JWT — must match Spring Boot's app.jwt.secret
@@ -44,9 +50,34 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
     @property
+    def effective_groq_api_key(self) -> str:
+        return (self.groq_api_key or "").strip()
+
+    @property
     def effective_gemini_api_key(self) -> str:
         """Return whichever of the two well-known env vars is populated."""
         return (self.gemini_api_key or self.google_api_key or "").strip()
+
+    @property
+    def llm_provider(self) -> str:
+        if self.effective_groq_api_key:
+            return "groq"
+        if self.effective_gemini_api_key:
+            return "gemini"
+        return "none"
+
+    @property
+    def llm_ready(self) -> bool:
+        return self.llm_provider != "none"
+
+    @property
+    def llm_model(self) -> str:
+        provider = self.llm_provider
+        if provider == "groq":
+            return self.groq_model
+        if provider == "gemini":
+            return self.gemini_model
+        return ""
 
     @property
     def database_url(self) -> str:
@@ -75,16 +106,25 @@ settings = Settings()
 
 # Boot-time diagnostics so it is obvious from the DigitalOcean logs whether
 # the API key was picked up or not.
-_key = settings.effective_gemini_api_key
-if _key:
+_provider = settings.llm_provider
+if _provider == "groq":
+    _key = settings.effective_groq_api_key
     logger.info(
-        "Gemini API key configured (length=%d, suffix=...%s, model=%s)",
+        "Groq API key configured (length=%d, suffix=...%s, model=%s)",
+        len(_key), _key[-4:] if len(_key) >= 4 else "?", settings.groq_model,
+    )
+elif _provider == "gemini":
+    _key = settings.effective_gemini_api_key
+    logger.warning(
+        "Falling back to legacy Gemini provider (length=%d, suffix=...%s, model=%s) — "
+        "set GROQ_API_KEY to switch to the new provider.",
         len(_key), _key[-4:] if len(_key) >= 4 else "?", settings.gemini_model,
     )
 else:
     logger.error(
-        "❌ NO GEMINI_API_KEY / GOOGLE_API_KEY configured — chatbot will fall "
-        "back to rule-based answers and the /api/ai/chat endpoint will return "
-        "generic responses. Set GEMINI_API_KEY in the AI service env vars on "
-        "DigitalOcean App Platform to fix this."
+        "❌ NO GROQ_API_KEY (or legacy GEMINI_API_KEY) configured — chatbot "
+        "will fall back to rule-based answers and the /api/ai/chat endpoint "
+        "will return generic responses. Set GROQ_API_KEY in the AI service "
+        "env vars on DigitalOcean App Platform to fix this. Free key: "
+        "https://console.groq.com/keys"
     )

@@ -7,5 +7,7 @@ scikit-learn==1.6.1
 pydantic==2.11.7
 pydantic-settings==2.9.1
 httpx==0.28.1
+# Legacy Gemini SDK — still imported as a fallback when only GEMINI_API_KEY
+# is configured. Safe to remove once all environments switch to Groq.
 google-generativeai==0.8.5
 PyJWT==2.10.1
